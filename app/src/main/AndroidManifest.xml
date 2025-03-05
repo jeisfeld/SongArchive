@@ -15,7 +15,7 @@
         android:theme="@style/Theme.CircleSongArchive"
         tools:targetApi="31">
         <activity
-            android:name=".MainActivity"
+            android:name=".ui.MainActivity"
             android:exported="true"
             android:theme="@style/Theme.CircleSongArchive">
             <intent-filter>
@@ -24,8 +24,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".ChordsViewerActivity"
+        <activity android:name=".ui.ChordsViewerActivity"
             android:screenOrientation="userLandscape"
+            android:theme="@android:style/Theme.Light.NoTitleBar.Fullscreen"/>
+        <activity android:name=".ui.LyricsViewerActivity"
             android:theme="@android:style/Theme.Light.NoTitleBar.Fullscreen"/>
     </application>
 

@@ -1,4 +1,4 @@
-package de.jeisfeld.songarchive
+package de.jeisfeld.songarchive.ui
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -37,6 +37,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import de.jeisfeld.songarchive.R
 
 class ChordsViewerActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
