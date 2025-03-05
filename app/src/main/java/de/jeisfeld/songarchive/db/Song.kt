@@ -18,5 +18,8 @@ data class Song(
     val author: String?,
 
     @ColumnInfo(name = "tabfilename")
-    val tabfilename: String?
+    val tabfilename: String?,
+
+    @ColumnInfo(name = "keywords")
+    val keywords: String?
 )

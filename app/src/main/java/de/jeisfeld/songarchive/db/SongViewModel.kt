@@ -46,6 +46,7 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
                 val fetchedSongs = RetrofitClient.api.fetchSongs()
                 songDao.clearSongs()
                 songDao.insertSongs(fetchedSongs)
+                _songs.value = fetchedSongs
 
                 // Step 2: Download and Extract Images
                 val success = downloadAndExtractZip(getApplication(), "https://jeisfeld.de/songarchive/download_chords.php")
