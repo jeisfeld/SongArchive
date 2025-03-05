@@ -8,4 +8,11 @@
     <string name="view_chords">View Chords</string>
     <string name="search">Search</string>
 
+    <string name="sync">Sync</string>
+    <string name="sync_title">Synchronization</string>
+    <string name="sync_message">Do you want to download latest song information?</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+    <string name="sync_success">Download successful!</string>
+    <string name="sync_failed">Download failed!</string>
 </resources>

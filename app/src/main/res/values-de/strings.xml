@@ -9,4 +9,11 @@
     <string name="view_chords">Akkorde anzeigen</string>
     <string name="search">Suchen</string>
 
+    <string name="sync">Synchronisieren</string>
+    <string name="sync_title">Synchronisierung</string>
+    <string name="sync_message">Möchtest du die aktuellen Songinformationen herunterladen?</string>
+    <string name="yes">Ja</string>
+    <string name="no">Nein</string>
+    <string name="sync_success">Download erfolgreich!</string>
+    <string name="sync_failed">Download fehlgeschlagen!</string>
 </resources>

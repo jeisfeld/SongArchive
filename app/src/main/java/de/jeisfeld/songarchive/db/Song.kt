@@ -12,11 +12,11 @@ data class Song(
     val title: String,
 
     @ColumnInfo(name = "lyrics")  // "text" ist ein reserviertes Wort in SQL, daher umbenannt
-    val lyrics: String,
+    val lyrics: String?,
 
     @ColumnInfo(name = "author")
-    val author: String,
+    val author: String?,
 
     @ColumnInfo(name = "tabfilename")
-    val tabfilename: String
+    val tabfilename: String?
 )
