@@ -1,3 +1,11 @@
 <resources>
     <string name="app_name">Circle Song Archive</string>
+    <string name="column_id">ID</string>
+    <string name="column_title">Title</string>
+    <string name="column_author">Author(s)</string>
+    <string name="column_actions">Actions</string>
+    <string name="view_lyrics">View Lyrics</string>
+    <string name="view_chords">View Chords</string>
+    <string name="search">Search</string>
+
 </resources>

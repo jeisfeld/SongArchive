@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Circle Song Archiv</string>
+    <string name="column_id">ID</string>
+    <string name="column_title">Titel</string>
+    <string name="column_author">Urheber:innen</string>
+    <string name="column_actions">Aktionen</string>
+    <string name="view_lyrics">Text anzeigen</string>
+    <string name="view_chords">Akkorde anzeigen</string>
+    <string name="search">Suchen</string>
+
+</resources>

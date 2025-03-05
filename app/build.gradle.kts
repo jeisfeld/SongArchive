@@ -44,12 +44,11 @@ dependencies {
 
     // Jetpack Compose UI
     implementation(libs.ui)
-    implementation(libs.androidx.material)
 
     // Room für SQLite-Datenbank
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
-    implementation(libs.androidx.material3.android)
+    implementation(libs.material3)
     implementation(libs.androidx.ui.tooling.preview.android)
     ksp(libs.androidx.room.compiler)
 
