@@ -1,5 +1,6 @@
 package de.jeisfeld.songarchive
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -40,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -47,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
 import de.jeisfeld.songarchive.db.Song
 import de.jeisfeld.songarchive.db.SongViewModel
+import java.io.File
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -174,12 +177,15 @@ fun SearchBar(searchQuery: String, onSearchChange: (String) -> Unit) {
 
 @Composable
 fun SongTable(songs: List<Song>, isWideScreen: Boolean) {
+    val context = LocalContext.current
+    val imagesDir = File(context.filesDir, "chords") // Path to stored images
+
     Column(modifier = Modifier.fillMaxSize()) {
         // Fixed Table Header (Outside LazyColumn)
         Row(modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp)) {
             Text(
                 text = stringResource(id = R.string.column_id),
-                modifier = Modifier.width(50.dp), // Fixed width
+                modifier = Modifier.width(50.dp),
                 fontWeight = FontWeight.Bold
             )
             Text(
@@ -196,7 +202,7 @@ fun SongTable(songs: List<Song>, isWideScreen: Boolean) {
             }
             Text(
                 text = stringResource(id = R.string.column_actions),
-                modifier = Modifier.width(80.dp), // Fixed width
+                modifier = Modifier.width(80.dp),
                 fontWeight = FontWeight.Bold
             )
         }
@@ -224,7 +230,14 @@ fun SongTable(songs: List<Song>, isWideScreen: Boolean) {
                         Image(
                             painter = painterResource(id = R.drawable.chords),
                             contentDescription = stringResource(id = R.string.view_chords),
-                            modifier = Modifier.size(24.dp).clickable { /* Bild anzeigen */ }
+                            modifier = Modifier.size(24.dp).clickable {
+                                val imageFile = File(imagesDir, song.tabfilename ?: "")
+                                if (imageFile.exists()) {
+                                    val intent = Intent(context, ChordsViewerActivity::class.java)
+                                    intent.putExtra("IMAGE_PATH", imageFile.absolutePath)
+                                    context.startActivity(intent)
+                                }
+                            }
                         )
                     }
                 }
@@ -233,3 +246,4 @@ fun SongTable(songs: List<Song>, isWideScreen: Boolean) {
         }
     }
 }
+

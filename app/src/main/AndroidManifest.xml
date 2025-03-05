@@ -24,6 +24,9 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity android:name=".ChordsViewerActivity"
+            android:screenOrientation="userLandscape"
+            android:theme="@android:style/Theme.Light.NoTitleBar.Fullscreen"/>
     </application>
 
 </manifest>
