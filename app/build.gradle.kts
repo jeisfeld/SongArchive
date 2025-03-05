@@ -55,9 +55,7 @@ dependencies {
     // Retrofit für den HTTP-Download
     implementation(libs.retrofit)
     implementation(libs.converter.gson)
-
-    // Coil für das Laden von Bildern
-    implementation(libs.coil.compose)
+    implementation(libs.okhttp)
 
     // WorkManager für Hintergrund-Download
     implementation(libs.androidx.work.runtime.ktx)

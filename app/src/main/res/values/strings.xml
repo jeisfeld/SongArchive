@@ -15,4 +15,5 @@
     <string name="no">No</string>
     <string name="sync_success">Download successful!</string>
     <string name="sync_failed">Download failed!</string>
+    <string name="syncing">Download in progress…</string>
 </resources>
