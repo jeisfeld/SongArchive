@@ -128,7 +128,7 @@ fun LyricsViewerScreen(lyrics: String, onClose: () -> Unit) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 8.dp, end = 8.dp),
+                    .padding(top = 0.dp, end = 0.dp),
                 contentAlignment = Alignment.TopEnd
             ) {
                 IconButton(
@@ -141,7 +141,7 @@ fun LyricsViewerScreen(lyrics: String, onClose: () -> Unit) {
                             shape = RoundedCornerShape(50) // Rounded background
                         )
                         .clip(RoundedCornerShape(50))
-                        .padding(4.dp) // Small padding around icon
+                        .padding(4.dp)
                 ) {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_close),

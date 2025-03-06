@@ -163,6 +163,21 @@ fun SearchBar(viewModel: SongViewModel) {
             focusedContainerColor = Color.Transparent,
             unfocusedContainerColor = Color.Transparent,
             disabledContainerColor = Color.Transparent
-        )
+        ),
+        trailingIcon = {
+            if (searchQuery.isNotEmpty()) {
+                IconButton(onClick = {
+                    searchQuery = "" // Clear text
+                    viewModel.searchSongs("") // Reset search results
+                }) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_close),
+                        contentDescription = "Clear",
+                        tint = Color.Gray
+                    )
+                }
+            }
+        }
     )
 }
+
