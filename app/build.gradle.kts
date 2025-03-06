@@ -59,4 +59,8 @@ dependencies {
 
     // WorkManager für Hintergrund-Download
     implementation(libs.androidx.work.runtime.ktx)
+
+    // Audio player
+    implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.androidx.media3.ui)
 }

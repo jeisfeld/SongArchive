@@ -1,7 +1,6 @@
 package de.jeisfeld.songarchive.ui
 
 import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -18,6 +17,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -27,10 +30,14 @@ import androidx.compose.ui.unit.dp
 import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.db.Song
 import java.io.File
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 @Composable
 fun SongTable(songs: List<Song>, isWideScreen: Boolean) {
     val context = LocalContext.current
+    var showAudioPopup by remember { mutableStateOf(false) }
+    var currentMp3Url by remember { mutableStateOf("") }
 
     Column(modifier = Modifier.fillMaxSize()) {
         // Fixed Table Header (Outside LazyColumn)
@@ -99,16 +106,15 @@ fun SongTable(songs: List<Song>, isWideScreen: Boolean) {
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                         }
-                        song.mp3filename?.takeIf { it.isNotBlank() }?.let {
+                        song.mp3filename?.takeIf { it.isNotBlank() }?.let { filename ->
+                            val encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8.toString()).replace("+", "%20")
+                            val mp3Url = "https://jeisfeld.de/audio/songs/$encodedFilename"
                             Image(
                                 painter = painterResource(id = R.drawable.ic_play),
                                 contentDescription = stringResource(id = R.string.play_song),
                                 modifier = Modifier.size(24.dp).clickable {
-                                    val url = "https://jeisfeld.de/audio/songs/$it"
-                                    val intent = Intent(Intent.ACTION_VIEW).apply {
-                                        setDataAndType(Uri.parse(url), "audio/*")
-                                    }
-                                    context.startActivity(intent)
+                                    currentMp3Url = mp3Url
+                                    showAudioPopup = true
                                 }
                             )
                         }
@@ -116,6 +122,13 @@ fun SongTable(songs: List<Song>, isWideScreen: Boolean) {
                 }
                 HorizontalDivider()
             }
+        }
+    }
+
+    // Show popup when MP3 button is clicked
+    if (showAudioPopup) {
+        AudioPlayerPopup(mp3Url = currentMp3Url) {
+            showAudioPopup = false
         }
     }
 }
