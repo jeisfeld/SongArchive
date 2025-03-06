@@ -62,9 +62,11 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
                         id = it.id,
                         title = it.title,
                         lyrics = it.lyrics ?: "",
-                        tabfilename = it.tabfilename ?: "",
                         author = it.author ?: "",
                         keywords = it.keywords ?: "",
+                        tabfilename = it.tabfilename,
+                        mp3filename = it.mp3filename,
+                        mp3filename2 = it.mp3filename2,
 
                         // Normalize fields before storing in Room
                         title_normalized = removeAccents(it.title),

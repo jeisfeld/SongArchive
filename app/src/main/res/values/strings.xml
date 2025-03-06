@@ -6,6 +6,7 @@
     <string name="column_actions">Actions</string>
     <string name="view_lyrics">View Lyrics</string>
     <string name="view_chords">View Chords</string>
+    <string name="play_song">Play Song</string>
     <string name="search">Search</string>
 
     <string name="sync">Sync</string>

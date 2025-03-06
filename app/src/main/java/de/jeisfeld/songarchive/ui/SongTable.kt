@@ -1,6 +1,7 @@
 package de.jeisfeld.songarchive.ui
 
 import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -30,7 +31,6 @@ import java.io.File
 @Composable
 fun SongTable(songs: List<Song>, isWideScreen: Boolean) {
     val context = LocalContext.current
-    val imagesDir = File(context.filesDir, "chords") // Path to stored images
 
     Column(modifier = Modifier.fillMaxSize()) {
         // Fixed Table Header (Outside LazyColumn)
@@ -83,18 +83,35 @@ fun SongTable(songs: List<Song>, isWideScreen: Boolean) {
                             }
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Image(
-                            painter = painterResource(id = R.drawable.chords),
-                            contentDescription = stringResource(id = R.string.view_chords),
-                            modifier = Modifier.size(24.dp).clickable {
-                                val imageFile = File(imagesDir, song.tabfilename)
-                                if (imageFile.exists()) {
-                                    val intent = Intent(context, ChordsViewerActivity::class.java)
-                                    intent.putExtra("IMAGE_PATH", imageFile.absolutePath)
+
+                        song.tabfilename?.takeIf { it.isNotBlank() }?.let {
+                            Image(
+                                painter = painterResource(id = R.drawable.chords),
+                                contentDescription = stringResource(id = R.string.view_chords),
+                                modifier = Modifier.size(24.dp).clickable {
+                                    val imageFile = File(context.filesDir, "chords/$it")
+                                    if (imageFile.exists()) {
+                                        val intent = Intent(context, ChordsViewerActivity::class.java)
+                                        intent.putExtra("IMAGE_PATH", imageFile.absolutePath)
+                                        context.startActivity(intent)
+                                    }
+                                }
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                        song.mp3filename?.takeIf { it.isNotBlank() }?.let {
+                            Image(
+                                painter = painterResource(id = R.drawable.ic_play),
+                                contentDescription = stringResource(id = R.string.play_song),
+                                modifier = Modifier.size(24.dp).clickable {
+                                    val url = "https://jeisfeld.de/audio/songs/$it"
+                                    val intent = Intent(Intent.ACTION_VIEW).apply {
+                                        setDataAndType(Uri.parse(url), "audio/*")
+                                    }
                                     context.startActivity(intent)
                                 }
-                            }
-                        )
+                            )
+                        }
                     }
                 }
                 HorizontalDivider()

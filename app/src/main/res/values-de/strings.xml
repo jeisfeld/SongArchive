@@ -7,6 +7,7 @@
     <string name="column_actions">Aktionen</string>
     <string name="view_lyrics">Text anzeigen</string>
     <string name="view_chords">Akkorde anzeigen</string>
+    <string name="play_song">Lied abspielen</string>
     <string name="search">Suchen</string>
 
     <string name="sync">Synchronisieren</string>

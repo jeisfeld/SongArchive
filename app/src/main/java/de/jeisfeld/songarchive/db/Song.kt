@@ -10,8 +10,10 @@ data class Song(
     val title: String,
     val lyrics: String,
     val author: String,
-    val tabfilename: String,
     val keywords: String,
+    val tabfilename: String?,
+    val mp3filename: String?,
+    val mp3filename2: String?,
 
     val title_normalized: String,
     val lyrics_normalized: String,
