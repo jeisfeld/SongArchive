@@ -52,7 +52,6 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MainScreen(viewModel: SongViewModel) {
-    var searchQuery by remember { mutableStateOf("") }
     val songs by viewModel.songs.collectAsState()
     val isWideScreen = LocalConfiguration.current.screenWidthDp > 600
     var showDialog by remember { mutableStateOf(false) }
@@ -69,15 +68,17 @@ fun MainScreen(viewModel: SongViewModel) {
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().padding(0.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
                     text = stringResource(id = R.string.app_name),
+                    modifier = Modifier.align(Alignment.CenterVertically),
                     fontSize = MaterialTheme.typography.headlineMedium.fontSize,
-                    modifier = Modifier.padding(bottom = 16.dp)
                 )
-                IconButton(onClick = { showDialog = true }) {
+                IconButton(onClick = { showDialog = true },
+                    modifier = Modifier.align(Alignment.CenterVertically),
+                    ) {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_sync),
                         contentDescription = stringResource(id = R.string.sync)
@@ -85,10 +86,7 @@ fun MainScreen(viewModel: SongViewModel) {
                 }
             }
 
-            SearchBar(searchQuery) { newQuery ->
-                searchQuery = newQuery
-                viewModel.searchSongs(newQuery)
-            }
+            SearchBar(viewModel)
 
             SongTable(songs, isWideScreen)
 
@@ -147,10 +145,15 @@ fun ProgressOverlay() {
 }
 
 @Composable
-fun SearchBar(searchQuery: String, onSearchChange: (String) -> Unit) {
+fun SearchBar(viewModel: SongViewModel) {
+    var searchQuery by remember { mutableStateOf("") }
+
     OutlinedTextField(
         value = searchQuery,
-        onValueChange = onSearchChange,
+        onValueChange = {
+            searchQuery = it
+            viewModel.searchSongs(it)
+        },
         modifier = Modifier
             .fillMaxWidth()
             .padding(8.dp),

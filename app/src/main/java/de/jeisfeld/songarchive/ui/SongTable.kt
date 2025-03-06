@@ -70,7 +70,7 @@ fun SongTable(songs: List<Song>, isWideScreen: Boolean) {
                     Text(text = song.id, modifier = Modifier.width(50.dp))
                     Text(text = song.title, modifier = Modifier.weight(1f))
                     if (isWideScreen) {
-                        Text(text = song.author ?: "", modifier = Modifier.weight(1f))
+                        Text(text = song.author, modifier = Modifier.weight(1f))
                     }
                     Row(modifier = Modifier.width(80.dp)) {
                         Image(
@@ -87,7 +87,7 @@ fun SongTable(songs: List<Song>, isWideScreen: Boolean) {
                             painter = painterResource(id = R.drawable.chords),
                             contentDescription = stringResource(id = R.string.view_chords),
                             modifier = Modifier.size(24.dp).clickable {
-                                val imageFile = File(imagesDir, song.tabfilename ?: "")
+                                val imageFile = File(imagesDir, song.tabfilename)
                                 if (imageFile.exists()) {
                                     val intent = Intent(context, ChordsViewerActivity::class.java)
                                     intent.putExtra("IMAGE_PATH", imageFile.absolutePath)

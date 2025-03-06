@@ -9,12 +9,15 @@ import de.jeisfeld.songarchive.RetrofitClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.text.Normalizer
+import java.util.regex.Pattern
 import java.util.zip.ZipInputStream
 
 class SongViewModel(application: Application) : AndroidViewModel(application) {
@@ -33,17 +36,44 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun searchSongs(query: String) {
+    fun searchSongs(input: String) {
         viewModelScope.launch {
-            _songs.value = songDao.searchSongs(query)
+            val normalizedQuery = removeAccents(input) // Normalize accents & quotes
+            val words = normalizedQuery.split(" ").filter { it.isNotBlank() }
+
+            val fullQuery = "%$normalizedQuery%"
+            val wordList = words.map { "%$it%" }.take(5) + List(5) { "%%" } // Ensure 5 words are always passed
+
+            songDao.searchSongs(
+                "%$normalizedQuery%",
+                fullQuery,
+                wordList[0], wordList[1], wordList[2], wordList[3], wordList[4]
+            ).collectLatest { results ->
+                _songs.value = results
+            }
         }
     }
-
     fun synchronizeDatabaseAndImages(onComplete: (Boolean) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 // Step 1: Synchronize Database
-                val fetchedSongs = RetrofitClient.api.fetchSongs()
+                val fetchedSongs = RetrofitClient.api.fetchSongs().map {
+                    Song(
+                        id = it.id,
+                        title = it.title,
+                        lyrics = it.lyrics ?: "",
+                        tabfilename = it.tabfilename ?: "",
+                        author = it.author ?: "",
+                        keywords = it.keywords ?: "",
+
+                        // Normalize fields before storing in Room
+                        title_normalized = removeAccents(it.title),
+                        lyrics_normalized = removeAccents(it.lyrics ?: ""),
+                        author_normalized = removeAccents(it.author ?: ""),
+                        keywords_normalized = removeAccents(it.keywords ?: "")
+                    )
+                }
+
                 songDao.clearSongs()
                 songDao.insertSongs(fetchedSongs)
                 _songs.value = fetchedSongs
@@ -54,10 +84,22 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
                 // Step 3: Notify UI
                 onComplete(success)
             } catch (e: Exception) {
-                Log.e("SongArchive", "Failed to synchronize: ${e.message}", e)
+                Log.e("SyncError", "Failed to synchronize: ${e.message}")
                 onComplete(false)
             }
         }
+    }
+
+    fun removeAccents(input: String): String {
+        val normalized = Normalizer.normalize(input, Normalizer.Form.NFD)
+        val pattern = Pattern.compile("\\p{InCombiningDiacriticalMarks}+")
+
+        return pattern.matcher(normalized)
+            .replaceAll("") // Remove accents
+            .replace("ß", "ss") // German sharp S
+            .replace("´", "'") // Normalize accents to plain apostrophe
+            .replace("`", "'")
+            .replace("’", "'")
     }
 
     private fun downloadAndExtractZip(context: Context, url: String): Boolean {

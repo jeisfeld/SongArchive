@@ -1,6 +1,5 @@
 package de.jeisfeld.songarchive.db
 
-import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -8,18 +7,14 @@ import androidx.room.PrimaryKey
 data class Song(
     @PrimaryKey val id: String,
 
-    @ColumnInfo(name = "title")
     val title: String,
+    val lyrics: String,
+    val author: String,
+    val tabfilename: String,
+    val keywords: String,
 
-    @ColumnInfo(name = "lyrics")  // "text" ist ein reserviertes Wort in SQL, daher umbenannt
-    val lyrics: String?,
-
-    @ColumnInfo(name = "author")
-    val author: String?,
-
-    @ColumnInfo(name = "tabfilename")
-    val tabfilename: String?,
-
-    @ColumnInfo(name = "keywords")
-    val keywords: String?
+    val title_normalized: String,
+    val lyrics_normalized: String,
+    val author_normalized: String,
+    val keywords_normalized: String
 )
