@@ -88,7 +88,7 @@ fun MainScreen(viewModel: SongViewModel) {
 
             SearchBar(viewModel)
 
-            SongTable(songs, isWideScreen)
+            SongTable(viewModel, songs, isWideScreen)
 
             if (showDialog) {
                 AlertDialog(

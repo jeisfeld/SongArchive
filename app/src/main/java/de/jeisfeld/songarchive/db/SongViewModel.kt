@@ -3,8 +3,10 @@ package de.jeisfeld.songarchive.db
 import android.app.Application
 import android.content.Context
 import android.util.Log
+import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.media3.exoplayer.ExoPlayer
 import de.jeisfeld.songarchive.RetrofitClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,6 +28,11 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
     val songs: StateFlow<List<Song>> = _songs
     private val client = OkHttpClient()
 
+    var currentlyPlayingSong = mutableStateOf<String?>(null)
+    var isPlaying = mutableStateOf(false)
+    var currentProgress = mutableStateOf(0L)
+    var exoPlayer: ExoPlayer? = null
+
     init {
         loadAllSongs()
     }
@@ -34,6 +41,18 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _songs.value = songDao.getAllSongs()
         }
+    }
+
+    fun getExoPlayer(context: Context): ExoPlayer {
+        if (exoPlayer == null) {
+            exoPlayer = ExoPlayer.Builder(context).build()
+        }
+        return exoPlayer!!
+    }
+
+    fun releaseExoPlayer() {
+        exoPlayer?.release()
+        exoPlayer = null
     }
 
     fun searchSongs(input: String) {

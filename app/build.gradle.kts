@@ -50,6 +50,7 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     implementation(libs.material3)
     implementation(libs.androidx.ui.tooling.preview.android)
+    implementation(libs.androidx.foundation.layout.android)
     ksp(libs.androidx.room.compiler)
 
     // Retrofit für den HTTP-Download

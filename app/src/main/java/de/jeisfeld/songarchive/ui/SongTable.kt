@@ -1,6 +1,7 @@
 package de.jeisfeld.songarchive.ui
 
 import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -14,121 +15,140 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.media3.common.MediaItem
 import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.db.Song
+import de.jeisfeld.songarchive.db.SongViewModel
 import java.io.File
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
 @Composable
-fun SongTable(songs: List<Song>, isWideScreen: Boolean) {
+fun SongTable(viewModel: SongViewModel, songs: List<Song>, isWideScreen: Boolean) {
     val context = LocalContext.current
-    var showAudioPopup by remember { mutableStateOf(false) }
-    var currentMp3Url by remember { mutableStateOf("") }
+    val currentlyPlayingSong by viewModel.currentlyPlayingSong
+    val isPlaying by viewModel.isPlaying
+    val exoPlayer = viewModel.getExoPlayer(context)
+
+    // Restore progress after rotation
+    LaunchedEffect(viewModel.currentlyPlayingSong.value) {
+        viewModel.currentlyPlayingSong.value?.let { url ->
+            exoPlayer.setMediaItem(MediaItem.fromUri(url))
+            exoPlayer.prepare()
+            exoPlayer.seekTo(viewModel.currentProgress.value) // Restore progress
+            exoPlayer.playWhenReady = viewModel.isPlaying.value
+        }
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // Fixed Table Header (Outside LazyColumn)
-        Row(modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp)) {
-            Text(
-                text = stringResource(id = R.string.column_id),
-                modifier = Modifier.width(50.dp),
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = stringResource(id = R.string.column_title),
-                modifier = Modifier.weight(1f),
-                fontWeight = FontWeight.Bold
-            )
-            if (isWideScreen) {
-                Text(
-                    text = stringResource(id = R.string.column_author),
-                    modifier = Modifier.weight(1f),
-                    fontWeight = FontWeight.Bold
-                )
-            }
-            Text(
-                text = stringResource(id = R.string.column_actions),
-                modifier = Modifier.width(80.dp),
-                fontWeight = FontWeight.Bold
-            )
-        }
-        HorizontalDivider()
-
-        // Scrollable List of Songs
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             items(songs) { song ->
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
                 ) {
-                    Text(text = song.id, modifier = Modifier.width(50.dp))
-                    Text(text = song.title, modifier = Modifier.weight(1f))
-                    if (isWideScreen) {
-                        Text(text = song.author, modifier = Modifier.weight(1f))
-                    }
-                    Row(modifier = Modifier.width(80.dp)) {
-                        Image(
-                            painter = painterResource(id = R.drawable.text),
-                            contentDescription = stringResource(id = R.string.view_lyrics),
-                            modifier = Modifier.size(24.dp).clickable {
-                                val intent = Intent(context, LyricsViewerActivity::class.java)
-                                intent.putExtra("LYRICS", song.lyrics)
-                                context.startActivity(intent)
-                            }
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-
-                        song.tabfilename?.takeIf { it.isNotBlank() }?.let {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(text = song.id, modifier = Modifier.width(50.dp))
+                        Text(text = song.title, modifier = Modifier.weight(1f))
+                        if (isWideScreen) {
+                            Text(text = song.author ?: "", modifier = Modifier.weight(1f))
+                        }
+                        Row(modifier = Modifier.width(90.dp)) {
                             Image(
-                                painter = painterResource(id = R.drawable.chords),
-                                contentDescription = stringResource(id = R.string.view_chords),
+                                painter = painterResource(id = R.drawable.text),
+                                contentDescription = stringResource(id = R.string.view_lyrics),
                                 modifier = Modifier.size(24.dp).clickable {
-                                    val imageFile = File(context.filesDir, "chords/$it")
-                                    if (imageFile.exists()) {
-                                        val intent = Intent(context, ChordsViewerActivity::class.java)
-                                        intent.putExtra("IMAGE_PATH", imageFile.absolutePath)
-                                        context.startActivity(intent)
-                                    }
+                                    val intent = Intent(context, LyricsViewerActivity::class.java)
+                                    intent.putExtra("LYRICS", song.lyrics)
+                                    context.startActivity(intent)
                                 }
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                        }
-                        song.mp3filename?.takeIf { it.isNotBlank() }?.let { filename ->
-                            val encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8.toString()).replace("+", "%20")
-                            val mp3Url = "https://jeisfeld.de/audio/songs/$encodedFilename"
-                            Image(
-                                painter = painterResource(id = R.drawable.ic_play),
-                                contentDescription = stringResource(id = R.string.play_song),
-                                modifier = Modifier.size(24.dp).clickable {
-                                    currentMp3Url = mp3Url
-                                    showAudioPopup = true
-                                }
-                            )
+
+                            song.tabfilename?.takeIf { it.isNotBlank() }?.let {
+                                Image(
+                                    painter = painterResource(id = R.drawable.chords),
+                                    contentDescription = stringResource(id = R.string.view_chords),
+                                    modifier = Modifier.size(24.dp).clickable {
+                                        val imageFile = File(context.filesDir, "chords/$it")
+                                        if (imageFile.exists()) {
+                                            val intent = Intent(context, ChordsViewerActivity::class.java)
+                                            intent.putExtra("IMAGE_PATH", imageFile.absolutePath)
+                                            context.startActivity(intent)
+                                        }
+                                    }
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                            }
+
+                            song.mp3filename?.takeIf { it.isNotBlank() }?.let { filename ->
+                                val encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8.toString()).replace("+", "%20")
+                                val mp3Url = "https://jeisfeld.de/audio/songs/$encodedFilename"
+
+                                Image(
+                                    painter = painterResource(
+                                        id = if (currentlyPlayingSong == mp3Url) R.drawable.ic_stop else R.drawable.ic_play
+                                    ),
+                                    contentDescription = if (currentlyPlayingSong == mp3Url) "Stop" else "Play MP3",
+                                    modifier = Modifier.size(24.dp).clickable {
+                                        if (currentlyPlayingSong == mp3Url) {
+                                            viewModel.releaseExoPlayer()
+                                            viewModel.currentlyPlayingSong.value = null
+                                            viewModel.isPlaying.value = false
+                                        } else {
+                                            exoPlayer.setMediaItem(MediaItem.fromUri(Uri.parse(mp3Url)))
+                                            exoPlayer.prepare()
+                                            exoPlayer.playWhenReady = true
+                                            viewModel.currentlyPlayingSong.value = mp3Url
+                                            viewModel.isPlaying.value = true
+                                            viewModel.currentProgress.value = 0L
+                                        }
+                                    }
+                                )
+                            }
                         }
                     }
+
+                    // Ensure Mini Player is displayed when the song is playing
+                    if (currentlyPlayingSong == "https://jeisfeld.de/audio/songs/${URLEncoder.encode(song.mp3filename ?: "", StandardCharsets.UTF_8.toString()).replace("+", "%20")}") {
+                        MiniAudioPlayer(
+                            exoPlayer = exoPlayer,
+                            isPlaying = isPlaying,
+                            onPlayPauseToggle = {
+                                if (exoPlayer.isPlaying) {
+                                    exoPlayer.pause()
+                                    viewModel.isPlaying.value = false
+                                } else {
+                                    exoPlayer.play()
+                                    viewModel.isPlaying.value = true
+                                }
+                            },
+                            onStop = {
+                                viewModel.releaseExoPlayer()
+                                viewModel.currentlyPlayingSong.value = null
+                                viewModel.isPlaying.value = false
+                                viewModel.currentProgress.value = 0L
+                            },
+                            viewModel = viewModel
+                        )
+                    }
                 }
-                HorizontalDivider()
             }
         }
     }
-
-    // Show popup when MP3 button is clicked
-    if (showAudioPopup) {
-        AudioPlayerPopup(mp3Url = currentMp3Url) {
-            showAudioPopup = false
-        }
-    }
 }
+
+
