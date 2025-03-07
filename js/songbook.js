@@ -502,17 +502,17 @@ const texts = {
 		title: "Title",
 		author: "Author(s)",
 		actions: "Actions",
-		circlesongarchive: "Circle Song Archive",
 		impressum: "Imprint",
-		searchBox: "Search..."
+		searchBox: "Search...",
+		heilsamelieder: "Circle Songs"
 	},
 	de: {
 		title: "Titel",
 		author: "Urheber:innen",
 		actions: "Aktionen",
-		circlesongarchive: "Circle Song Archive",
 		impressum: "Impressum",
-		searchBox: "Suchen..."
+		searchBox: "Suchen...",
+		heilsamelieder: "Heilsame Lieder"
 	}
 };
 
@@ -523,10 +523,10 @@ const userLang = navigator.language.slice(0, 2) === 'de' ? 'de' : 'en';
 document.getElementById("title").textContent = texts[userLang].title;
 document.getElementById("author").textContent = texts[userLang].author;
 document.getElementById("actions").textContent = texts[userLang].actions;
-document.getElementById("circlesongarchive").textContent = texts[userLang].circlesongarchive;
 document.getElementById("impressum-link").textContent = texts[userLang].impressum;
 document.getElementById("searchBox").placeholder = texts[userLang].searchBox;
-
+document.getElementById("heilsame-lieder").textContent = texts[userLang].heilsamelieder;
+document.title = texts[userLang].heilsamelieder;
 
 // handle modal impressum
 

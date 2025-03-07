@@ -13,7 +13,6 @@ body {
 	color: var(--text-color);
 }
 
-/* Centered Container for Search & Table */
 .container {
 	display: flex;
 	flex-direction: column;
@@ -23,10 +22,17 @@ body {
 	margin: 0 auto;
 }
 
-/* Center Page Heading */
-h2 {
-	text-align: center;
-	width: 100%;
+.page-heading {
+    display: flex;
+    align-items: center; 
+    justify-content: center; 
+    gap: 8px;
+}
+
+/* Style for icons */
+.heading-icon {
+    width: 36px;
+    height: auto;
 }
 
 /* Search Box with Icon (Same Width as Table) */
