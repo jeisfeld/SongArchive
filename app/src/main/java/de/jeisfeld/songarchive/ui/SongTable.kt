@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -23,11 +24,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.MediaItem
 import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.db.Song
 import de.jeisfeld.songarchive.db.SongViewModel
+import de.jeisfeld.songarchive.ui.theme.AppColors
 import java.io.File
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -50,6 +53,36 @@ fun SongTable(viewModel: SongViewModel, songs: List<Song>, isWideScreen: Boolean
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
+        // Fixed Table Header (Outside LazyColumn)
+        Row(modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp)) {
+            Text(
+                text = stringResource(id = R.string.column_id),
+                modifier = Modifier.width(50.dp),
+                fontWeight = FontWeight.Bold,
+                color = AppColors.TextColor
+            )
+            Text(
+                text = stringResource(id = R.string.column_title),
+                modifier = Modifier.weight(1f),
+                fontWeight = FontWeight.Bold,
+                color = AppColors.TextColor
+            )
+            if (isWideScreen) {
+                Text(
+                    text = stringResource(id = R.string.column_author),
+                    modifier = Modifier.weight(1f),
+                    fontWeight = FontWeight.Bold,
+                    color = AppColors.TextColor
+                )
+            }
+            Text(
+                text = stringResource(id = R.string.column_actions),
+                modifier = Modifier.width(80.dp),
+                fontWeight = FontWeight.Bold,
+                color = AppColors.TextColor
+            )
+        }
+        HorizontalDivider(color = AppColors.TextColorLight)
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             items(songs) { song ->
                 Column(
@@ -61,14 +94,14 @@ fun SongTable(viewModel: SongViewModel, songs: List<Song>, isWideScreen: Boolean
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(text = song.id, modifier = Modifier.width(50.dp))
-                        Text(text = song.title, modifier = Modifier.weight(1f))
+                        Text(text = song.id, modifier = Modifier.width(50.dp), color = AppColors.TextColor)
+                        Text(text = song.title, modifier = Modifier.weight(1f), color = AppColors.TextColor)
                         if (isWideScreen) {
-                            Text(text = song.author ?: "", modifier = Modifier.weight(1f))
+                            Text(text = song.author ?: "", modifier = Modifier.weight(1f), color = AppColors.TextColor)
                         }
                         Row(modifier = Modifier.width(90.dp)) {
                             Image(
-                                painter = painterResource(id = R.drawable.text),
+                                painter = painterResource(id = R.drawable.text2),
                                 contentDescription = stringResource(id = R.string.view_lyrics),
                                 modifier = Modifier.size(24.dp).clickable {
                                     val intent = Intent(context, LyricsViewerActivity::class.java)
@@ -80,7 +113,7 @@ fun SongTable(viewModel: SongViewModel, songs: List<Song>, isWideScreen: Boolean
 
                             song.tabfilename?.takeIf { it.isNotBlank() }?.let {
                                 Image(
-                                    painter = painterResource(id = R.drawable.chords),
+                                    painter = painterResource(id = R.drawable.chords2),
                                     contentDescription = stringResource(id = R.string.view_chords),
                                     modifier = Modifier.size(24.dp).clickable {
                                         val imageFile = File(context.filesDir, "chords/$it")

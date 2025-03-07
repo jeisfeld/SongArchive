@@ -3,6 +3,7 @@ package de.jeisfeld.songarchive.ui
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,15 +14,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -39,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
 import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.db.SongViewModel
+import de.jeisfeld.songarchive.ui.theme.AppColors
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -65,23 +68,47 @@ fun MainScreen(viewModel: SongViewModel) {
     }
 
     // Wrap everything in a Box to ensure the overlay appears above content
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize().background(AppColors.Background)) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(0.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
+                modifier = Modifier
+                    .fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = stringResource(id = R.string.app_name),
-                    modifier = Modifier.align(Alignment.CenterVertically),
-                    fontSize = MaterialTheme.typography.headlineMedium.fontSize,
-                )
-                IconButton(onClick = { showDialog = true },
-                    modifier = Modifier.align(Alignment.CenterVertically),
-                    ) {
+                Row(
+                    modifier = Modifier.weight(1f), // Expands to take available space
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.ic_launcher_foreground), // Replace with actual launcher icon
+                        contentDescription = "App Icon",
+                        modifier = Modifier
+                            .size(32.dp)
+                            .padding(end = 8.dp) // Space between icon and text
+                    )
+
+                    Text(
+                        text = stringResource(id = R.string.app_name),
+                        fontSize = MaterialTheme.typography.headlineSmall.fontSize,
+                        color = AppColors.TextColor
+                    )
+
+                    Image(
+                        painter = painterResource(id = R.drawable.ic_launcher_foreground), // Replace with actual launcher icon
+                        contentDescription = "App Icon",
+                        modifier = Modifier
+                            .size(32.dp)
+                            .padding(start = 8.dp) // Space between text and icon
+                    )
+                }
+
+                // Sync Button on the Right
+                IconButton(onClick = { showDialog = true }) {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_sync),
-                        contentDescription = stringResource(id = R.string.sync)
+                        contentDescription = stringResource(id = R.string.sync),
+                        tint = AppColors.TextColor
                     )
                 }
             }
@@ -159,10 +186,13 @@ fun SearchBar(viewModel: SongViewModel) {
             .padding(8.dp),
         singleLine = true,
         label = { Text(stringResource(id = R.string.search)) },
-        colors = TextFieldDefaults.colors(
-            focusedContainerColor = Color.Transparent,
-            unfocusedContainerColor = Color.Transparent,
-            disabledContainerColor = Color.Transparent
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedContainerColor = Color.White,
+            unfocusedContainerColor = Color.White,
+            disabledContainerColor = Color.Transparent,
+            focusedBorderColor = AppColors.TextColorLight,
+            unfocusedBorderColor = AppColors.TextColorLight,
+            cursorColor = AppColors.TextColor
         ),
         trailingIcon = {
             if (searchQuery.isNotEmpty()) {

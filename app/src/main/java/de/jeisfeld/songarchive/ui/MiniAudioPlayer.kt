@@ -27,12 +27,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.media3.exoplayer.ExoPlayer
 import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.db.SongViewModel
+import de.jeisfeld.songarchive.ui.theme.AppColors
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -59,17 +59,18 @@ fun MiniAudioPlayer(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start =  16.dp, end = 8.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+            .padding(start =  8.dp, end = 8.dp, top = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = AppColors.BackgroundShaded)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(start = 8.dp)
         ) {
             // Current Time
             Text(
                 text = formatTime(currentTime),
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.Black,
+                color = AppColors.TextColor,
                 modifier = Modifier.padding(end = 8.dp)
             )
 
@@ -81,16 +82,11 @@ fun MiniAudioPlayer(
                     viewModel.currentProgress.value = newPosition // Update UI immediately
                     exoPlayer.seekTo(newPosition) // Seek to new position
                 },
-                colors = SliderDefaults.colors(
-                    thumbColor = Color.Black, // Ball-style indicator
-                    activeTrackColor = Color.Gray,
-                    inactiveTrackColor = Color.LightGray
-                ),
                 modifier = Modifier.weight(1f),
                 thumb = {
                     Box(
                         modifier = Modifier
-                            .background(Color.Black, shape = CircleShape)
+                            .background(AppColors.TextColor, shape = CircleShape)
                             .padding(1.dp)
                             .size(width = 1.dp, height = 15.dp)
                     )
@@ -103,9 +99,9 @@ fun MiniAudioPlayer(
                         trackInsideCornerSize = 0.dp,
                         drawStopIndicator = null,
                         colors = SliderDefaults.colors(
-                            thumbColor = Color.Black,
-                            activeTrackColor = Color.Gray,
-                            inactiveTrackColor = Color.LightGray
+                            thumbColor = AppColors.TextColor,
+                            activeTrackColor = AppColors.TextColorLight,
+                            inactiveTrackColor = AppColors.ForegroundVeryLight
                         )
                     )
                 }
@@ -115,7 +111,7 @@ fun MiniAudioPlayer(
             Text(
                 text = formatTime(totalDuration),
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.Black,
+                color = AppColors.TextColor,
                 modifier = Modifier.padding(start = 8.dp)
             )
 
@@ -128,7 +124,7 @@ fun MiniAudioPlayer(
                         id = if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play
                     ),
                     contentDescription = if (isPlaying) "Pause" else "Play",
-                    tint = Color.Black,
+                    tint = AppColors.TextColor
                 )
             }
         }
