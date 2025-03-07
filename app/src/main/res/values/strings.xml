@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Circle Song Archive</string>
+    <string name="app_name">Circle Songs</string>
     <string name="column_id">ID</string>
     <string name="column_title">Title</string>
     <string name="column_author">Author(s)</string>

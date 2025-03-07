@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Circle Song Archiv</string>
+    <string name="app_name">Heilsame Lieder</string>
     <string name="column_id">ID</string>
     <string name="column_title">Titel</string>
     <string name="column_author">Urheber:innen</string>
