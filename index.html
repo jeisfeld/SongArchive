@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Circle Song Archive</title>
+<link rel="stylesheet" href="/css/songbook.css">
+<style>
+</style>
+</head>
+<body>
+
+	<div class="container">
+		<!-- Centered Page Heading -->
+		<h2 id="circlesongarchive">Circle Song Archive</h2>
+
+		<!-- Search Box with Local PNG Icon -->
+		<div class="search-container">
+			<img src="/img/search2.png" alt="Search"> <input type="text" id="searchBox" placeholder="Search..."
+				oninput="toggleClearButton()" onkeyup="searchSongs()">
+			<button id="clearButton" onclick="clearSearch()">✕</button>
+		</div>
+
+		<!-- Table for Results -->
+		<table>
+			<thead>
+				<tr>
+					<th id="id">ID</th>
+					<th id="title">Title</th>
+					<th id="author" class="author-col">Author(s)</th>
+					<th id="actions">Actions</th>
+				</tr>
+			</thead>
+			<tbody id="results"></tbody>
+		</table>
+	</div>
+
+
+	<!-- Popup Container -->
+	<div id="popup" class="popup" style="display: none;">
+		<div class="popup-content">
+			<span class="popup-close" onclick="closePopup('popup')">&times;</span>
+			<div id="popup-body"></div>
+		</div>
+	</div>
+	<div id="popup2" class="popup" style="display: none;">
+		<div class="popup-content">
+			<span class="popup-close" onclick="closePopup('popup2')">&times;</span>
+			<div id="popup2-body"></div>
+		</div>
+	</div>
+
+	<a href="/impressum.html" class="impressum" id="impressum-link">Imprint</a>
+
+	<!-- Modal Structure -->
+	<div id="modal-main" class="modal">
+		<div class="modal-content">
+			<!-- A close button and a placeholder; content will be loaded here -->
+			<span class="modal-close" id="close-modal">&times;</span>
+			<div id="modal-content">
+				<!-- Impressum content from impressum.html will appear here -->
+			</div>
+		</div>
+	</div>
+
+	<script src="/js/songbook.js"></script>
+</body>
+</html>
