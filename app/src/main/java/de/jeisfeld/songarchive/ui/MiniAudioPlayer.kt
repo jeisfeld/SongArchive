@@ -48,8 +48,8 @@ fun MiniAudioPlayer(
     var totalDuration by remember { mutableStateOf(0L) }
 
     // Update progress bar in real-time
-    LaunchedEffect(isPlaying) {
-        while (isPlaying) {
+    LaunchedEffect(Unit) {
+        while (true) {
             viewModel.currentProgress.value = exoPlayer.currentPosition
             totalDuration = exoPlayer.duration.coerceAtLeast(0L)
             delay(500)

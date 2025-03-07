@@ -13,7 +13,7 @@ interface ApiService {
 object RetrofitClient {
     val api: ApiService by lazy {
         Retrofit.Builder()
-            .baseUrl("https://jeisfeld.de/songarchive/")
+            .baseUrl("https://heilsame-lieder.de/")
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(ApiService::class.java)

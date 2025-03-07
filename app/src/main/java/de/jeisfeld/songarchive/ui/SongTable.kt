@@ -96,7 +96,7 @@ fun SongTable(viewModel: SongViewModel, songs: List<Song>, isWideScreen: Boolean
 
                             song.mp3filename?.takeIf { it.isNotBlank() }?.let { filename ->
                                 val encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8.toString()).replace("+", "%20")
-                                val mp3Url = "https://jeisfeld.de/audio/songs/$encodedFilename"
+                                val mp3Url = "https://heilsame-lieder.de/audio/songs/$encodedFilename"
 
                                 Image(
                                     painter = painterResource(
@@ -123,7 +123,7 @@ fun SongTable(viewModel: SongViewModel, songs: List<Song>, isWideScreen: Boolean
                     }
 
                     // Ensure Mini Player is displayed when the song is playing
-                    if (currentlyPlayingSong == "https://jeisfeld.de/audio/songs/${URLEncoder.encode(song.mp3filename ?: "", StandardCharsets.UTF_8.toString()).replace("+", "%20")}") {
+                    if (currentlyPlayingSong == "https://heilsame-lieder.de/audio/songs/${URLEncoder.encode(song.mp3filename ?: "", StandardCharsets.UTF_8.toString()).replace("+", "%20")}") {
                         MiniAudioPlayer(
                             exoPlayer = exoPlayer,
                             isPlaying = isPlaying,

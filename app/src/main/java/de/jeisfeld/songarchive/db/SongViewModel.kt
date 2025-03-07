@@ -100,7 +100,7 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
                 _songs.value = fetchedSongs
 
                 // Step 2: Download and Extract Images
-                val success = downloadAndExtractZip(getApplication(), "https://jeisfeld.de/songarchive/download_chords.php")
+                val success = downloadAndExtractZip(getApplication(), "https://heilsame-lieder.de/download_chords.php")
 
                 // Step 3: Notify UI
                 onComplete(success)

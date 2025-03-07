@@ -58,7 +58,7 @@ class LyricsViewerActivity : ComponentActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         // Get lyrics from intent
-        val lyrics = intent.getStringExtra("LYRICS") ?: "No lyrics available."
+        val lyrics = intent.getStringExtra("LYRICS")?.trim() ?: resources.getString(R.string.nolyrics)
 
         setContent {
             MaterialTheme {
@@ -91,7 +91,7 @@ fun LyricsViewerScreen(lyrics: String, onClose: () -> Unit) {
                                 isZooming = true
                                 if (kotlin.math.abs(pan.x) > kotlin.math.abs(pan.y)) {
                                     // Horizontal pinch → Adjust font size
-                                    fontSize = (fontSize * zoom).coerceIn(12f, 48f)
+                                    fontSize = (fontSize * zoom).coerceIn(8f, 96f)
                                 } else {
                                     // Vertical pinch → Adjust line spacing
                                     lineHeight = (lineHeight * zoom).coerceIn(1f, 3f)
