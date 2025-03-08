@@ -35,20 +35,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
 import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.db.SongViewModel
 import de.jeisfeld.songarchive.ui.theme.AppColors
+import de.jeisfeld.songarchive.ui.theme.AppTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             val viewModel: SongViewModel = ViewModelProvider(this)[SongViewModel::class.java]
-            MainScreen(viewModel)
+            AppTheme {
+                MainScreen(viewModel)
+            }
         }
     }
 }
@@ -69,10 +72,9 @@ fun MainScreen(viewModel: SongViewModel) {
 
     // Wrap everything in a Box to ensure the overlay appears above content
     Box(modifier = Modifier.fillMaxSize().background(AppColors.Background)) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(dimensionResource(id = R.dimen.spacing_large))) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(
@@ -84,13 +86,13 @@ fun MainScreen(viewModel: SongViewModel) {
                         painter = painterResource(id = R.drawable.ic_launcher_foreground), // Replace with actual launcher icon
                         contentDescription = "App Icon",
                         modifier = Modifier
-                            .size(32.dp)
-                            .padding(end = 8.dp) // Space between icon and text
+                            .size(dimensionResource(id = R.dimen.icon_size_medium))
+                            .padding(end = dimensionResource(id = R.dimen.spacing_medium)) // Space between icon and text
                     )
 
                     Text(
                         text = stringResource(id = R.string.app_name),
-                        fontSize = MaterialTheme.typography.headlineSmall.fontSize,
+                        fontSize = MaterialTheme.typography.titleLarge.fontSize,
                         color = AppColors.TextColor
                     )
 
@@ -98,8 +100,8 @@ fun MainScreen(viewModel: SongViewModel) {
                         painter = painterResource(id = R.drawable.ic_launcher_foreground), // Replace with actual launcher icon
                         contentDescription = "App Icon",
                         modifier = Modifier
-                            .size(32.dp)
-                            .padding(start = 8.dp) // Space between text and icon
+                            .size(dimensionResource(id = R.dimen.icon_size_medium))
+                            .padding(start = dimensionResource(id = R.dimen.spacing_medium)) // Space between text and icon
                     )
                 }
 
@@ -108,7 +110,8 @@ fun MainScreen(viewModel: SongViewModel) {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_sync),
                         contentDescription = stringResource(id = R.string.sync),
-                        tint = AppColors.TextColor
+                        tint = AppColors.TextColor,
+                        modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small))
                     )
                 }
             }
@@ -165,7 +168,7 @@ fun ProgressOverlay() {
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             CircularProgressIndicator(color = Color.White) // Spinning loader
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(dimensionResource(id = R.dimen.spacing_large)))
             Text(text = stringResource(id = R.string.syncing), color = Color.White)
         }
     }
@@ -183,7 +186,7 @@ fun SearchBar(viewModel: SongViewModel) {
         },
         modifier = Modifier
             .fillMaxWidth()
-            .padding(8.dp),
+            .padding(dimensionResource(id = R.dimen.spacing_medium)),
         singleLine = true,
         label = { Text(stringResource(id = R.string.search)) },
         colors = OutlinedTextFieldDefaults.colors(
@@ -203,7 +206,8 @@ fun SearchBar(viewModel: SongViewModel) {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_close),
                         contentDescription = "Clear",
-                        tint = Color.Gray
+                        tint = Color.Gray,
+                        modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small))
                     )
                 }
             }

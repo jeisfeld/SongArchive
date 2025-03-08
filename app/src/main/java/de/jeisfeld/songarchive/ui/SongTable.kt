@@ -16,14 +16,18 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.MediaItem
@@ -54,10 +58,10 @@ fun SongTable(viewModel: SongViewModel, songs: List<Song>, isWideScreen: Boolean
 
     Column(modifier = Modifier.fillMaxSize()) {
         // Fixed Table Header (Outside LazyColumn)
-        Row(modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp)) {
+        Row(modifier = Modifier.fillMaxWidth().padding(bottom = dimensionResource(id = R.dimen.spacing_small))) {
             Text(
                 text = stringResource(id = R.string.column_id),
-                modifier = Modifier.width(50.dp),
+                modifier = Modifier.width(dimensionResource(id = R.dimen.width_id)),
                 fontWeight = FontWeight.Bold,
                 color = AppColors.TextColor
             )
@@ -70,52 +74,53 @@ fun SongTable(viewModel: SongViewModel, songs: List<Song>, isWideScreen: Boolean
             if (isWideScreen) {
                 Text(
                     text = stringResource(id = R.string.column_author),
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(0.6f),
                     fontWeight = FontWeight.Bold,
                     color = AppColors.TextColor
                 )
             }
             Text(
                 text = stringResource(id = R.string.column_actions),
-                modifier = Modifier.width(80.dp),
+                modifier = Modifier.width(dimensionResource(id = R.dimen.width_actions)),
                 fontWeight = FontWeight.Bold,
                 color = AppColors.TextColor
             )
         }
-        HorizontalDivider(color = AppColors.TextColorLight)
+        HorizontalDivider(color = AppColors.TextColorLight, thickness = 2.dp)
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             items(songs) { song ->
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 4.dp),
+                        .padding(vertical = dimensionResource(id = R.dimen.spacing_small)),
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        modifier = Modifier.fillMaxWidth().padding(bottom = dimensionResource(id = R.dimen.spacing_small)),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(text = song.id, modifier = Modifier.width(50.dp), color = AppColors.TextColor)
+                        Text(text = song.id, modifier = Modifier.width(dimensionResource(id = R.dimen.width_id)), color = AppColors.TextColor)
                         Text(text = song.title, modifier = Modifier.weight(1f), color = AppColors.TextColor)
                         if (isWideScreen) {
-                            Text(text = song.author ?: "", modifier = Modifier.weight(1f), color = AppColors.TextColor)
+                            Text(text = song.author ?: "", modifier = Modifier.weight(0.6f), color = AppColors.TextColor, fontStyle = FontStyle.Italic, fontSize = MaterialTheme.typography.bodySmall.fontSize)
                         }
-                        Row(modifier = Modifier.width(90.dp)) {
+                        Row(modifier = Modifier.width(dimensionResource(id = R.dimen.width_actions))) {
                             Image(
                                 painter = painterResource(id = R.drawable.text2),
                                 contentDescription = stringResource(id = R.string.view_lyrics),
-                                modifier = Modifier.size(24.dp).clickable {
+                                modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small)).clickable {
                                     val intent = Intent(context, LyricsViewerActivity::class.java)
                                     intent.putExtra("LYRICS", song.lyrics)
                                     context.startActivity(intent)
                                 }
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(dimensionResource(id = R.dimen.spacing_medium)))
 
                             song.tabfilename?.takeIf { it.isNotBlank() }?.let {
                                 Image(
                                     painter = painterResource(id = R.drawable.chords2),
                                     contentDescription = stringResource(id = R.string.view_chords),
-                                    modifier = Modifier.size(24.dp).clickable {
+                                    modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small)).clickable {
                                         val imageFile = File(context.filesDir, "chords/$it")
                                         if (imageFile.exists()) {
                                             val intent = Intent(context, ChordsViewerActivity::class.java)
@@ -124,7 +129,7 @@ fun SongTable(viewModel: SongViewModel, songs: List<Song>, isWideScreen: Boolean
                                         }
                                     }
                                 )
-                                Spacer(modifier = Modifier.width(8.dp))
+                                Spacer(modifier = Modifier.width(dimensionResource(id = R.dimen.spacing_medium)))
                             }
 
                             song.mp3filename?.takeIf { it.isNotBlank() }?.let { filename ->
@@ -136,7 +141,7 @@ fun SongTable(viewModel: SongViewModel, songs: List<Song>, isWideScreen: Boolean
                                         id = if (currentlyPlayingSong == mp3Url) R.drawable.ic_stop else R.drawable.ic_play
                                     ),
                                     contentDescription = if (currentlyPlayingSong == mp3Url) "Stop" else "Play MP3",
-                                    modifier = Modifier.size(24.dp).clickable {
+                                    modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small)).clickable {
                                         if (currentlyPlayingSong == mp3Url) {
                                             viewModel.releaseExoPlayer()
                                             viewModel.currentlyPlayingSong.value = null
@@ -154,6 +159,7 @@ fun SongTable(viewModel: SongViewModel, songs: List<Song>, isWideScreen: Boolean
                             }
                         }
                     }
+                    HorizontalDivider(color = AppColors.TextColorLight)
 
                     // Ensure Mini Player is displayed when the song is playing
                     if (currentlyPlayingSong == "https://heilsame-lieder.de/audio/songs/${URLEncoder.encode(song.mp3filename ?: "", StandardCharsets.UTF_8.toString()).replace("+", "%20")}") {

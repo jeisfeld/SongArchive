@@ -35,6 +35,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import de.jeisfeld.songarchive.R
@@ -136,7 +137,8 @@ fun ChordsViewerScreen(imagePath: String, onClose: () -> Unit) {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_close),
                         contentDescription = "Close",
-                        tint = Color.Black
+                        tint = Color.Black,
+                        modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small))
                     )
                 }
             }

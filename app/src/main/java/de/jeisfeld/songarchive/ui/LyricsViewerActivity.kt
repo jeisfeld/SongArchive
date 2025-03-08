@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -35,6 +36,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.pointerInteropFilter
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -71,8 +74,10 @@ class LyricsViewerActivity : ComponentActivity() {
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun LyricsViewerScreen(lyrics: String, onClose: () -> Unit) {
-    var fontSize by remember { mutableStateOf(18f) } // Default font size
-    var lineHeight by remember { mutableStateOf(1.5f) } // Default line spacing
+    val isWide = LocalConfiguration.current.smallestScreenWidthDp > 450
+    val isTablet = LocalConfiguration.current.smallestScreenWidthDp > 600
+    var fontSize by remember { mutableStateOf(if (isTablet) 40f else if (isWide) 32f else 24f) } // Default font size
+    var lineHeight by remember { mutableStateOf(1.3f) } // Default line spacing
     var textAlign by remember { mutableStateOf(TextAlign.Left) } // Default alignment
     val scrollState = rememberScrollState()
     var isZooming by remember { mutableStateOf(false) } // Track if zoom is happening
@@ -146,7 +151,8 @@ fun LyricsViewerScreen(lyrics: String, onClose: () -> Unit) {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_close),
                         contentDescription = "Close",
-                        tint = Color.Black
+                        tint = Color.Black,
+                        modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small))
                     )
                 }
             }

@@ -27,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.media3.exoplayer.ExoPlayer
@@ -59,19 +60,19 @@ fun MiniAudioPlayer(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start =  8.dp, end = 8.dp, top = 4.dp),
+            .padding(start =  dimensionResource(id = R.dimen.spacing_medium), end = dimensionResource(id = R.dimen.spacing_medium), top = dimensionResource(id = R.dimen.spacing_small)),
         colors = CardDefaults.cardColors(containerColor = AppColors.BackgroundShaded)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(start = 8.dp)
+            modifier = Modifier.padding(start = dimensionResource(id = R.dimen.spacing_medium))
         ) {
             // Current Time
             Text(
                 text = formatTime(currentTime),
                 style = MaterialTheme.typography.bodySmall,
                 color = AppColors.TextColor,
-                modifier = Modifier.padding(end = 8.dp)
+                modifier = Modifier.padding(end = dimensionResource(id = R.dimen.spacing_medium))
             )
 
             // Progress Bar (with Ball Indicator)
@@ -112,10 +113,10 @@ fun MiniAudioPlayer(
                 text = formatTime(totalDuration),
                 style = MaterialTheme.typography.bodySmall,
                 color = AppColors.TextColor,
-                modifier = Modifier.padding(start = 8.dp)
+                modifier = Modifier.padding(start = dimensionResource(id = R.dimen.spacing_medium))
             )
 
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(dimensionResource(id = R.dimen.spacing_medium)))
 
             // Play/Pause Toggle Button
             IconButton(onClick = onPlayPauseToggle) {
@@ -124,7 +125,8 @@ fun MiniAudioPlayer(
                         id = if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play
                     ),
                     contentDescription = if (isPlaying) "Pause" else "Play",
-                    tint = AppColors.TextColor
+                    tint = AppColors.TextColor,
+                    modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small))
                 )
             }
         }
