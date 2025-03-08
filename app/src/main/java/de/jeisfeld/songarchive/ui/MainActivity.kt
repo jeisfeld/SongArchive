@@ -64,9 +64,22 @@ fun MainScreen(viewModel: SongViewModel) {
     var syncSuccess by remember { mutableStateOf<Boolean?>(null) }
     var isSyncing by remember { mutableStateOf(false) }
 
+    // If DB is empty on startup, then synchronize data
+    LaunchedEffect(Unit) {
+        viewModel.isDatabaseEmpty { isEmpty ->
+            if (isEmpty) {
+                isSyncing = true
+                viewModel.synchronizeDatabaseAndImages { success ->
+                    syncSuccess = success
+                    isSyncing = false
+                }
+            }
+        }
+    }
+
     LaunchedEffect(syncSuccess) {
         if (syncSuccess != null) {
-            isSyncing = false // Hide progress when sync completes
+            isSyncing = false
         }
     }
 
@@ -86,7 +99,7 @@ fun MainScreen(viewModel: SongViewModel) {
                         painter = painterResource(id = R.drawable.ic_launcher_foreground), // Replace with actual launcher icon
                         contentDescription = "App Icon",
                         modifier = Modifier
-                            .size(dimensionResource(id = R.dimen.icon_size_medium))
+                            .size(dimensionResource(id = R.dimen.icon_size_large))
                             .padding(end = dimensionResource(id = R.dimen.spacing_medium)) // Space between icon and text
                     )
 
@@ -100,7 +113,7 @@ fun MainScreen(viewModel: SongViewModel) {
                         painter = painterResource(id = R.drawable.ic_launcher_foreground), // Replace with actual launcher icon
                         contentDescription = "App Icon",
                         modifier = Modifier
-                            .size(dimensionResource(id = R.dimen.icon_size_medium))
+                            .size(dimensionResource(id = R.dimen.icon_size_large))
                             .padding(start = dimensionResource(id = R.dimen.spacing_medium)) // Space between text and icon
                     )
                 }
@@ -129,7 +142,6 @@ fun MainScreen(viewModel: SongViewModel) {
                         TextButton(onClick = {
                             showDialog = false
                             isSyncing = true // Show progress
-                            syncSuccess = null // Reset sync status
                             viewModel.synchronizeDatabaseAndImages { success ->
                                 syncSuccess = success
                             }

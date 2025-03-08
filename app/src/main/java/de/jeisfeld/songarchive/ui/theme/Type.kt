@@ -15,7 +15,7 @@ fun appTypography(): Typography {
         bodyLarge = TextStyle(fontSize = if (isTablet) 20.sp else if (isWide) 18.sp else 16.sp),
         bodyMedium = TextStyle(fontSize = if (isTablet) 18.sp else if (isWide) 16.sp else 14.sp),
         bodySmall = TextStyle(fontSize = if (isTablet) 16.sp else if (isWide) 14.sp else 12.sp),
-        titleLarge = TextStyle(fontSize = if (isTablet) 26.sp else if (isWide) 24.sp else 22.sp),
+        titleLarge = TextStyle(fontSize = if (isTablet) 30.sp else if (isWide) 24.sp else 22.sp),
         titleMedium = TextStyle(fontSize = if (isTablet) 22.sp else if (isWide) 20.sp else 18.sp),
         titleSmall = TextStyle(fontSize = if (isTablet) 20.sp else if (isWide) 18.sp else 16.sp),
     )

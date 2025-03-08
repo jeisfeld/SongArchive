@@ -43,6 +43,13 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun isDatabaseEmpty(callback: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            val count = songDao.getSongCount()
+            callback(count == 0)
+        }
+    }
+
     fun getExoPlayer(context: Context): ExoPlayer {
         if (exoPlayer == null) {
             exoPlayer = ExoPlayer.Builder(context).build()
