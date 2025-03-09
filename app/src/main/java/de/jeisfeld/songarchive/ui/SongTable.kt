@@ -171,6 +171,9 @@ fun SongTable(viewModel: SongViewModel, songs: List<Song>, isWideScreen: Boolean
                                     exoPlayer.pause()
                                     viewModel.isPlaying.value = false
                                 } else {
+                                    if (exoPlayer.currentPosition >= exoPlayer.duration) {
+                                        exoPlayer.seekTo(0)
+                                    }
                                     exoPlayer.play()
                                     viewModel.isPlaying.value = true
                                 }

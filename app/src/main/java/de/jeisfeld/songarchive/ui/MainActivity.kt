@@ -188,12 +188,10 @@ fun ProgressOverlay() {
 
 @Composable
 fun SearchBar(viewModel: SongViewModel) {
-    var searchQuery by remember { mutableStateOf("") }
-
     OutlinedTextField(
-        value = searchQuery,
+        value = viewModel.searchQuery.value,
         onValueChange = {
-            searchQuery = it
+            viewModel.searchQuery.value = it
             viewModel.searchSongs(it)
         },
         modifier = Modifier
@@ -210,9 +208,9 @@ fun SearchBar(viewModel: SongViewModel) {
             cursorColor = AppColors.TextColor
         ),
         trailingIcon = {
-            if (searchQuery.isNotEmpty()) {
+            if (viewModel.searchQuery.value.isNotEmpty()) {
                 IconButton(onClick = {
-                    searchQuery = "" // Clear text
+                    viewModel.searchQuery.value = "" // Clear text
                     viewModel.searchSongs("") // Reset search results
                 }) {
                     Icon(

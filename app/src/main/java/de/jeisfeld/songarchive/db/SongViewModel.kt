@@ -31,6 +31,7 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
     var currentlyPlayingSong = mutableStateOf<String?>(null)
     var isPlaying = mutableStateOf(false)
     var currentProgress = mutableStateOf(0L)
+    var searchQuery = mutableStateOf("")
     var exoPlayer: ExoPlayer? = null
 
     init {

@@ -48,11 +48,21 @@ fun MiniAudioPlayer(
     val currentTime by viewModel.currentProgress
     var totalDuration by remember { mutableStateOf(0L) }
 
-    // Update progress bar in real-time
     LaunchedEffect(Unit) {
         while (true) {
-            viewModel.currentProgress.value = exoPlayer.currentPosition
-            totalDuration = exoPlayer.duration.coerceAtLeast(0L)
+            val duration = exoPlayer.duration.coerceAtLeast(0L)
+            val position = exoPlayer.currentPosition
+
+            viewModel.currentProgress.value = position
+            totalDuration = duration
+
+            // Check if playback has reached the end
+            if (duration > 0 && position >= duration) {
+                viewModel.isPlaying.value = false
+                exoPlayer.pause()
+                //exoPlayer.seekTo(0L)
+            }
+
             delay(500)
         }
     }
