@@ -48,11 +48,28 @@ fun SongTable(viewModel: SongViewModel, songs: List<Song>, isWideScreen: Boolean
 
     // Restore progress after rotation
     LaunchedEffect(viewModel.currentlyPlayingSong.value) {
-        viewModel.currentlyPlayingSong.value?.let { url ->
-            exoPlayer.setMediaItem(MediaItem.fromUri(url))
+        viewModel.currentlyPlayingSong.value?.let { song ->
+            val encodedFilename = URLEncoder.encode(song.mp3filename, StandardCharsets.UTF_8.toString()).replace("+", "%20")
+            val mp3Url = "https://heilsame-lieder.de/audio/songs/$encodedFilename"
+            exoPlayer.setMediaItem(MediaItem.fromUri(mp3Url))
             exoPlayer.prepare()
             exoPlayer.seekTo(viewModel.currentProgress.value) // Restore progress
             exoPlayer.playWhenReady = viewModel.isPlaying.value
+        }
+    }
+
+    var displayedSongs = songs
+    if (isPlaying) {
+        val playingId = currentlyPlayingSong?.id
+        var foundPlayingSong = false
+        for (song in songs) {
+            if (song.id == playingId) {
+                foundPlayingSong = true
+                continue
+            }
+        }
+        if (! foundPlayingSong ) {
+            displayedSongs = currentlyPlayingSong?.let { songs + it } ?: songs
         }
     }
 
@@ -88,7 +105,7 @@ fun SongTable(viewModel: SongViewModel, songs: List<Song>, isWideScreen: Boolean
         }
         HorizontalDivider(color = AppColors.TextColorLight, thickness = 2.dp)
         LazyColumn(modifier = Modifier.fillMaxSize()) {
-            items(songs) { song ->
+            items(displayedSongs) { song ->
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -138,11 +155,11 @@ fun SongTable(viewModel: SongViewModel, songs: List<Song>, isWideScreen: Boolean
 
                                 Image(
                                     painter = painterResource(
-                                        id = if (currentlyPlayingSong == mp3Url) R.drawable.ic_stop else R.drawable.ic_play
+                                        id = if (currentlyPlayingSong?.id == song.id) R.drawable.ic_stop else R.drawable.ic_play
                                     ),
-                                    contentDescription = if (currentlyPlayingSong == mp3Url) "Stop" else "Play MP3",
+                                    contentDescription = if (currentlyPlayingSong?.id == song.id) "Stop" else "Play MP3",
                                     modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small)).clickable {
-                                        if (currentlyPlayingSong == mp3Url) {
+                                        if (currentlyPlayingSong?.id == song.id) {
                                             viewModel.releaseExoPlayer()
                                             viewModel.currentlyPlayingSong.value = null
                                             viewModel.isPlaying.value = false
@@ -150,7 +167,7 @@ fun SongTable(viewModel: SongViewModel, songs: List<Song>, isWideScreen: Boolean
                                             exoPlayer.setMediaItem(MediaItem.fromUri(Uri.parse(mp3Url)))
                                             exoPlayer.prepare()
                                             exoPlayer.playWhenReady = true
-                                            viewModel.currentlyPlayingSong.value = mp3Url
+                                            viewModel.currentlyPlayingSong.value = song
                                             viewModel.isPlaying.value = true
                                             viewModel.currentProgress.value = 0L
                                         }
@@ -162,7 +179,7 @@ fun SongTable(viewModel: SongViewModel, songs: List<Song>, isWideScreen: Boolean
                     HorizontalDivider(color = AppColors.TextColorLight)
 
                     // Ensure Mini Player is displayed when the song is playing
-                    if (currentlyPlayingSong == "https://heilsame-lieder.de/audio/songs/${URLEncoder.encode(song.mp3filename ?: "", StandardCharsets.UTF_8.toString()).replace("+", "%20")}") {
+                    if (currentlyPlayingSong?.id == song.id) {
                         MiniAudioPlayer(
                             exoPlayer = exoPlayer,
                             isPlaying = isPlaying,

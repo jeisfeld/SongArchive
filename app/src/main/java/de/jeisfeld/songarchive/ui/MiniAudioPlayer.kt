@@ -63,7 +63,7 @@ fun MiniAudioPlayer(
                 //exoPlayer.seekTo(0L)
             }
 
-            delay(500)
+            delay(100)
         }
     }
 

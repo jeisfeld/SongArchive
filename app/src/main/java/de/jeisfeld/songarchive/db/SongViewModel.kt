@@ -28,7 +28,7 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
     val songs: StateFlow<List<Song>> = _songs
     private val client = OkHttpClient()
 
-    var currentlyPlayingSong = mutableStateOf<String?>(null)
+    var currentlyPlayingSong = mutableStateOf<Song?>(null)
     var isPlaying = mutableStateOf(false)
     var currentProgress = mutableStateOf(0L)
     var searchQuery = mutableStateOf("")
