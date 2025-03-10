@@ -210,8 +210,12 @@ fun SearchBar(viewModel: SongViewModel) {
         trailingIcon = {
             if (viewModel.searchQuery.value.isNotEmpty()) {
                 IconButton(onClick = {
-                    viewModel.searchQuery.value = "" // Clear text
-                    viewModel.searchSongs("") // Reset search results
+                    viewModel.searchQuery.value = ""
+                    viewModel.searchSongs("")
+                    viewModel.releaseExoPlayer()
+                    viewModel.currentlyPlayingSong.value = null
+                    viewModel.isPlaying.value = false
+                    viewModel.currentProgress.value = 0L
                 }) {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_close),

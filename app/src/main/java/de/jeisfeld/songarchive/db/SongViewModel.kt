@@ -67,14 +67,13 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val normalizedQuery = removeAccents(input) // Normalize accents & quotes
             val words = normalizedQuery.split(" ").filter { it.isNotBlank() }
-
-            val fullQuery = "%$normalizedQuery%"
             val wordList = words.map { "%$it%" }.take(5) + List(5) { "%%" } // Ensure 5 words are always passed
+            val wordList2 = words.map { "% $it%" }.take(5) + List(5) { "%%" }
 
             songDao.searchSongs(
                 "%$normalizedQuery%",
-                fullQuery,
-                wordList[0], wordList[1], wordList[2], wordList[3], wordList[4]
+                "% $normalizedQuery%",
+                wordList[0], wordList2[0], wordList[1], wordList2[1], wordList[2], wordList2[2], wordList[3], wordList2[3], wordList[4], wordList2[4]
             ).collectLatest { results ->
                 _songs.value = results
             }
@@ -96,10 +95,10 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
                         mp3filename2 = it.mp3filename2,
 
                         // Normalize fields before storing in Room
-                        title_normalized = removeAccents(it.title),
-                        lyrics_normalized = removeAccents(it.lyrics ?: ""),
-                        author_normalized = removeAccents(it.author ?: ""),
-                        keywords_normalized = removeAccents(it.keywords ?: "")
+                        title_normalized = " " + removeAccents(it.title).trim(),
+                        lyrics_normalized = " " + removeAccents(it.lyrics ?: "").trim(),
+                        author_normalized = " " + removeAccents(it.author ?: "").trim(),
+                        keywords_normalized = " " + removeAccents(it.keywords ?: "").trim()
                     )
                 }
 

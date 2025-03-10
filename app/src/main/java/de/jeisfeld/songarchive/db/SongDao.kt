@@ -16,7 +16,37 @@ interface SongDao {
             CASE 
                 WHEN lyrics_normalized LIKE :fullQuery THEN 1 ELSE 0 
             END AS full_lyrics_match,
-            -- Count how many search words appear in title
+            CASE 
+                WHEN keywords_normalized LIKE :fullQuery THEN 1 ELSE 0 
+            END AS full_keywords_match,
+            (
+                CASE WHEN title_normalized LIKE :word1a THEN 1 ELSE 0 END +
+                CASE WHEN title_normalized LIKE :word2a THEN 1 ELSE 0 END +
+                CASE WHEN title_normalized LIKE :word3a THEN 1 ELSE 0 END +
+                CASE WHEN title_normalized LIKE :word4a THEN 1 ELSE 0 END +
+                CASE WHEN title_normalized LIKE :word5a THEN 1 ELSE 0 END
+            ) AS title_word_match_count,
+            (
+                CASE WHEN author_normalized LIKE :word1a THEN 1 ELSE 0 END +
+                CASE WHEN author_normalized LIKE :word2a THEN 1 ELSE 0 END +
+                CASE WHEN author_normalized LIKE :word3a THEN 1 ELSE 0 END +
+                CASE WHEN author_normalized LIKE :word4a THEN 1 ELSE 0 END +
+                CASE WHEN author_normalized LIKE :word5a THEN 1 ELSE 0 END
+            ) AS author_word_match_count,
+            (
+                CASE WHEN keywords_normalized LIKE :word1a THEN 1 ELSE 0 END +
+                CASE WHEN keywords_normalized LIKE :word2a THEN 1 ELSE 0 END +
+                CASE WHEN keywords_normalized LIKE :word3a THEN 1 ELSE 0 END +
+                CASE WHEN keywords_normalized LIKE :word4a THEN 1 ELSE 0 END +
+                CASE WHEN keywords_normalized LIKE :word5a THEN 1 ELSE 0 END
+            ) AS keywords_word_match_count,
+            (
+                CASE WHEN lyrics_normalized LIKE :word1a THEN 1 ELSE 0 END +
+                CASE WHEN lyrics_normalized LIKE :word2a THEN 1 ELSE 0 END +
+                CASE WHEN lyrics_normalized LIKE :word3a THEN 1 ELSE 0 END +
+                CASE WHEN lyrics_normalized LIKE :word4a THEN 1 ELSE 0 END +
+                CASE WHEN lyrics_normalized LIKE :word5a THEN 1 ELSE 0 END
+            ) AS lyrics_word_match_count,
             (
                 CASE WHEN title_normalized LIKE :word1 THEN 1 ELSE 0 END +
                 CASE WHEN title_normalized LIKE :word2 THEN 1 ELSE 0 END +
@@ -24,8 +54,6 @@ interface SongDao {
                 CASE WHEN title_normalized LIKE :word4 THEN 1 ELSE 0 END +
                 CASE WHEN title_normalized LIKE :word5 THEN 1 ELSE 0 END
             ) AS title_match_count,
-            
-            -- Count how many search words appear in lyrics
             (
                 CASE WHEN lyrics_normalized LIKE :word1 THEN 1 ELSE 0 END +
                 CASE WHEN lyrics_normalized LIKE :word2 THEN 1 ELSE 0 END +
@@ -69,6 +97,11 @@ interface SongDao {
         ORDER BY 
             full_title_match DESC,
             full_lyrics_match DESC,
+            full_keywords_match DESC,
+            title_word_match_count DESC,
+            lyrics_word_match_count DESC,
+            author_word_match_count DESC,
+            keywords_word_match_count DESC,
             title_match_count DESC,
             lyrics_match_count DESC,
             id ASC
@@ -77,10 +110,15 @@ interface SongDao {
         query: String,
         fullQuery: String,
         word1: String,
+        word1a: String,
         word2: String,
+        word2a: String,
         word3: String,
+        word3a: String,
         word4: String,
-        word5: String
+        word4a: String,
+        word5: String,
+        word5a: String
     ): Flow<List<Song>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
