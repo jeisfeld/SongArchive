@@ -93,10 +93,10 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
                 val fetchedSongs = response.songs.map {
                     Song(
                         id = it.id,
-                        title = it.title,
-                        lyrics = it.lyrics ?: "",
-                        author = it.author ?: "",
-                        keywords = it.keywords ?: "",
+                        title = it.title.trim(),
+                        lyrics = it.lyrics?.trim() ?: "",
+                        author = it.author ?.trim() ?: "",
+                        keywords = it.keywords ?.trim() ?: "",
                         tabfilename = it.tabfilename,
                         mp3filename = it.mp3filename,
                         mp3filename2 = it.mp3filename2,
@@ -113,8 +113,8 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
                 val fetchedMeanings = response.meanings.map {
                     Meaning(
                         id = it.id,
-                        title = it.title,
-                        meaning = it.meaning
+                        title = it.title.trim(),
+                        meaning = it.meaning.trim()
                     )
                 }
 
