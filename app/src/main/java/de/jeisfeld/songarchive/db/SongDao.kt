@@ -129,6 +129,15 @@ interface SongDao {
     @Query("DELETE FROM songs")
     suspend fun clearSongs()
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertMeanings(songs: List<Meaning>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertSongMeanings(songs: List<SongMeaning>)
+
+    @Query("DELETE FROM meaning")
+    suspend fun clearMeanings()
+
     @Query("SELECT * FROM songs")
     suspend fun getAllSongs(): List<Song>
 

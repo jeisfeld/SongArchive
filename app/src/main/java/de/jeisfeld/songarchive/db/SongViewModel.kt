@@ -82,8 +82,11 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
     fun synchronizeDatabaseAndImages(onComplete: (Boolean) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                // Step 1: Synchronize Database
-                val fetchedSongs = RetrofitClient.api.fetchSongs().map {
+                // Fetch all data in one API call
+                val response = RetrofitClient.api.fetchAllData()
+
+                // Process Songs
+                val fetchedSongs = response.songs.map {
                     Song(
                         id = it.id,
                         title = it.title,
@@ -102,9 +105,31 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
                     )
                 }
 
+                // Process Meanings
+                val fetchedMeanings = response.meanings.map {
+                    Meaning(
+                        id = it.id,
+                        title = it.title,
+                        meaning = it.meaning
+                    )
+                }
+
+                // Process Song-Meaning Relationships
+                val fetchedSongMeanings = response.song_meanings.map {
+                    SongMeaning(
+                        songId = it.song_id,
+                        meaningId = it.meaning_id
+                    )
+                }
+
+                // Store in local Room database
+                songDao.clearMeanings()
                 songDao.clearSongs()
                 songDao.insertSongs(fetchedSongs)
                 _songs.value = fetchedSongs
+
+                songDao.insertMeanings(fetchedMeanings)
+                songDao.insertSongMeanings(fetchedSongMeanings)
 
                 // Step 2: Download and Extract Images
                 val success = downloadAndExtractZip(getApplication(), "https://heilsame-lieder.de/download_chords.php")
