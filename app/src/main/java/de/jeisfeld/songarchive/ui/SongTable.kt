@@ -1,7 +1,6 @@
 package de.jeisfeld.songarchive.ui
 
 import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -30,6 +29,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
 import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.db.Song
@@ -75,7 +75,7 @@ fun SongTable(viewModel: SongViewModel, songs: List<Song>, isWideScreen: Boolean
 
     Column(modifier = Modifier.fillMaxSize()) {
         // Fixed Table Header (Outside LazyColumn)
-        Row(modifier = Modifier.fillMaxWidth().padding(bottom = dimensionResource(id = R.dimen.spacing_small))) {
+        Row(modifier = Modifier.fillMaxWidth().padding(bottom = dimensionResource(id = R.dimen.spacing_small), top = dimensionResource(id = R.dimen.spacing_heading_vertical))) {
             Text(
                 text = stringResource(id = R.string.column_id),
                 modifier = Modifier.width(dimensionResource(id = R.dimen.width_id)),
@@ -151,7 +151,7 @@ fun SongTable(viewModel: SongViewModel, songs: List<Song>, isWideScreen: Boolean
 
                             song.mp3filename?.takeIf { it.isNotBlank() }?.let { filename ->
                                 val encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8.toString()).replace("+", "%20")
-                                val mp3Url = "https://heilsame-lieder.de/audio/songs/$encodedFilename"
+                                val mp3Url = "https://heilsame-lieder.de/audio/songs/$encodedFilename".toUri()
 
                                 Image(
                                     painter = painterResource(
@@ -164,7 +164,7 @@ fun SongTable(viewModel: SongViewModel, songs: List<Song>, isWideScreen: Boolean
                                             viewModel.currentlyPlayingSong.value = null
                                             viewModel.isPlaying.value = false
                                         } else {
-                                            exoPlayer.setMediaItem(MediaItem.fromUri(Uri.parse(mp3Url)))
+                                            exoPlayer.setMediaItem(MediaItem.fromUri(mp3Url))
                                             exoPlayer.prepare()
                                             exoPlayer.playWhenReady = true
                                             viewModel.currentlyPlayingSong.value = song

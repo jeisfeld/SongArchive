@@ -85,10 +85,11 @@ fun MainScreen(viewModel: SongViewModel) {
 
     // Wrap everything in a Box to ensure the overlay appears above content
     Box(modifier = Modifier.fillMaxSize().background(AppColors.Background)) {
-        Column(modifier = Modifier.padding(dimensionResource(id = R.dimen.spacing_large))) {
+        Column(modifier = Modifier.padding(start = dimensionResource(id = R.dimen.spacing_medium),
+            end = dimensionResource(id = R.dimen.spacing_medium),
+            top = dimensionResource(id = R.dimen.spacing_heading_vertical))) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Row(
                     modifier = Modifier.weight(1f), // Expands to take available space
@@ -99,8 +100,8 @@ fun MainScreen(viewModel: SongViewModel) {
                         painter = painterResource(id = R.drawable.ic_launcher_foreground), // Replace with actual launcher icon
                         contentDescription = "App Icon",
                         modifier = Modifier
-                            .size(dimensionResource(id = R.dimen.icon_size_large))
                             .padding(end = dimensionResource(id = R.dimen.spacing_medium)) // Space between icon and text
+                            .size(dimensionResource(id = R.dimen.icon_size_medium))
                     )
 
                     Text(
@@ -113,13 +114,13 @@ fun MainScreen(viewModel: SongViewModel) {
                         painter = painterResource(id = R.drawable.ic_launcher_foreground), // Replace with actual launcher icon
                         contentDescription = "App Icon",
                         modifier = Modifier
-                            .size(dimensionResource(id = R.dimen.icon_size_large))
                             .padding(start = dimensionResource(id = R.dimen.spacing_medium)) // Space between text and icon
+                            .size(dimensionResource(id = R.dimen.icon_size_medium))
                     )
                 }
 
                 // Sync Button on the Right
-                IconButton(onClick = { showDialog = true }) {
+                IconButton(onClick = { showDialog = true }, modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_large))) {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_sync),
                         contentDescription = stringResource(id = R.string.sync),
@@ -137,7 +138,7 @@ fun MainScreen(viewModel: SongViewModel) {
                 AlertDialog(
                     onDismissRequest = { showDialog = false },
                     title = { Text(stringResource(id = R.string.sync_title)) },
-                    text = { Text(stringResource(id = R.string.sync_message)) },
+                    text = { Text(stringResource(id = R.string.sync_message), fontSize = MaterialTheme.typography.bodyLarge.fontSize) },
                     confirmButton = {
                         TextButton(onClick = {
                             showDialog = false
@@ -180,7 +181,7 @@ fun ProgressOverlay() {
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             CircularProgressIndicator(color = Color.White) // Spinning loader
-            Spacer(modifier = Modifier.height(dimensionResource(id = R.dimen.spacing_large)))
+            Spacer(modifier = Modifier.height(dimensionResource(id = R.dimen.spacing_heading_vertical)))
             Text(text = stringResource(id = R.string.syncing), color = Color.White)
         }
     }
@@ -196,7 +197,7 @@ fun SearchBar(viewModel: SongViewModel) {
         },
         modifier = Modifier
             .fillMaxWidth()
-            .padding(dimensionResource(id = R.dimen.spacing_medium)),
+            .padding(start = dimensionResource(id = R.dimen.spacing_medium), end = dimensionResource(id = R.dimen.spacing_medium)),
         singleLine = true,
         label = { Text(stringResource(id = R.string.search)) },
         colors = OutlinedTextFieldDefaults.colors(
