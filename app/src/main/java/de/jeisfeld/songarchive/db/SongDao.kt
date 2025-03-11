@@ -8,7 +8,8 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface SongDao {
-    @Query("""
+    @Query(
+        """
         SELECT *, 
             CASE 
                 WHEN title_normalized LIKE :fullQuery THEN 1 ELSE 0 
@@ -105,7 +106,8 @@ interface SongDao {
             title_match_count DESC,
             lyrics_match_count DESC,
             id ASC
-    """)
+    """
+    )
     fun searchSongs(
         query: String,
         fullQuery: String,
@@ -132,5 +134,12 @@ interface SongDao {
 
     @Query("SELECT count(*) FROM songs")
     suspend fun getSongCount(): Int
+
+    @Query(
+        """SELECT m.* FROM meaning m 
+           INNER JOIN song_meaning sm ON m.id = sm.meaningId 
+           WHERE sm.songId = :songId"""
+    )
+    suspend fun getMeaningsForSong(songId: String): List<Meaning>
 }
 
