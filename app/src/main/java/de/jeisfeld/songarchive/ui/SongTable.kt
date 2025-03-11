@@ -35,6 +35,10 @@ import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.db.Song
 import de.jeisfeld.songarchive.db.SongViewModel
 import de.jeisfeld.songarchive.ui.theme.AppColors
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -140,9 +144,16 @@ fun SongTable(viewModel: SongViewModel, songs: List<Song>, isWideScreen: Boolean
                                     modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small)).clickable {
                                         val imageFile = File(context.filesDir, "chords/$it")
                                         if (imageFile.exists()) {
-                                            val intent = Intent(context, ChordsViewerActivity::class.java)
-                                            intent.putExtra("IMAGE_PATH", imageFile.absolutePath)
-                                            context.startActivity(intent)
+                                            CoroutineScope(Dispatchers.IO).launch {
+                                                val meanings = viewModel.getMeaningsForSong(song.id) // Fetch in IO thread
+                                                withContext(Dispatchers.Main) {  // Switch back to Main thread to start Activity
+                                                    val intent = Intent(context, ChordsViewerActivity::class.java).apply {
+                                                        putExtra("IMAGE_PATH", imageFile.absolutePath)
+                                                        putExtra("MEANINGS", meanings)  // Ensure Meaning is Parcelable
+                                                    }
+                                                    context.startActivity(intent)
+                                                }
+                                            }
                                         }
                                     }
                                 )

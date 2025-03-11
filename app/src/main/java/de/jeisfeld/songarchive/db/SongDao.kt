@@ -149,6 +149,6 @@ interface SongDao {
            INNER JOIN song_meaning sm ON m.id = sm.meaningId 
            WHERE sm.songId = :songId"""
     )
-    suspend fun getMeaningsForSong(songId: String): List<Meaning>
+    fun getMeaningsForSong(songId: String): List<Meaning>
 }
 

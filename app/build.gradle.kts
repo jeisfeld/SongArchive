@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
+    id("kotlin-parcelize")
 }
 
 android {
@@ -64,4 +65,5 @@ dependencies {
     // Audio player
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.ui)
+
 }

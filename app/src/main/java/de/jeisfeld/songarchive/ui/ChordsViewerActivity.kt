@@ -13,10 +13,13 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -39,6 +42,7 @@ import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import de.jeisfeld.songarchive.R
+import de.jeisfeld.songarchive.db.Meaning
 
 class ChordsViewerActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -60,10 +64,11 @@ class ChordsViewerActivity : ComponentActivity() {
 
         // Get the image path from intent
         val imagePath = intent.getStringExtra("IMAGE_PATH") ?: return
+        val meanings: List<Meaning> = intent.getParcelableArrayListExtra("MEANINGS") ?: emptyList()
 
         setContent {
             MaterialTheme {
-                ChordsViewerScreen(imagePath) { finish() }
+                ChordsViewerScreen(imagePath, meanings) { finish() }
             }
         }
     }
@@ -71,7 +76,7 @@ class ChordsViewerActivity : ComponentActivity() {
 }
 
 @Composable
-fun ChordsViewerScreen(imagePath: String, onClose: () -> Unit) {
+fun ChordsViewerScreen(imagePath: String, meanings: List<Meaning>, onClose: () -> Unit) {
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
 
@@ -130,16 +135,34 @@ fun ChordsViewerScreen(imagePath: String, onClose: () -> Unit) {
                     .padding(8.dp),
                 contentAlignment = Alignment.TopEnd
             ) {
-                IconButton(
-                    onClick = onClose,
-                    modifier = Modifier.size(24.dp) // Adjust size if needed
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_close),
-                        contentDescription = "Close",
-                        tint = Color.Black,
-                        modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small))
-                    )
+                Row {
+                    if (!meanings.isEmpty()) {
+                        IconButton(
+                            onClick = { /* TODO: Open meanings display */ },
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_info),
+                                contentDescription = "Info",
+                                tint = Color.Black,
+                                modifier = Modifier
+                                    .size(dimensionResource(id = R.dimen.icon_size_small))
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(dimensionResource(id = R.dimen.spacing_medium)))
+                    }
+
+                    IconButton(
+                        onClick = onClose,
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_close),
+                            contentDescription = "Close",
+                            tint = Color.Black,
+                            modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small))
+                        )
+                    }
                 }
             }
         }

@@ -63,6 +63,10 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
         exoPlayer = null
     }
 
+    fun getMeaningsForSong(id: String): ArrayList<Meaning> {
+        return ArrayList(songDao.getMeaningsForSong(id))
+    }
+
     fun searchSongs(input: String) {
         viewModelScope.launch {
             val normalizedQuery = removeAccents(input) // Normalize accents & quotes
