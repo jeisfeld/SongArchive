@@ -572,3 +572,13 @@ window.addEventListener('click', function(event) {
 	}
 });
 
+let userAgent = navigator.userAgent || navigator.vendor || window.opera;
+let linkElement = document.getElementById("androidapp-link");
+
+if (/Android/i.test(userAgent)) {
+    linkElement.style.display = "block"; // Show link
+} else {
+    linkElement.style.display = "none"; // Hide link
+}
+
+

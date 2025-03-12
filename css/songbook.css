@@ -362,6 +362,19 @@ body.no-scroll {
 	color: var(--text-color);
 }
 
+.androidapp {
+	position: fixed; /* Fix the element relative to the viewport */
+	top: 10px;
+ 	left: 50%; /* Move to the center horizontally */
+    transform: translateX(-50%); /* Adjust position to truly center */
+	font-size: 1em;
+	z-index: 500; /* Ensure it appears above other elements */
+	transition: color 0.3s;
+	text-decoration: none;
+	display: none;
+	color: #006AC8;
+}
+
 .modal {
 	display: none; /* Hidden by default */
 	position: fixed;
