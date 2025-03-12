@@ -61,7 +61,6 @@ fun MainScreen(viewModel: SongViewModel) {
     val songs by viewModel.songs.collectAsState()
     val isWideScreen = LocalConfiguration.current.screenWidthDp > 600
     var showDialog by remember { mutableStateOf(false) }
-    var syncSuccess by remember { mutableStateOf<Boolean?>(null) }
     var isSyncing by remember { mutableStateOf(false) }
 
     // If DB is empty on startup, then synchronize data
@@ -70,16 +69,9 @@ fun MainScreen(viewModel: SongViewModel) {
             if (isEmpty) {
                 isSyncing = true
                 viewModel.synchronizeDatabaseAndImages { success ->
-                    syncSuccess = success
                     isSyncing = false
                 }
             }
-        }
-    }
-
-    LaunchedEffect(syncSuccess) {
-        if (syncSuccess != null) {
-            isSyncing = false
         }
     }
 
@@ -144,7 +136,7 @@ fun MainScreen(viewModel: SongViewModel) {
                             showDialog = false
                             isSyncing = true // Show progress
                             viewModel.synchronizeDatabaseAndImages { success ->
-                                syncSuccess = success
+                                isSyncing = false
                             }
                         }) {
                             Text(stringResource(id = R.string.yes))
@@ -156,11 +148,6 @@ fun MainScreen(viewModel: SongViewModel) {
                         }
                     }
                 )
-            }
-
-            syncSuccess?.let {
-                val message = if (it) R.string.sync_success else R.string.sync_failed
-                Text(text = stringResource(id = message), color = if (it) Color.Green else Color.Red)
             }
         }
 
