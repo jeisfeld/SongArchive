@@ -53,7 +53,9 @@ fun SongTable(viewModel: SongViewModel, songs: List<Song>, isWideScreen: Boolean
     // Restore progress after rotation
     LaunchedEffect(viewModel.currentlyPlayingSong.value) {
         viewModel.currentlyPlayingSong.value?.let { song ->
-            val encodedFilename = URLEncoder.encode(song.mp3filename, StandardCharsets.UTF_8.toString()).replace("+", "%20")
+
+            val filename = if (viewModel.currentSongId.value == 0) { song.mp3filename } else { song.mp3filename2 }
+            val encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8.toString()).replace("+", "%20")
             val mp3Url = "https://heilsame-lieder.de/audio/songs/$encodedFilename"
             exoPlayer.setMediaItem(MediaItem.fromUri(mp3Url))
             exoPlayer.prepare()
@@ -181,6 +183,7 @@ fun SongTable(viewModel: SongViewModel, songs: List<Song>, isWideScreen: Boolean
                                             viewModel.currentlyPlayingSong.value = song
                                             viewModel.isPlaying.value = true
                                             viewModel.currentProgress.value = 0L
+                                            viewModel.currentSongId.value = 0
                                         }
                                     }
                                 )
@@ -193,6 +196,7 @@ fun SongTable(viewModel: SongViewModel, songs: List<Song>, isWideScreen: Boolean
                     if (currentlyPlayingSong?.id == song.id) {
                         MiniAudioPlayer(
                             exoPlayer = exoPlayer,
+                            song = song,
                             isPlaying = isPlaying,
                             onPlayPauseToggle = {
                                 if (exoPlayer.isPlaying) {

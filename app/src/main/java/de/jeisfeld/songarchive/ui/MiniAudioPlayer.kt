@@ -30,16 +30,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
+import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
 import de.jeisfeld.songarchive.R
+import de.jeisfeld.songarchive.db.Song
 import de.jeisfeld.songarchive.db.SongViewModel
 import de.jeisfeld.songarchive.ui.theme.AppColors
 import kotlinx.coroutines.delay
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MiniAudioPlayer(
     exoPlayer: ExoPlayer,
+    song: Song,
     isPlaying: Boolean,
     onPlayPauseToggle: () -> Unit,
     viewModel: SongViewModel,
@@ -128,8 +134,30 @@ fun MiniAudioPlayer(
 
             Spacer(modifier = Modifier.width(dimensionResource(id = R.dimen.spacing_medium)))
 
+            song.mp3filename2?.takeIf { it.isNotBlank() }?.let {
+                IconButton(modifier = Modifier.padding(end = dimensionResource(id = R.dimen.spacing_medium)).size(dimensionResource(id = R.dimen.icon_size_small)),
+                    onClick = {
+                        viewModel.currentSongId.value = (viewModel.currentSongId.value + 1) % 2
+                        val filename = if (viewModel.currentSongId.value == 0) { song.mp3filename } else { song.mp3filename2 }
+                        val encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8.toString()).replace("+", "%20")
+                        val mp3Url = "https://heilsame-lieder.de/audio/songs/$encodedFilename".toUri()
+                        exoPlayer.setMediaItem(MediaItem.fromUri(mp3Url))
+                        exoPlayer.seekTo(0L)
+                    }) {
+                    Icon(
+                        painter = painterResource(
+                            id = R.drawable.ic_next
+                        ),
+                        contentDescription = "Next",
+                        tint = AppColors.TextColor,
+                        modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small))
+                    )
+                }
+            }
+
             // Play/Pause Toggle Button
-            IconButton(onClick = onPlayPauseToggle) {
+            IconButton(modifier = Modifier.padding(end = dimensionResource(id = R.dimen.spacing_medium)).size(dimensionResource(id = R.dimen.icon_size_small)),
+                onClick = onPlayPauseToggle) {
                 Icon(
                     painter = painterResource(
                         id = if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play
