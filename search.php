@@ -12,6 +12,18 @@ $query = isset ( $_GET ['q'] ) ? trim ( $_GET ['q'] ) : "";
 $is_valid_id = preg_match ( '/^\d{4}[a-zA-Z]?$/', $query );
 $isSingleLetter = preg_match ( '/^[a-zA-Z]$/', $query );
 
+function interpolateQuery($query, $params) {
+	foreach ($params as $key => $value) {
+		// Escape string values and format for SQL
+		$replacement = is_numeric($value) ? $value : "'" . addslashes($value) . "'";
+		// Support both named (:param) and positional (?) placeholders
+		$query = preg_replace('/\?/', $replacement, $query, 1);
+		$query = str_replace(":$key", $replacement, $query);
+	}
+	// Replace newlines, tabs, and multiple spaces with a single space
+	return preg_replace('/\s+/', ' ', trim($query));
+}
+
 // SQL Query for valid id
 if ($is_valid_id) {
 	// If searching by ID
@@ -178,9 +190,8 @@ $songs = [ ];
 while ( $row = $result->fetch_assoc () ) {
 	$songs [] = $row;
 }
-error_log ( "Result size for " . $query . ": " . count ( $songs ) );
-// error_log ( "SQL: " . $sql );
-// error_log ( "Params: " . json_encode ( @$params ) );
+// error_log ( "Result size for " . $query . ": " . count ( $songs ) );
+// error_log ( "SQL: " . interpolateQuery($sql, $params));
 
 // Return JSON
 echo json_encode ( $songs );
