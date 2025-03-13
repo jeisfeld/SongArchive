@@ -47,8 +47,8 @@ import de.jeisfeld.songarchive.ui.theme.AppTheme
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val viewModel = ViewModelProvider(this)[SongViewModel::class.java]
         setContent {
-            val viewModel: SongViewModel = ViewModelProvider(this)[SongViewModel::class.java]
             AppTheme {
                 MainScreen(viewModel)
             }
@@ -201,10 +201,6 @@ fun SearchBar(viewModel: SongViewModel) {
                 IconButton(onClick = {
                     viewModel.searchQuery.value = ""
                     viewModel.searchSongs("")
-                    viewModel.releaseExoPlayer()
-                    viewModel.currentlyPlayingSong.value = null
-                    viewModel.isPlaying.value = false
-                    viewModel.currentProgress.value = 0L
                 }) {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_close),

@@ -1,5 +1,6 @@
 package de.jeisfeld.songarchive.ui
 
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -21,21 +22,19 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
-import androidx.media3.common.MediaItem
-import androidx.media3.exoplayer.ExoPlayer
+import de.jeisfeld.songarchive.audio.AudioPlayerService
+import de.jeisfeld.songarchive.audio.PlaybackViewModel
 import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.db.Song
-import de.jeisfeld.songarchive.db.SongViewModel
 import de.jeisfeld.songarchive.ui.theme.AppColors
 import kotlinx.coroutines.delay
 import java.net.URLEncoder
@@ -44,28 +43,23 @@ import java.nio.charset.StandardCharsets
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MiniAudioPlayer(
-    exoPlayer: ExoPlayer,
     song: Song,
     isPlaying: Boolean,
     onPlayPauseToggle: () -> Unit,
-    viewModel: SongViewModel,
     onStop: () -> Unit
 ) {
-    val currentTime by viewModel.currentProgress
-    var totalDuration by remember { mutableStateOf(0L) }
+    val currentTime by PlaybackViewModel.currentProgress.collectAsState()
+    val totalDuration by PlaybackViewModel.totalDuration.collectAsState()
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         while (true) {
-            val duration = exoPlayer.duration.coerceAtLeast(0L)
-            val position = exoPlayer.currentPosition
-
-            viewModel.currentProgress.value = position
-            totalDuration = duration
-
-            // Check if playback has reached the end
-            if (duration > 0 && position >= duration) {
-                viewModel.isPlaying.value = false
-                exoPlayer.pause()
+            if (totalDuration > 0 && currentTime >= totalDuration) {
+                PlaybackViewModel.setPlaying(false)
+                val intent = Intent(context, AudioPlayerService::class.java).apply {
+                    action = if (PlaybackViewModel.isPlaying.value) "PAUSE" else "RESUME"
+                }
+                context.startService(intent)
                 //exoPlayer.seekTo(0L)
             }
 
@@ -96,8 +90,12 @@ fun MiniAudioPlayer(
                 value = if (totalDuration > 0) (currentTime.toFloat() / totalDuration) else 0f,
                 onValueChange = { progress ->
                     val newPosition = (progress * totalDuration).toLong()
-                    viewModel.currentProgress.value = newPosition // Update UI immediately
-                    exoPlayer.seekTo(newPosition) // Seek to new position
+                    PlaybackViewModel.setProgress(newPosition)
+                    val intent = Intent(context, AudioPlayerService::class.java).apply {
+                        action = "SEEK"
+                        putExtra("SEEK_POSITION", (progress * totalDuration).toLong())
+                    }
+                    context.startService(intent)
                 },
                 modifier = Modifier.weight(1f),
                 thumb = {
@@ -137,12 +135,15 @@ fun MiniAudioPlayer(
             song.mp3filename2?.takeIf { it.isNotBlank() }?.let {
                 IconButton(modifier = Modifier.padding(end = dimensionResource(id = R.dimen.spacing_medium)).size(dimensionResource(id = R.dimen.icon_size_small)),
                     onClick = {
-                        viewModel.currentSongId.value = (viewModel.currentSongId.value + 1) % 2
-                        val filename = if (viewModel.currentSongId.value == 0) { song.mp3filename } else { song.mp3filename2 }
+                        PlaybackViewModel.changeSong()
+                        val filename = if (PlaybackViewModel.currentMp3Id.value == 0) { song.mp3filename } else { song.mp3filename2 }
                         val encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8.toString()).replace("+", "%20")
                         val mp3Url = "https://heilsame-lieder.de/audio/songs/$encodedFilename".toUri()
-                        exoPlayer.setMediaItem(MediaItem.fromUri(mp3Url))
-                        exoPlayer.seekTo(0L)
+                        val intent = Intent(context, AudioPlayerService::class.java).apply {
+                            action = "CHANGESONG"
+                            putExtra("URL", mp3Url)
+                        }
+                        context.startForegroundService(intent)
                     }) {
                     Icon(
                         painter = painterResource(

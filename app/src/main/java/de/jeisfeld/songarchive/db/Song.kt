@@ -1,9 +1,12 @@
 package de.jeisfeld.songarchive.db
 
+import android.os.Parcelable
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import kotlinx.parcelize.Parcelize
 
 @Entity(tableName = "songs")
+@Parcelize
 data class Song(
     @PrimaryKey val id: String,
 
@@ -19,4 +22,4 @@ data class Song(
     val lyrics_normalized: String,
     val author_normalized: String,
     val keywords_normalized: String
-)
+): Parcelable

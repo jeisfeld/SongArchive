@@ -6,7 +6,6 @@ import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.media3.exoplayer.ExoPlayer
 import de.jeisfeld.songarchive.RetrofitClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,13 +26,7 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
     private val _songs = MutableStateFlow<List<Song>>(emptyList())
     val songs: StateFlow<List<Song>> = _songs
     private val client = OkHttpClient()
-
-    var currentlyPlayingSong = mutableStateOf<Song?>(null)
-    var isPlaying = mutableStateOf(false)
-    var currentProgress = mutableStateOf(0L)
-    var currentSongId = mutableStateOf(0)
     var searchQuery = mutableStateOf("")
-    var exoPlayer: ExoPlayer? = null
 
     init {
         loadAllSongs()
@@ -50,18 +43,6 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
             val count = songDao.getSongCount()
             callback(count == 0)
         }
-    }
-
-    fun getExoPlayer(context: Context): ExoPlayer {
-        if (exoPlayer == null) {
-            exoPlayer = ExoPlayer.Builder(context).build()
-        }
-        return exoPlayer!!
-    }
-
-    fun releaseExoPlayer() {
-        exoPlayer?.release()
-        exoPlayer = null
     }
 
     fun getMeaningsForSong(id: String): ArrayList<Meaning> {
@@ -84,6 +65,7 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
+
     fun synchronizeDatabaseAndImages(onComplete: (Boolean) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -96,8 +78,8 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
                         id = it.id,
                         title = it.title.trim(),
                         lyrics = it.lyrics?.trim() ?: "",
-                        author = it.author ?.trim() ?: "",
-                        keywords = it.keywords ?.trim() ?: "",
+                        author = it.author?.trim() ?: "",
+                        keywords = it.keywords?.trim() ?: "",
                         tabfilename = it.tabfilename,
                         mp3filename = it.mp3filename,
                         mp3filename2 = it.mp3filename2,

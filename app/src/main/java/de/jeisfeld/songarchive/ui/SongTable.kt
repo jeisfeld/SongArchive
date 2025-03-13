@@ -18,7 +18,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,8 +29,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.core.net.toUri
-import androidx.media3.common.MediaItem
+import de.jeisfeld.songarchive.audio.AudioPlayerService
+import de.jeisfeld.songarchive.audio.PlaybackViewModel
 import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.db.Song
 import de.jeisfeld.songarchive.db.SongViewModel
@@ -40,29 +40,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
 
 @Composable
 fun SongTable(viewModel: SongViewModel, songs: List<Song>, isWideScreen: Boolean) {
     val context = LocalContext.current
-    val currentlyPlayingSong by viewModel.currentlyPlayingSong
-    val isPlaying by viewModel.isPlaying
-    val exoPlayer = viewModel.getExoPlayer(context)
-
-    // Restore progress after rotation
-    LaunchedEffect(viewModel.currentlyPlayingSong.value) {
-        viewModel.currentlyPlayingSong.value?.let { song ->
-
-            val filename = if (viewModel.currentSongId.value == 0) { song.mp3filename } else { song.mp3filename2 }
-            val encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8.toString()).replace("+", "%20")
-            val mp3Url = "https://heilsame-lieder.de/audio/songs/$encodedFilename"
-            exoPlayer.setMediaItem(MediaItem.fromUri(mp3Url))
-            exoPlayer.prepare()
-            exoPlayer.seekTo(viewModel.currentProgress.value) // Restore progress
-            exoPlayer.playWhenReady = viewModel.isPlaying.value
-        }
-    }
+    val currentlyPlayingSong by PlaybackViewModel.currentlyPlayingSong.collectAsState()
+    val isPlaying by PlaybackViewModel.isPlaying.collectAsState()
 
     var displayedSongs = songs
     if (isPlaying) {
@@ -163,9 +146,6 @@ fun SongTable(viewModel: SongViewModel, songs: List<Song>, isWideScreen: Boolean
                             }
 
                             song.mp3filename?.takeIf { it.isNotBlank() }?.let { filename ->
-                                val encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8.toString()).replace("+", "%20")
-                                val mp3Url = "https://heilsame-lieder.de/audio/songs/$encodedFilename".toUri()
-
                                 Image(
                                     painter = painterResource(
                                         id = if (currentlyPlayingSong?.id == song.id) R.drawable.ic_stop else R.drawable.ic_play
@@ -173,17 +153,18 @@ fun SongTable(viewModel: SongViewModel, songs: List<Song>, isWideScreen: Boolean
                                     contentDescription = if (currentlyPlayingSong?.id == song.id) "Stop" else "Play MP3",
                                     modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small)).clickable {
                                         if (currentlyPlayingSong?.id == song.id) {
-                                            viewModel.releaseExoPlayer()
-                                            viewModel.currentlyPlayingSong.value = null
-                                            viewModel.isPlaying.value = false
+                                            val intent = Intent(context, AudioPlayerService::class.java).apply {
+                                                action = "STOP"
+                                            }
+                                            context.startService(intent)
+                                            PlaybackViewModel.updatePlaybackState(null, false, 0L, 0L)
                                         } else {
-                                            exoPlayer.setMediaItem(MediaItem.fromUri(mp3Url))
-                                            exoPlayer.prepare()
-                                            exoPlayer.playWhenReady = true
-                                            viewModel.currentlyPlayingSong.value = song
-                                            viewModel.isPlaying.value = true
-                                            viewModel.currentProgress.value = 0L
-                                            viewModel.currentSongId.value = 0
+                                            PlaybackViewModel.updatePlaybackState(song, true, 0L, 0L)
+                                            val intent = Intent(context, AudioPlayerService::class.java).apply {
+                                                action = "PLAY"
+                                                putExtra("SONG", song) // Pass entire Song object
+                                            }
+                                            context.startForegroundService(intent)
                                         }
                                     }
                                 )
@@ -195,28 +176,22 @@ fun SongTable(viewModel: SongViewModel, songs: List<Song>, isWideScreen: Boolean
                     // Ensure Mini Player is displayed when the song is playing
                     if (currentlyPlayingSong?.id == song.id) {
                         MiniAudioPlayer(
-                            exoPlayer = exoPlayer,
                             song = song,
                             isPlaying = isPlaying,
                             onPlayPauseToggle = {
-                                if (exoPlayer.isPlaying) {
-                                    exoPlayer.pause()
-                                    viewModel.isPlaying.value = false
-                                } else {
-                                    if (exoPlayer.currentPosition >= exoPlayer.duration) {
-                                        exoPlayer.seekTo(0)
-                                    }
-                                    exoPlayer.play()
-                                    viewModel.isPlaying.value = true
+                                val intent = Intent(context, AudioPlayerService::class.java).apply {
+                                    action = if (isPlaying) "PAUSE" else "RESUME"
                                 }
+                                context.startService(intent)
+                                PlaybackViewModel.toggleIsPlaying()
                             },
                             onStop = {
-                                viewModel.releaseExoPlayer()
-                                viewModel.currentlyPlayingSong.value = null
-                                viewModel.isPlaying.value = false
-                                viewModel.currentProgress.value = 0L
-                            },
-                            viewModel = viewModel
+                                val intent = Intent(context, AudioPlayerService::class.java).apply {
+                                    action = "STOP"
+                                }
+                                context.startService(intent)
+                                PlaybackViewModel.updatePlaybackState(null, false, 0L, 0L)
+                            }
                         )
                     }
                 }

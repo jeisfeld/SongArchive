@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
 
     <application
         android:allowBackup="true"
@@ -29,6 +30,10 @@
             android:theme="@android:style/Theme.Light.NoTitleBar.Fullscreen"/>
         <activity android:name=".ui.LyricsViewerActivity"
             android:theme="@android:style/Theme.Light.NoTitleBar.Fullscreen"/>
+        <service
+            android:name=".audio.AudioPlayerService"
+            android:foregroundServiceType="mediaPlayback"
+            android:exported="false" />
     </application>
 
 </manifest>
