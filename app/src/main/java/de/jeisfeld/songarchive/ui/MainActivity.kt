@@ -137,6 +137,7 @@ fun MainScreen(viewModel: SongViewModel) {
                             isSyncing = true // Show progress
                             viewModel.synchronizeDatabaseAndImages { success ->
                                 isSyncing = false
+                                viewModel.searchSongs(viewModel.searchQuery.value)
                             }
                         }) {
                             Text(stringResource(id = R.string.yes))
