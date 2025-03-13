@@ -96,20 +96,24 @@ else {
 
 	$normalizedTitle = "REPLACE(REPLACE(REPLACE(title, '´', ''''), '`', ''''), '’', '''')";
 	$normalizedLyrics = "REPLACE(REPLACE(REPLACE(lyrics, '´', ''''), '`', ''''), '’', '''')";
-
+	$normalizedAuthor = "REPLACE(REPLACE(REPLACE(author, '´', ''''), '`', ''''), '’', '''')";
+	$normalizedKeywords = "REPLACE(REPLACE(REPLACE(keywords, '´', ''''), '`', ''''), '’', '''')";
+	
 	// Full-string match (apply replacement)
-	$fullMatchTitle = "IF($normalizedTitle LIKE ?, 1, 0)";
-	$fullMatchLyrics = "IF($normalizedLyrics LIKE ?, 1, 0)";
-
+	$fullMatchTitle = "IF(CONCAT(' ',  $normalizedTitle) LIKE ?, 1, 0)";
+	$fullMatchLyrics = "IF(CONCAT(' ', $normalizedLyrics) LIKE ?, 1, 0)";
+	$fullMatchKeywords = "IF(CONCAT(' ', $normalizedKeywords) LIKE ?, 1, 0)";
+	
 	// Full phrase match params
-	$selectParams [] = "%" . $normalizedQuery . "%"; // Full match title
-	$selectParams [] = "%" . $normalizedQuery . "%"; // Full match lyrics
-	$types .= "ss";
+	$selectParams [] = "% " . $normalizedQuery . "%"; // Full match title
+	$selectParams [] = "% " . $normalizedQuery . "%"; // Full match lyrics
+	$selectParams [] = "% " . $normalizedQuery . "%"; // Full match lyrics
+	$types .= "sss";
 
 	// Process each word separately for WHERE and ORDER BY
 	foreach ( $words as $word ) {
 		// WHERE conditions
-		$conditions [] = "(id LIKE ? OR $normalizedTitle LIKE ? OR $normalizedLyrics LIKE ? OR author LIKE ? OR keywords LIKE ?)";
+		$conditions [] = "(id LIKE ? OR $normalizedTitle LIKE ? OR $normalizedLyrics LIKE ? OR $normalizedAuthor LIKE ? OR $normalizedKeywords LIKE ?)";
 		$whereParams [] = "%" . $word . "%";
 		$whereParams [] = "%" . $word . "%";
 		$whereParams [] = "%" . $word . "%";
@@ -120,15 +124,28 @@ else {
 		// ORDER BY conditions
 		$titleMatch [] = "IF($normalizedTitle LIKE ?, 1, 0)";
 		$lyricsMatch [] = "IF($normalizedLyrics LIKE ?, 1, 0)";
+		$titleWordMatch [] = "IF(CONCAT(' ', $normalizedTitle) LIKE ?, 1, 0)";
+		$lyricsWordMatch [] = "IF(CONCAT(' ', $normalizedLyrics) LIKE ?, 1, 0)";
+		$authorWordMatch [] = "IF(CONCAT(' ', $normalizedAuthor) LIKE ?, 1, 0)";
+		$keywordsWordMatch [] = "IF(CONCAT(' ', $normalizedKeywords) LIKE ?, 1, 0)";
+		$selectParams [] = "% " . $word . "%"; // Title word match
+		$selectParams [] = "% " . $word . "%"; // Lyrics word match
+		$selectParams [] = "% " . $word . "%"; // Author word match
+		$selectParams [] = "% " . $word . "%"; // Keywords word match
 		$selectParams [] = "%" . $word . "%"; // Title match
 		$selectParams [] = "%" . $word . "%"; // Lyrics match
-		$types .= "ss";
+		$types .= "ssssss";
 	}
 
 	// Construct SQL query with ranking priority
 	$sql = "SELECT id, title, tabfilename, mp3filename, mp3filename2, author, keywords,
                 ($fullMatchTitle) AS full_title_match,
                 ($fullMatchLyrics) AS full_lyrics_match,
+                ($fullMatchKeywords) AS full_keywords_match,
+                (" . implode ( " + ", $titleWordMatch ) . ") AS title_word_match_count,
+                (" . implode ( " + ", $lyricsWordMatch ) . ") AS lyrics_word_match_count,
+                (" . implode ( " + ", $authorWordMatch ) . ") AS author_word_match_count,
+                (" . implode ( " + ", $keywordsWordMatch ) . ") AS keywords_word_match_count,
                 (" . implode ( " + ", $titleMatch ) . ") AS title_match_count,
                 (" . implode ( " + ", $lyricsMatch ) . ") AS lyrics_match_count
             FROM songs
@@ -136,6 +153,11 @@ else {
             ORDER BY
                 full_title_match DESC,
                 full_lyrics_match DESC,
+                full_keywords_match DESC,
+                title_word_match_count DESC,
+                lyrics_word_match_count DESC,
+                author_word_match_count DESC,
+                keywords_word_match_count DESC,
                 title_match_count DESC,
                 lyrics_match_count DESC,
                 id ASC";
