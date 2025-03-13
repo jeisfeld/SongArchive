@@ -3,6 +3,7 @@ package de.jeisfeld.songarchive.audio
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.net.Uri
@@ -28,6 +29,7 @@ class AudioPlayerService : Service() {
     private lateinit var exoPlayer: ExoPlayer
     private lateinit var mediaSession: MediaSession
     private lateinit var url: Uri
+    private var isForegroundService = false
 
     override fun onCreate() {
         super.onCreate()
@@ -36,11 +38,7 @@ class AudioPlayerService : Service() {
         // Initialize ExoPlayer
         exoPlayer = ExoPlayer.Builder(this).build()
         mediaSession = MediaSession.Builder(this, exoPlayer).build()
-
-        startForeground(
-            1,
-            createNotification("Audio Player Running")
-        )
+        startNotification()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -54,18 +52,18 @@ class AudioPlayerService : Service() {
                     exoPlayer.setMediaItem(MediaItem.fromUri(url))
                     exoPlayer.prepare()
                     exoPlayer.addListener(object : Player.Listener {
-                        override fun onPlaybackStateChanged(state: Int) {
-                            if (state != Player.STATE_BUFFERING) sendPlaybackState()
-                        }
                         override fun onIsPlayingChanged(isPlaying: Boolean) {
+                            sendPlaybackState()
                             if (isPlaying) {
                                 startPlaybackUpdates()
                             }
+                            startNotification()
                         }
                     })
                     exoPlayer.play()
                 }
             }
+
             "CHANGESONG" -> {
                 url = intent.getParcelableExtra("URL")!!
                 exoPlayer.stop()
@@ -74,20 +72,25 @@ class AudioPlayerService : Service() {
                 exoPlayer.play()
                 sendPlaybackState()
             }
+
             "PAUSE" -> {
                 exoPlayer.pause()
                 sendPlaybackState()
             }
+
             "RESUME" -> {
                 exoPlayer.play()
                 sendPlaybackState()
                 startPlaybackUpdates()
             }
+
             "STOP" -> {
                 song = null
                 exoPlayer.stop()
+                stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
             }
+
             "SEEK" -> {
                 val position = intent.getLongExtra("SEEK_POSITION", 0L)
                 exoPlayer.seekTo(position)
@@ -106,12 +109,38 @@ class AudioPlayerService : Service() {
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
     }
 
-    private fun createNotification(content: String): Notification {
+    private fun createNotification(): Notification {
+        val playPauseAction = if (exoPlayer.isPlaying) {
+            PendingIntent.getService(
+                this, 1, Intent(this, AudioPlayerService::class.java).setAction("PAUSE"),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+        } else {
+            PendingIntent.getService(
+                this, 2, Intent(this, AudioPlayerService::class.java).setAction("RESUME"),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+        }
+
+        val stopAction = PendingIntent.getService(
+            this, 3, Intent(this, AudioPlayerService::class.java).setAction("STOP"),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
         return NotificationCompat.Builder(this, "AUDIO_PLAYER_CHANNEL")
-            .setContentTitle("Playing Audio")
-            .setContentText(content)
-            .setSmallIcon(R.drawable.ic_play)
+            .setContentTitle(song?.title ?: "Playing Audio")
+            .setContentText(song?.author ?: "")
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setOnlyAlertOnce(true)
             .setOngoing(true)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .addAction(
+                if (exoPlayer.isPlaying) R.drawable.ic_pause else R.drawable.ic_play,
+                if (exoPlayer.isPlaying) "Pause" else "Play",
+                playPauseAction
+            )
+            .addAction(R.drawable.ic_stop, "Stop", stopAction)
             .build()
     }
 
@@ -133,6 +162,18 @@ class AudioPlayerService : Service() {
             exoPlayer.currentPosition,
             Math.max(0L, exoPlayer.duration)
         )
+    }
+
+    private fun startNotification() {
+        val notification = createNotification()
+        val notificationManager = getSystemService(NotificationManager::class.java)
+
+        if (isForegroundService) {
+            notificationManager.notify(1, notification)
+        } else {
+            startForeground(1, notification)
+            isForegroundService = true
+        }
     }
 
     private fun startPlaybackUpdates() {

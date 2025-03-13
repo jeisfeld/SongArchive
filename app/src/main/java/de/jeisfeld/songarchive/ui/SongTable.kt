@@ -1,6 +1,10 @@
 package de.jeisfeld.songarchive.ui
 
+import android.Manifest
+import android.app.Activity
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -29,6 +33,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import de.jeisfeld.songarchive.audio.AudioPlayerService
 import de.jeisfeld.songarchive.audio.PlaybackViewModel
 import de.jeisfeld.songarchive.R
@@ -159,6 +165,16 @@ fun SongTable(viewModel: SongViewModel, songs: List<Song>, isWideScreen: Boolean
                                             context.startService(intent)
                                             PlaybackViewModel.updatePlaybackState(null, false, 0L, 0L)
                                         } else {
+                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                                (context as? Activity)?.let { activity ->
+                                                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS)
+                                                        != PackageManager.PERMISSION_GRANTED
+                                                    ) {
+                                                        ActivityCompat.requestPermissions(activity, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1)
+                                                    }
+                                                }
+                                            }
+
                                             PlaybackViewModel.updatePlaybackState(song, true, 0L, 0L)
                                             val intent = Intent(context, AudioPlayerService::class.java).apply {
                                                 action = "PLAY"
