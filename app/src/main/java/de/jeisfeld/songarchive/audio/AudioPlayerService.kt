@@ -79,6 +79,7 @@ class AudioPlayerService : Service() {
             }
 
             "RESUME" -> {
+                if (exoPlayer.currentPosition >= exoPlayer.duration) exoPlayer.seekTo(0L)
                 exoPlayer.play()
                 sendPlaybackState()
                 startPlaybackUpdates()

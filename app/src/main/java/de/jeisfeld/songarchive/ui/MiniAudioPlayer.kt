@@ -21,7 +21,6 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -31,12 +30,11 @@ import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
+import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.audio.AudioPlayerService
 import de.jeisfeld.songarchive.audio.PlaybackViewModel
-import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.db.Song
 import de.jeisfeld.songarchive.ui.theme.AppColors
-import kotlinx.coroutines.delay
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
@@ -51,21 +49,6 @@ fun MiniAudioPlayer(
     val currentTime by PlaybackViewModel.currentProgress.collectAsState()
     val totalDuration by PlaybackViewModel.totalDuration.collectAsState()
     val context = LocalContext.current
-
-    LaunchedEffect(Unit) {
-        while (true) {
-            if (totalDuration > 0 && currentTime >= totalDuration) {
-                PlaybackViewModel.setPlaying(false)
-                val intent = Intent(context, AudioPlayerService::class.java).apply {
-                    action = if (PlaybackViewModel.isPlaying.value) "PAUSE" else "RESUME"
-                }
-                context.startService(intent)
-                //exoPlayer.seekTo(0L)
-            }
-
-            delay(100)
-        }
-    }
 
     Card(
         modifier = Modifier
