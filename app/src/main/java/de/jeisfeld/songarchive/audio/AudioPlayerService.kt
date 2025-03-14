@@ -16,6 +16,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.db.Song
+import de.jeisfeld.songarchive.ui.MainActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -128,6 +129,13 @@ class AudioPlayerService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val pendingIntent = PendingIntent.getActivity(this, 0,
+            Intent(this, MainActivity::class.java).apply {
+                putExtra("SONG", song)
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            },
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+
         return NotificationCompat.Builder(this, "AUDIO_PLAYER_CHANNEL")
             .setContentTitle(song?.title ?: "Playing Audio")
             .setContentText(song?.author ?: "")
@@ -136,6 +144,7 @@ class AudioPlayerService : Service() {
             .setOnlyAlertOnce(true)
             .setOngoing(true)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setContentIntent(pendingIntent)
             .addAction(
                 if (exoPlayer.isPlaying) R.drawable.ic_pause else R.drawable.ic_play,
                 if (exoPlayer.isPlaying) "Pause" else "Play",

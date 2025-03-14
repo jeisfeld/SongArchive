@@ -5,6 +5,7 @@ import android.content.Context
 import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import de.jeisfeld.songarchive.RetrofitClient
 import kotlinx.coroutines.Dispatchers
@@ -27,14 +28,12 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
     val songs: StateFlow<List<Song>> = _songs
     private val client = OkHttpClient()
     var searchQuery = mutableStateOf("")
+    var initState = MutableLiveData<Int> (0)
 
     init {
-        loadAllSongs()
-    }
-
-    fun loadAllSongs() {
         viewModelScope.launch {
             _songs.value = songDao.getAllSongs()
+            initState.postValue(1)
         }
     }
 

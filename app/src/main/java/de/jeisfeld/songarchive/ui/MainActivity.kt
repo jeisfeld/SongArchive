@@ -40,6 +40,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.ViewModelProvider
 import de.jeisfeld.songarchive.R
+import de.jeisfeld.songarchive.db.Song
 import de.jeisfeld.songarchive.db.SongViewModel
 import de.jeisfeld.songarchive.ui.theme.AppColors
 import de.jeisfeld.songarchive.ui.theme.AppTheme
@@ -51,6 +52,17 @@ class MainActivity : ComponentActivity() {
         setContent {
             AppTheme {
                 MainScreen(viewModel)
+            }
+        }
+        val song: Song? = intent.getParcelableExtra("SONG")
+        song?.let {
+            val searchString = if (song.id.length > 4) song.id.substring(0, 4) else song.id
+            viewModel.initState.observe(this) { initState ->
+                if (initState == 1) {
+                    viewModel.initState.postValue(2)
+                    viewModel.searchQuery.value = searchString
+                    viewModel.searchSongs(searchString)
+                }
             }
         }
     }
@@ -77,9 +89,13 @@ fun MainScreen(viewModel: SongViewModel) {
 
     // Wrap everything in a Box to ensure the overlay appears above content
     Box(modifier = Modifier.fillMaxSize().background(AppColors.Background)) {
-        Column(modifier = Modifier.padding(start = dimensionResource(id = R.dimen.spacing_medium),
-            end = dimensionResource(id = R.dimen.spacing_medium),
-            top = dimensionResource(id = R.dimen.spacing_heading_vertical))) {
+        Column(
+            modifier = Modifier.padding(
+                start = dimensionResource(id = R.dimen.spacing_medium),
+                end = dimensionResource(id = R.dimen.spacing_medium),
+                top = dimensionResource(id = R.dimen.spacing_heading_vertical)
+            )
+        ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
