@@ -488,12 +488,22 @@ document.addEventListener("keydown", function(event) {
 	}
 });
 
+// Function to get URL parameters
+function getQueryParam(param) {
+    let urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get(param) || "";
+}
+
 document.addEventListener("DOMContentLoaded", function() {
-	document.getElementById("searchBox").focus();
-	searchSongs("*"); // Simulates searching for "*"
+	let query = getQueryParam("q"); // Get search term from URL
+	if (query) {
+	    document.getElementById("searchBox").value = query; // Set search box value
+		toggleClearButton();
+	    performSearch(query); // Run search with parameter
+	} else {
+	    performSearch("*"); // Default: Load full list
+	}
 });
-
-
 
 
 // Define the text for English and German versions.
