@@ -45,6 +45,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.jeisfeld.songarchive.R
+import de.jeisfeld.songarchive.db.Song
 
 class LyricsViewerActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -60,12 +61,14 @@ class LyricsViewerActivity : ComponentActivity() {
         // Prevent screen timeout
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
-        // Get lyrics from intent
-        val lyrics = intent.getStringExtra("LYRICS")?.trim() ?: resources.getString(R.string.nolyrics)
+        // Get lyrics and optional short lyrics from intent
+        val song: Song? = intent.getParcelableExtra("SONG")
+        val lyrics = song?.lyrics?.trim() ?: resources.getString(R.string.nolyrics)
+        val lyricsShort = song?.lyricsShort?.trim() ?: lyrics
 
         setContent {
             MaterialTheme {
-                LyricsViewerScreen(lyrics) { finish() }
+                LyricsViewerScreen(lyrics, lyricsShort) { finish() }
             }
         }
     }
@@ -73,18 +76,22 @@ class LyricsViewerActivity : ComponentActivity() {
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun LyricsViewerScreen(lyrics: String, onClose: () -> Unit) {
-    val isWide = LocalConfiguration.current.smallestScreenWidthDp > 450
-    val isTablet = LocalConfiguration.current.smallestScreenWidthDp > 600
-    var fontSize by remember { mutableStateOf(if (isTablet) 40f else if (isWide) 32f else 24f) } // Default font size
-    var lineHeight by remember { mutableStateOf(1.3f) } // Default line spacing
-    var textAlign by remember { mutableStateOf(TextAlign.Left) } // Default alignment
+fun LyricsViewerScreen(lyrics: String, lyricsShort: String, onClose: () -> Unit) {
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+    val displayedLyrics = if (isLandscape) lyricsShort else lyrics
+
+    val isWide = configuration.smallestScreenWidthDp > 450
+    val isTablet = configuration.smallestScreenWidthDp > 600
+    var fontSize by remember { mutableStateOf(if (isTablet) 40f else if (isWide) 32f else 24f) }
+    var lineHeight by remember { mutableStateOf(1.3f) }
+    var textAlign by remember { mutableStateOf(TextAlign.Left) }
     val scrollState = rememberScrollState()
-    var isZooming by remember { mutableStateOf(false) } // Track if zoom is happening
+    var isZooming by remember { mutableStateOf(false) }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = Color.White // White background
+        color = Color.White
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             Column(
@@ -118,18 +125,18 @@ fun LyricsViewerScreen(lyrics: String, onClose: () -> Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = lyrics,
+                    text = displayedLyrics,
                     style = TextStyle(
                         fontSize = fontSize.sp,
                         lineHeight = (fontSize * lineHeight).sp,
                         fontWeight = FontWeight.Normal,
-                        color = Color.Black, // Black text on white background
+                        color = Color.Black,
                         textAlign = textAlign
                     )
                 )
             }
 
-            // Close button (Top-Right, with semi-transparent background)
+            // Close button
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -143,7 +150,7 @@ fun LyricsViewerScreen(lyrics: String, onClose: () -> Unit) {
                             Brush.verticalGradient(
                                 listOf(Color.White.copy(alpha = 0.6f), Color.White.copy(alpha = 0.3f))
                             ),
-                            shape = RoundedCornerShape(50) // Rounded background
+                            shape = RoundedCornerShape(50)
                         )
                         .clip(RoundedCornerShape(50))
                         .padding(4.dp)

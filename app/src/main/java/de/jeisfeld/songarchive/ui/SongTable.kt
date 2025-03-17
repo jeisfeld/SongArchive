@@ -122,7 +122,7 @@ fun SongTable(viewModel: SongViewModel, songs: List<Song>, isWideScreen: Boolean
                                 contentDescription = stringResource(id = R.string.view_lyrics),
                                 modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small)).clickable {
                                     val intent = Intent(context, LyricsViewerActivity::class.java)
-                                    intent.putExtra("LYRICS", song.lyrics)
+                                    intent.putExtra("SONG", song)
                                     context.startActivity(intent)
                                 }
                             )

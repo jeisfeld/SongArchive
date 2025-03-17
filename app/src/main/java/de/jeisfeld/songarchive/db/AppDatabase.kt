@@ -6,7 +6,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import kotlinx.coroutines.CoroutineScope
 
-@Database(entities = [Song::class, Meaning::class, SongMeaning::class], version = 8, exportSchema = false)
+@Database(entities = [Song::class, Meaning::class, SongMeaning::class], version = 9, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun songDao(): SongDao
 

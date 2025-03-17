@@ -5,7 +5,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.GET
 
 interface ApiService {
-    @GET("download_data.php")
+    @GET("download_data2.php")
     suspend fun fetchAllData(): SyncResponse
 }
 
@@ -23,6 +23,7 @@ data class SongResponse(
     val id: String,
     val title: String,
     val lyrics: String?,
+    val lyrics_short: String?,
     val author: String?,
     val keywords: String?,
     val tabfilename: String?,

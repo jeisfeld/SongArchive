@@ -77,6 +77,7 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
                         id = it.id,
                         title = it.title.trim(),
                         lyrics = it.lyrics?.trim() ?: "",
+                        lyricsShort = it.lyrics_short?.trim(),
                         author = it.author?.trim() ?: "",
                         keywords = it.keywords?.trim() ?: "",
                         tabfilename = it.tabfilename,
