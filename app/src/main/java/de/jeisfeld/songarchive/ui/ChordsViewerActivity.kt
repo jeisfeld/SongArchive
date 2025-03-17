@@ -41,6 +41,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
@@ -91,7 +93,6 @@ class ChordsViewerActivity : ComponentActivity() {
 @Composable
 fun ChordsViewerScreen(imagePath: String, meanings: List<Meaning>, onClose: () -> Unit) {
     var showPopup by remember { mutableStateOf(false) }
-    val context = LocalContext.current
     val configuration = LocalConfiguration.current
 
     val bitmap = remember(imagePath) {
@@ -153,7 +154,15 @@ fun ChordsViewerScreen(imagePath: String, meanings: List<Meaning>, onClose: () -
                     if (!meanings.isEmpty()) {
                         IconButton(
                             onClick = { showPopup = true },
-                            modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small))
+                            modifier = Modifier
+                                .background(
+                                    Brush.verticalGradient(
+                                        listOf(Color.White.copy(alpha = 0.6f), Color.White.copy(alpha = 0.3f))
+                                    ),
+                                    shape = RoundedCornerShape(50)
+                                )
+                                .size(dimensionResource(id = R.dimen.icon_size_large))
+                                .clip(RoundedCornerShape(50))
                         ) {
                             Icon(
                                 painter = painterResource(id = R.drawable.ic_info),
@@ -168,13 +177,21 @@ fun ChordsViewerScreen(imagePath: String, meanings: List<Meaning>, onClose: () -
 
                     IconButton(
                         onClick = onClose,
-                        modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small))
+                        modifier = Modifier
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(Color.White.copy(alpha = 0.6f), Color.White.copy(alpha = 0.3f))
+                                ),
+                                shape = RoundedCornerShape(50)
+                            )
+                            .size(dimensionResource(id = R.dimen.icon_size_large))
+                            .clip(RoundedCornerShape(50))
                     ) {
                         Icon(
                             painter = painterResource(id = R.drawable.ic_close),
                             contentDescription = "Close",
                             tint = Color.Black,
-                            modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small))
+                            modifier = Modifier.padding(8.dp).size(dimensionResource(id = R.dimen.icon_size_small))
                         )
                     }
                 }
@@ -195,23 +212,6 @@ fun ChordsViewerScreen(imagePath: String, meanings: List<Meaning>, onClose: () -
                             .background(Color.White, shape = RoundedCornerShape(16.dp))
                             .border(1.dp, Color.Gray, shape = RoundedCornerShape(16.dp))
                     ) {
-                        // Close button at top-right
-                        Box(
-                            modifier = Modifier.fillMaxWidth().padding(dimensionResource(id = R.dimen.spacing_small)),
-                            contentAlignment = Alignment.TopEnd
-                        ) {
-                            IconButton(
-                                onClick = { showPopup = false },
-                                modifier = Modifier.align(Alignment.TopEnd).size(dimensionResource(id = R.dimen.icon_size_small))
-                            ) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_close),
-                                    contentDescription = "Close",
-                                    tint = Color.Black,
-                                    modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small))
-                                )
-                            }
-                        }
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
