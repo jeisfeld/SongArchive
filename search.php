@@ -27,7 +27,7 @@ function interpolateQuery($query, $params) {
 // SQL Query for valid id
 if ($is_valid_id) {
 	// If searching by ID
-	$sql = "SELECT s.id, s.title, s.lyrics, s.tabfilename, s.mp3filename, s.mp3filename2, s.author,
+	$sql = "SELECT s.id, s.title, s.lyrics, s.lyrics_short, s.tabfilename, s.mp3filename, s.mp3filename2, s.author,
                m.title AS meaning_title, m.meaning AS meaning_text
         FROM songs s
         LEFT JOIN song_meaning sm ON s.id = sm.song_id
@@ -51,6 +51,7 @@ if ($is_valid_id) {
 					'id' => $row ['id'],
 					'title' => $row ['title'],
 					'lyrics' => $row ['lyrics'],
+					'lyrics_short' => $row ['lyrics_short'],
 					'tabfilename' => $row ['tabfilename'],
 					'mp3filename' => $row ['mp3filename'],
 					'mp3filename2' => $row ['mp3filename2'],

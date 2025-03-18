@@ -185,7 +185,11 @@ function showLyrics(id, title, popupid = 'popup') {
 				document.getElementById(popupid + "-body").innerHTML = `<h2>${title}</h2><p>No lyrics available.</p>`;
 			} else {
 				let songLyrics = songs[0].lyrics.replace(/\n/g, '<br>');
+				if (songs[0].lyrics_short && isMobileLandscape()) {
+					songLyrics = songs[0].lyrics_short.replace(/\n/g, '<br>');
+				}
 
+				
 				let meaningsButton = '';
 				if (songs[0].meanings.length > 0) {
 				    meaningsButton = `
@@ -232,7 +236,10 @@ function showLyrics(id, title, popupid = 'popup') {
                 `;
 
 				ensureTextPositioning();
-				setupFontControls(popupid); // Start auto-hide timer
+				setupFontControls(popupid);
+				if (isMobileLandscape()) {
+					toggleTextAlignment();
+				}
 			}
 
 			document.getElementById(popupid).style.display = "flex";
@@ -479,6 +486,16 @@ function exitFullscreen() {
 			document.msExitFullscreen();
 		}
 	}
+}
+
+function isMobileLandscape() {
+    // Check if the device is mobile
+    const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+    // Check if the orientation is landscape
+    const isLandscape = window.matchMedia("(orientation: landscape)").matches;
+
+    return isMobile && isLandscape;
 }
 
 // Close pop-up when pressing Escape key
