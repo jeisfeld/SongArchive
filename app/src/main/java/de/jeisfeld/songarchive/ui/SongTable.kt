@@ -68,9 +68,9 @@ fun SongTable(viewModel: SongViewModel, songs: List<Song>, isWideScreen: Boolean
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = Modifier.fillMaxSize().padding(horizontal = dimensionResource(id = R.dimen.spacing_medium))) {
         // Fixed Table Header (Outside LazyColumn)
-        Row(modifier = Modifier.fillMaxWidth().padding(bottom = dimensionResource(id = R.dimen.spacing_small), top = dimensionResource(id = R.dimen.spacing_heading_vertical))) {
+        Row(modifier = Modifier.fillMaxWidth().padding(bottom = dimensionResource(id = R.dimen.spacing_small))) {
             Text(
                 text = stringResource(id = R.string.column_id),
                 modifier = Modifier.width(dimensionResource(id = R.dimen.width_id)),

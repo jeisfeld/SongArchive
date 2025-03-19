@@ -5,7 +5,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,17 +12,23 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.AlertDialog
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -38,6 +43,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
 import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.db.Song
@@ -68,12 +74,14 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(viewModel: SongViewModel) {
-    val songs by viewModel.songs.collectAsState()
     val isWideScreen = LocalConfiguration.current.screenWidthDp > 600
-    var showDialog by remember { mutableStateOf(false) }
     var isSyncing by remember { mutableStateOf(false) }
+
+    var showMenu by remember { mutableStateOf(false) }
+    var showWifiDialog by remember { mutableStateOf(false) }
 
     // If DB is empty on startup, then synchronize data
     LaunchedEffect(Unit) {
@@ -87,88 +95,125 @@ fun MainScreen(viewModel: SongViewModel) {
         }
     }
 
-    // Wrap everything in a Box to ensure the overlay appears above content
-    Box(modifier = Modifier.fillMaxSize().background(AppColors.Background)) {
-        Column(
-            modifier = Modifier.padding(
-                start = dimensionResource(id = R.dimen.spacing_medium),
-                end = dimensionResource(id = R.dimen.spacing_medium),
-                top = dimensionResource(id = R.dimen.spacing_heading_vertical)
-            )
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Row(
-                    modifier = Modifier.weight(1f), // Expands to take available space
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.ic_launcher_foreground), // Replace with actual launcher icon
-                        contentDescription = "App Icon",
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            topBar = {
+                Column {
+                    TopAppBar(
+                        title = {
+                            Box(
+                                modifier = Modifier.fillMaxWidth(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Image(
+                                        painter = painterResource(id = R.drawable.ic_launcher_foreground), // App icon
+                                        contentDescription = null,
+                                        modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_medium))
+                                    )
+                                    Spacer(modifier = Modifier.width(dimensionResource(id = R.dimen.spacing_medium)))
+                                    Text(
+                                        text = stringResource(id = R.string.app_name),
+                                        color = AppColors.TextColor,
+                                        style = MaterialTheme.typography.titleLarge
+                                    )
+                                    Spacer(modifier = Modifier.width(dimensionResource(id = R.dimen.spacing_medium)))
+                                    Image(
+                                        painter = painterResource(id = R.drawable.ic_launcher_foreground), // App icon
+                                        contentDescription = null,
+                                        modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_medium))
+                                    )
+                                }
+                            }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = AppColors.Background,
+                            titleContentColor = AppColors.TextColor
+                        ),
+                        actions = {
+                            IconButton(onClick = { showMenu = true }) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_menu),
+                                    contentDescription = "Menu",
+                                    modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small))
+                                )
+                            }
+
+                            DropdownMenu(
+                                expanded = showMenu,
+                                onDismissRequest = { showMenu = false },
+                                modifier = Modifier.background(AppColors.BackgroundShaded) // Set menu background color
+                            ) {
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            stringResource(id = R.string.sync),
+                                            color = AppColors.TextColor // Ensure text is colored
+                                        )
+                                    },
+                                    onClick = {
+                                        showMenu = false
+                                        isSyncing = true
+                                        viewModel.synchronizeDatabaseAndImages { success ->
+                                            isSyncing = false
+                                            viewModel.searchSongs(viewModel.searchQuery.value)
+                                        }
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.ic_sync),
+                                            contentDescription = "Sync",
+                                            modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small))
+                                        )
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            stringResource(id = R.string.wifi_transfer),
+                                            color = AppColors.TextColor // Ensure text is colored
+                                        )
+                                    },
+                                    onClick = {
+                                        showMenu = false
+                                        showWifiDialog = true
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.ic_wifi),
+                                            contentDescription = "Wi-Fi Transfer",
+                                            modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small))
+                                        )
+                                    }
+                                )
+                            }
+                        }
+                    )
+                    Box(
                         modifier = Modifier
-                            .padding(end = dimensionResource(id = R.dimen.spacing_medium)) // Space between icon and text
-                            .size(dimensionResource(id = R.dimen.icon_size_medium))
-                    )
-
-                    Text(
-                        text = stringResource(id = R.string.app_name),
-                        fontSize = MaterialTheme.typography.titleLarge.fontSize,
-                        color = AppColors.TextColor
-                    )
-
-                    Image(
-                        painter = painterResource(id = R.drawable.ic_launcher_foreground), // Replace with actual launcher icon
-                        contentDescription = "App Icon",
-                        modifier = Modifier
-                            .padding(start = dimensionResource(id = R.dimen.spacing_medium)) // Space between text and icon
-                            .size(dimensionResource(id = R.dimen.icon_size_medium))
-                    )
-                }
-
-                // Sync Button on the Right
-                IconButton(onClick = { showDialog = true }, modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_large))) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_sync),
-                        contentDescription = stringResource(id = R.string.sync),
-                        tint = AppColors.TextColor,
-                        modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small))
-                    )
+                            .fillMaxWidth()
+                            .padding(horizontal = dimensionResource(id = R.dimen.spacing_medium))
+                            .offset(y = -12.dp) // Move up slightly to overlap
+                    ) {
+                        SearchBar(viewModel)
+                    }
                 }
             }
-
-            SearchBar(viewModel)
-
-            SongTable(viewModel, songs, isWideScreen)
-
-            if (showDialog) {
-                AlertDialog(
-                    onDismissRequest = { showDialog = false },
-                    title = { Text(stringResource(id = R.string.sync_title)) },
-                    text = { Text(stringResource(id = R.string.sync_message), fontSize = MaterialTheme.typography.bodyLarge.fontSize) },
-                    confirmButton = {
-                        TextButton(onClick = {
-                            showDialog = false
-                            isSyncing = true // Show progress
-                            viewModel.synchronizeDatabaseAndImages { success ->
-                                isSyncing = false
-                                viewModel.searchSongs(viewModel.searchQuery.value)
-                            }
-                        }) {
-                            Text(stringResource(id = R.string.yes))
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { showDialog = false }) {
-                            Text(stringResource(id = R.string.no))
-                        }
-                    }
-                )
+        ) { innerPadding ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(AppColors.Background)
+                    .padding(innerPadding)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                ) {
+                    SongTable(viewModel, viewModel.songs.collectAsState().value, isWideScreen)
+                }
             }
         }
-
-        // Ensure overlay appears when isSyncing is true
         if (isSyncing) {
             ProgressOverlay()
         }
@@ -201,7 +246,8 @@ fun SearchBar(viewModel: SongViewModel) {
         },
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = dimensionResource(id = R.dimen.spacing_medium), end = dimensionResource(id = R.dimen.spacing_medium)),
+            .padding(start = dimensionResource(id = R.dimen.spacing_medium), end = dimensionResource(id = R.dimen.spacing_medium))
+        ,
         singleLine = true,
         label = { Text(stringResource(id = R.string.search)) },
         colors = OutlinedTextFieldDefaults.colors(

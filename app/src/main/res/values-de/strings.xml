@@ -11,8 +11,8 @@
     <string name="search">Suchen</string>
 
     <string name="sync">Synchronisieren</string>
+    <string name="wifi_transfer">Wifi Tranfer</string>
     <string name="sync_title">Synchronisierung</string>
-    <string name="sync_message">Möchtest du die aktuellen Liedinformationen herunterladen?</string>
     <string name="yes">Ja</string>
     <string name="no">Nein</string>
     <string name="sync_success">Download erfolgreich!</string>
