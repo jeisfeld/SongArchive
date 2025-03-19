@@ -8,6 +8,8 @@
     <string name="view_chords">View Chords</string>
     <string name="play_song">Play Song</string>
     <string name="search">Search</string>
+    <string name="ok">OK</string>
+    <string name="cancel">Cancel</string>
 
     <string name="sync">Sync</string>
     <string name="wifi_transfer">Wifi Tranfer</string>

@@ -23,7 +23,7 @@ import java.util.regex.Pattern
 import java.util.zip.ZipInputStream
 
 class SongViewModel(application: Application) : AndroidViewModel(application) {
-    private val songDao = AppDatabase.getDatabase(application, viewModelScope).songDao()
+    private val songDao = AppDatabase.getDatabase(application).songDao()
     private val _songs = MutableStateFlow<List<Song>>(emptyList())
     val songs: StateFlow<List<Song>> = _songs
     private val client = OkHttpClient()

@@ -45,8 +45,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.lifecycleScope
 import de.jeisfeld.songarchive.R
+import de.jeisfeld.songarchive.db.AppDatabase
 import de.jeisfeld.songarchive.db.Song
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class LyricsViewerActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -64,6 +69,20 @@ class LyricsViewerActivity : ComponentActivity() {
 
         // Get lyrics and optional short lyrics from intent
         val song: Song? = intent.getParcelableExtra("SONG")
+        val songId: String? = intent.getStringExtra("SONG_ID")
+
+        if (song == null && songId != null) {
+            val songDao = AppDatabase.getDatabase(application).songDao()
+            lifecycleScope.launch {
+                val fetchedSong = withContext(Dispatchers.IO) { songDao.getSongById(songId) }
+                updateUI(fetchedSong)
+            }
+        } else {
+            updateUI(song)
+        }
+    }
+
+    private fun updateUI(song: Song?) {
         val lyrics = song?.lyrics?.trim() ?: resources.getString(R.string.nolyrics)
         val lyricsShort = song?.lyricsShort?.trim() ?: lyrics
 

@@ -49,7 +49,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -57,7 +56,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.times
 import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.db.Meaning
+import de.jeisfeld.songarchive.db.Song
 import de.jeisfeld.songarchive.ui.theme.AppTheme
+import de.jeisfeld.songarchive.wifi.WifiViewModel
 
 class ChordsViewerActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -78,12 +79,13 @@ class ChordsViewerActivity : ComponentActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         // Get the image path from intent
+        val song: Song? = intent.getParcelableExtra("SONG")
         val imagePath = intent.getStringExtra("IMAGE_PATH") ?: return
         val meanings: List<Meaning> = intent.getParcelableArrayListExtra("MEANINGS") ?: emptyList()
 
         setContent {
             AppTheme {
-                ChordsViewerScreen(imagePath, meanings) { finish() }
+                ChordsViewerScreen(song, imagePath, meanings) { finish() }
             }
         }
     }
@@ -91,10 +93,9 @@ class ChordsViewerActivity : ComponentActivity() {
 }
 
 @Composable
-fun ChordsViewerScreen(imagePath: String, meanings: List<Meaning>, onClose: () -> Unit) {
+fun ChordsViewerScreen(song: Song?, imagePath: String, meanings: List<Meaning>, onClose: () -> Unit) {
     var showPopup by remember { mutableStateOf(false) }
     val configuration = LocalConfiguration.current
-
     val bitmap = remember(imagePath) {
         val originalBitmap = BitmapFactory.decodeFile(imagePath)
         if (configuration.orientation == android.content.res.Configuration.ORIENTATION_PORTRAIT) {
@@ -151,6 +152,31 @@ fun ChordsViewerScreen(imagePath: String, meanings: List<Meaning>, onClose: () -
                 contentAlignment = Alignment.TopEnd
             ) {
                 Row {
+                    if (WifiViewModel.wifiTransferMode == 2) {
+                        IconButton(
+                            onClick = {
+                                song?.let { WifiViewModel.startActivityInClients(song.id) }
+                            },
+                            modifier = Modifier
+                                .background(
+                                    Brush.verticalGradient(
+                                        listOf(Color.White.copy(alpha = 0.6f), Color.White.copy(alpha = 0.3f))
+                                    ),
+                                    shape = RoundedCornerShape(50)
+                                )
+                                .size(dimensionResource(id = R.dimen.icon_size_large))
+                                .clip(RoundedCornerShape(50))
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_send),
+                                contentDescription = "Send",
+                                tint = Color.Black,
+                                modifier = Modifier
+                                    .size(dimensionResource(id = R.dimen.icon_size_small))
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(dimensionResource(id = R.dimen.spacing_medium)))
+                    }
                     if (!meanings.isEmpty()) {
                         IconButton(
                             onClick = { showPopup = true },

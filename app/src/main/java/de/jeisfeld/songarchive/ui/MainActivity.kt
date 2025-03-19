@@ -1,8 +1,13 @@
 package de.jeisfeld.songarchive.ui
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -16,6 +21,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -25,8 +31,10 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -40,16 +48,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
 import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.db.Song
 import de.jeisfeld.songarchive.db.SongViewModel
 import de.jeisfeld.songarchive.ui.theme.AppColors
 import de.jeisfeld.songarchive.ui.theme.AppTheme
+import de.jeisfeld.songarchive.wifi.WifiViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -77,11 +88,30 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(viewModel: SongViewModel) {
+    val context = LocalContext.current
     val isWideScreen = LocalConfiguration.current.screenWidthDp > 600
     var isSyncing by remember { mutableStateOf(false) }
 
     var showMenu by remember { mutableStateOf(false) }
     var showWifiDialog by remember { mutableStateOf(false) }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { result ->
+        if (result.all { it.value }) {
+            // Start Wi-Fi Direct connection after permissions are granted
+            when (WifiViewModel.wifiTransferMode) {
+                1 -> { // Client Mode
+                    WifiViewModel.registerReceiver(context)
+                    WifiViewModel.discoverPeers(context)
+                }
+                2 -> { // Server Mode
+                    WifiViewModel.registerReceiver(context)
+                    WifiViewModel.startServer(context)
+                }
+            }
+        }
+    }
 
     // If DB is empty on startup, then synchronize data
     LaunchedEffect(Unit) {
@@ -175,7 +205,6 @@ fun MainScreen(viewModel: SongViewModel) {
                                         )
                                     },
                                     onClick = {
-                                        showMenu = false
                                         showWifiDialog = true
                                     },
                                     leadingIcon = {
@@ -186,6 +215,44 @@ fun MainScreen(viewModel: SongViewModel) {
                                         )
                                     }
                                 )
+                                if (showWifiDialog) {
+                                    WifiTransferDialog(
+                                        selectedMode = WifiViewModel.wifiTransferMode,
+                                        onModeSelected = { mode ->
+                                            WifiViewModel.wifiTransferMode = mode
+                                            showMenu = false
+                                            showWifiDialog = false
+                                            val requiredPermissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                                arrayOf(
+                                                    Manifest.permission.NEARBY_WIFI_DEVICES,
+                                                    Manifest.permission.ACCESS_FINE_LOCATION
+                                                )
+                                            } else {
+                                                arrayOf(
+                                                    Manifest.permission.ACCESS_FINE_LOCATION
+                                                )
+                                            }
+                                            val missingPermissions = requiredPermissions.filter {
+                                                ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
+                                            }
+                                            if (mode == 0) {
+                                                WifiViewModel.unregisterReceiver()
+                                            } else if (missingPermissions.isNotEmpty()) {
+                                                permissionLauncher.launch(missingPermissions.toTypedArray())
+                                            } else when (mode) {
+                                                1 -> { // Client Mode
+                                                    WifiViewModel.registerReceiver(context)
+                                                    WifiViewModel.discoverPeers(context)
+                                                }
+                                                2 -> { // Server Mode
+                                                    WifiViewModel.registerReceiver(context)
+                                                    WifiViewModel.startServer(context)
+                                                }
+                                            }
+                                        },
+                                        onDismiss = { showWifiDialog = false }
+                                    )
+                                }
                             }
                         }
                     )
@@ -246,8 +313,7 @@ fun SearchBar(viewModel: SongViewModel) {
         },
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = dimensionResource(id = R.dimen.spacing_medium), end = dimensionResource(id = R.dimen.spacing_medium))
-        ,
+            .padding(start = dimensionResource(id = R.dimen.spacing_medium), end = dimensionResource(id = R.dimen.spacing_medium)),
         singleLine = true,
         label = { Text(stringResource(id = R.string.search)) },
         colors = OutlinedTextFieldDefaults.colors(
@@ -276,3 +342,40 @@ fun SearchBar(viewModel: SongViewModel) {
     )
 }
 
+@Composable
+fun WifiTransferDialog(
+    selectedMode: Int,
+    onModeSelected: (Int) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val options = listOf("Disabled", "Client", "Server")
+    var selectedOption by remember { mutableStateOf(selectedMode) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Wi-Fi Transfer Mode") },
+        text = {
+            Column {
+                options.forEachIndexed { index, option ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(
+                            selected = (selectedOption == index),
+                            onClick = { selectedOption = index }
+                        )
+                        Text(option)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onModeSelected(selectedOption) }) {
+                Text("OK")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}

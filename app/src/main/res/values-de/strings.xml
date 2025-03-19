@@ -9,6 +9,8 @@
     <string name="view_chords">Akkorde anzeigen</string>
     <string name="play_song">Lied abspielen</string>
     <string name="search">Suchen</string>
+    <string name="ok">OK</string>
+    <string name="cancel">Abbrechen</string>
 
     <string name="sync">Synchronisieren</string>
     <string name="wifi_transfer">Wifi Tranfer</string>

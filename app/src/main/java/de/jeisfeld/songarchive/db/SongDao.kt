@@ -144,6 +144,9 @@ interface SongDao {
     @Query("SELECT count(*) FROM songs")
     suspend fun getSongCount(): Int
 
+    @Query("SELECT * from songs where id = :id")
+    suspend fun getSongById(id: String): Song?
+
     @Query(
         """SELECT m.* FROM meaning m 
            INNER JOIN song_meaning sm ON m.id = sm.meaningId 
