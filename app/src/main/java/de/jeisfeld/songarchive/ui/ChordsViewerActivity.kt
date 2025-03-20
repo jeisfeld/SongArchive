@@ -1,5 +1,6 @@
 package de.jeisfeld.songarchive.ui
 
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
@@ -49,6 +50,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -58,6 +60,7 @@ import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.db.Meaning
 import de.jeisfeld.songarchive.db.Song
 import de.jeisfeld.songarchive.ui.theme.AppTheme
+import de.jeisfeld.songarchive.wifi.WiFiDirectService
 import de.jeisfeld.songarchive.wifi.WifiViewModel
 
 class ChordsViewerActivity : ComponentActivity() {
@@ -113,6 +116,7 @@ fun ChordsViewerScreen(song: Song?, imagePath: String, meanings: List<Meaning>, 
     val minScale = 1f
     val imageWidth = bitmap.width.toFloat()
     val imageHeight = bitmap.height.toFloat()
+    val context = LocalContext.current
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -152,10 +156,16 @@ fun ChordsViewerScreen(song: Song?, imagePath: String, meanings: List<Meaning>, 
                 contentAlignment = Alignment.TopEnd
             ) {
                 Row {
-                    if (WifiViewModel.wifiTransferMode == 2) {
+                    if (WifiViewModel.wifiTransferMode == 1 && WifiViewModel.connectedDevices > 0) {
                         IconButton(
                             onClick = {
-                                song?.let { WifiViewModel.startActivityInClients(song.id) }
+                                song?.let {
+                                    val serviceIntent = Intent(context, WiFiDirectService::class.java).apply {
+                                        putExtra("SONG_ID", song.id)
+                                        putExtra("MODE", 10)
+                                    }
+                                    context.startForegroundService(serviceIntent)
+                                }
                             },
                             modifier = Modifier
                                 .background(

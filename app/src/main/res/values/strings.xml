@@ -20,4 +20,8 @@
     <string name="sync_failed">Download failed!</string>
     <string name="syncing">Downloading song information…</string>
     <string name="nolyrics">No lyrics available</string>
+
+    <string name="toast_connected_as_client">Connected as Client</string>
+    <string name="toast_client_connected">Client connected - count: %d"</string>
+    <string name="toast_client_disconnected">Client disconnected - count: %d"</string>
 </resources>

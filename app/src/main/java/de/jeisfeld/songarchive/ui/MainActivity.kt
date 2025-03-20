@@ -1,6 +1,7 @@
 package de.jeisfeld.songarchive.ui
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -60,6 +61,7 @@ import de.jeisfeld.songarchive.db.Song
 import de.jeisfeld.songarchive.db.SongViewModel
 import de.jeisfeld.songarchive.ui.theme.AppColors
 import de.jeisfeld.songarchive.ui.theme.AppTheme
+import de.jeisfeld.songarchive.wifi.WiFiDirectService
 import de.jeisfeld.songarchive.wifi.WifiViewModel
 
 class MainActivity : ComponentActivity() {
@@ -99,17 +101,10 @@ fun MainScreen(viewModel: SongViewModel) {
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { result ->
         if (result.all { it.value }) {
-            // Start Wi-Fi Direct connection after permissions are granted
-            when (WifiViewModel.wifiTransferMode) {
-                1 -> { // Client Mode
-                    WifiViewModel.registerReceiver(context)
-                    WifiViewModel.discoverPeers(context)
-                }
-                2 -> { // Server Mode
-                    WifiViewModel.registerReceiver(context)
-                    WifiViewModel.startServer(context)
-                }
+            val serviceIntent = Intent(context, WiFiDirectService::class.java).apply {
+                putExtra("MODE", WifiViewModel.wifiTransferMode)
             }
+            context.startForegroundService(serviceIntent)
         }
     }
 
@@ -235,19 +230,16 @@ fun MainScreen(viewModel: SongViewModel) {
                                             val missingPermissions = requiredPermissions.filter {
                                                 ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
                                             }
+                                            val serviceIntent = Intent(context, WiFiDirectService::class.java).apply {
+                                                putExtra("MODE", mode)
+                                            }
+
                                             if (mode == 0) {
-                                                WifiViewModel.unregisterReceiver()
+                                                context.stopService(serviceIntent)
                                             } else if (missingPermissions.isNotEmpty()) {
                                                 permissionLauncher.launch(missingPermissions.toTypedArray())
-                                            } else when (mode) {
-                                                1 -> { // Client Mode
-                                                    WifiViewModel.registerReceiver(context)
-                                                    WifiViewModel.discoverPeers(context)
-                                                }
-                                                2 -> { // Server Mode
-                                                    WifiViewModel.registerReceiver(context)
-                                                    WifiViewModel.startServer(context)
-                                                }
+                                            } else {
+                                                context.startForegroundService(serviceIntent)
                                             }
                                         },
                                         onDismiss = { showWifiDialog = false }
@@ -348,7 +340,7 @@ fun WifiTransferDialog(
     onModeSelected: (Int) -> Unit,
     onDismiss: () -> Unit
 ) {
-    val options = listOf("Disabled", "Client", "Server")
+    val options = listOf("Disabled", "Server", "Client" )
     var selectedOption by remember { mutableStateOf(selectedMode) }
 
     AlertDialog(

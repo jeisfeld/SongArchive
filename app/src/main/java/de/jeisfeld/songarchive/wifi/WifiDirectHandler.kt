@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.Intent.FLAG_ACTIVITY_NEW_TASK
 import android.content.IntentFilter
 import android.net.wifi.WpsInfo
 import android.net.wifi.p2p.WifiP2pConfig
@@ -13,7 +14,9 @@ import android.net.wifi.p2p.WifiP2pManager
 import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceInfo
 import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceRequest
 import android.util.Log
+import android.widget.Toast
 import androidx.annotation.RequiresPermission
+import de.jeisfeld.songarchive.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -27,58 +30,151 @@ import java.net.Socket
 class WiFiDirectHandler(private val context: Context) {
     private val manager: WifiP2pManager =
         context.getSystemService(Context.WIFI_P2P_SERVICE) as WifiP2pManager
-    private val channel: WifiP2pManager.Channel = manager.initialize(context, context.mainLooper, null)
-    private var receiver: BroadcastReceiver? = null
+    private val channel: WifiP2pManager.Channel = manager.initialize(context, context.mainLooper) { Log.d(TAG, "🛑 Channel disconnected") }
+    private val receivers = mutableListOf<BroadcastReceiver>()
     private val intentFilter = IntentFilter().apply {
         addAction(WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION)
         addAction(WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION)
         addAction(WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION)
         addAction(WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION)
     }
-    private val clientSockets = mutableListOf<Socket>()
     private val SERVICE_INSTANCE_NAME = "de.jeisfeld.songarchive.WIFI_SERVICE"
     private val SERVICE_TYPE = "_presence._tcp"
+    private val TAG = "WiFiDirectHandler"
+
+    @Volatile
+    private var isServerRunning = false
+    private var serverSocket: ServerSocket? = null
+    @Volatile
+    private var isClientRunning = false
+    private var clientSocket: Socket? = null
+    private val connectedClients = mutableSetOf<String>() // Track connected clients
+    private val clientSockets = mutableListOf<Socket>()
 
     fun registerReceiver() {
-        receiver = WiFiDirectBroadcastReceiver(manager, channel, this)
-        context.registerReceiver(receiver, intentFilter)
+        synchronized(receivers) {
+            receivers.forEach { context.unregisterReceiver(it) }
+            receivers.clear()
+            val newReceiver = WiFiDirectBroadcastReceiver(manager, channel, this)
+            context.registerReceiver(newReceiver, intentFilter)
+            receivers.add(newReceiver)
+            Log.d(TAG, "Registered receiver " + receivers.size)
+        }
     }
 
     fun unregisterReceiver() {
-        receiver?.let { context.unregisterReceiver(it) }
+        synchronized(receivers) {
+            receivers.forEach { context.unregisterReceiver(it) }
+            receivers.clear()
+            Log.d(TAG, "Unregistered receiver " + receivers.size)
+        }
     }
 
-    private fun startServer() {
+    fun startServer() {
+        isServerRunning = true
+
         Thread {
             try {
-                val serverSocket = ServerSocket(8888)
-                Log.d("WiFiDirectHandler", "✅ Server started, waiting for clients...")
+                serverSocket = ServerSocket(8888)
+                Log.d(TAG, "✅ Server started, waiting for clients...")
 
-                while (true) {
-                    val clientSocket = serverSocket.accept() // Accept client connection
-                    synchronized(clientSockets) {
-                        clientSockets.add(clientSocket) // ✅ Store the client socket for later use
+                while (isServerRunning) {
+                    try {
+                        Log.d(TAG, "Waiting for client")
+                        val clientSocket = serverSocket!!.accept()
+                        val clientIp = clientSocket.inetAddress.hostAddress
+                        Log.d(TAG, "Found client $clientIp")
+
+                        clientIp?.let {
+                            synchronized(connectedClients) {
+                                if (connectedClients.contains(clientIp)) {
+                                    Log.w(TAG, "⚠️ Duplicate connection attempt from $clientIp. Ignoring.")
+                                    clientSocket.close()
+                                } else {
+                                    connectedClients.add(clientIp)
+                                    synchronized(clientSockets) {
+                                        clientSockets.add(clientSocket)
+                                    }
+                                    Log.d(TAG, "🔗 Client connected: $clientIp")
+                                    CoroutineScope(Dispatchers.Main).launch {
+                                        Toast.makeText(context, context.getString(R.string.toast_client_connected, clientSockets.size), Toast.LENGTH_SHORT).show()
+                                    }
+                                    val serviceIntent = Intent(context, WiFiDirectService::class.java).apply {
+                                        putExtra("MODE", 11)
+                                        putExtra("CLIENTS", connectedClients.size)
+                                    }
+                                    WifiViewModel.connectedDevices = connectedClients.size
+                                    context.startService(serviceIntent)
+                                    handleClientDisconnect(clientSocket, clientIp)
+                                }
+                            }
+                        }
+                    } catch (e: IOException) {
+                        if (isServerRunning) {
+                            Log.e(TAG, "❌ Error accepting client connection: ${e.message}")
+                        }
+                        else {
+                            Log.d(TAG, "Error accepting client connection: ${e.message}")
+                        }
                     }
-                    Log.d("WiFiDirectHandler", "🔗 Client connected: ${clientSocket.inetAddress}")
                 }
             } catch (e: IOException) {
-                Log.e("WiFiDirectHandler", "❌ Server error: ${e.message}")
+                Log.e(TAG, "❌ Server error: ${e.message}")
+            } finally {
+                stopServer()
+            }
+        }.start()
+    }
+
+    fun handleClientDisconnect(clientSocket: Socket, clientIp: String) {
+        Thread {
+            try {
+                val input = clientSocket.getInputStream()
+                val buffer = ByteArray(1)
+
+                while (isServerRunning && clientSocket.isConnected) {
+                    if (input.read(buffer) == -1) {
+                        throw IOException("Client disconnected")
+                    }
+                    Thread.sleep(2000) // ✅ Check every 2 seconds
+                }
+            } catch (e: IOException) {
+                Log.w("WiFiDirectHandler", "⚠️ Client $clientIp disconnected: ${e.message}")
+                synchronized(connectedClients) {
+                    connectedClients.remove(clientIp)
+                }
+                synchronized(clientSockets) {
+                    clientSockets.removeIf { it.inetAddress.hostAddress == clientIp }
+                }
+                Log.d("WiFiDirectHandler", "🛑 Removed client: $clientIp")
+                CoroutineScope(Dispatchers.Main).launch {
+                    Toast.makeText(context, context.getString(R.string.toast_client_disconnected, clientSockets.size), Toast.LENGTH_SHORT).show()
+                }
+                val serviceIntent = Intent(context, WiFiDirectService::class.java).apply {
+                    putExtra("MODE", 11)
+                    putExtra("CLIENTS", connectedClients.size)
+                }
+                WifiViewModel.connectedDevices = connectedClients.size
+                context.startForegroundService(serviceIntent)
             }
         }.start()
     }
 
     fun startWiFiDirectServer() {
+        if (isServerRunning) {
+            stopServer()
+        }
         // First, remove any existing group to ensure a clean start
         manager.removeGroup(channel, object : WifiP2pManager.ActionListener {
             @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.NEARBY_WIFI_DEVICES])
             override fun onSuccess() {
-                Log.d("WiFiDirectHandler", "✅ Removed existing Wi-Fi Direct group")
+                Log.d(TAG, "✅ Removed existing Wi-Fi Direct group")
                 createNewWiFiDirectGroup() // Call function to create a new group
             }
 
             @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.NEARBY_WIFI_DEVICES])
             override fun onFailure(reason: Int) {
-                Log.w("WiFiDirectHandler", "⚠️ No existing group found or failed to remove. Continuing...")
+                Log.w(TAG, "⚠️ No existing group found or failed to remove. Continuing...")
                 createNewWiFiDirectGroup() // Still try to create a new group
             }
         })
@@ -89,13 +185,12 @@ class WiFiDirectHandler(private val context: Context) {
         manager.createGroup(channel, object : WifiP2pManager.ActionListener {
             @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.NEARBY_WIFI_DEVICES])
             override fun onSuccess() {
-                Log.d("WiFiDirectHandler", "✅ Wi-Fi Direct group created! Server is now discoverable.")
-                // 🚀 Start advertising service for the app
+                Log.d(TAG, "✅ Wi-Fi Direct group created! Server is now discoverable.")
                 advertiseService()
             }
 
             override fun onFailure(reason: Int) {
-                Log.e("WiFiDirectHandler", "❌ Failed to create Wi-Fi Direct group. Error: $reason")
+                Log.e(TAG, "❌ Failed to create Wi-Fi Direct group. Error: $reason")
             }
         })
     }
@@ -112,11 +207,11 @@ class WiFiDirectHandler(private val context: Context) {
 
         manager.addLocalService(channel, serviceInfo, object : WifiP2pManager.ActionListener {
             override fun onSuccess() {
-                Log.d("WiFiDirectHandler", "✅ Service advertised: $SERVICE_INSTANCE_NAME")
+                Log.d(TAG, "✅ Service advertised: $SERVICE_INSTANCE_NAME")
             }
 
             override fun onFailure(reason: Int) {
-                Log.e("WiFiDirectHandler", "❌ Service advertisement failed! Error: $reason")
+                Log.e(TAG, "❌ Service advertisement failed! Error: $reason")
             }
         })
     }
@@ -128,140 +223,221 @@ class WiFiDirectHandler(private val context: Context) {
                     try {
                         val output = PrintWriter(clientSocket.getOutputStream(), true)
                         output.println("START_ACTIVITY|de.jeisfeld.songarchive.ui.LyricsViewerActivity|" + songId)
-                        Log.d("WiFiDirectHandler", "📡 Sent command to client: ${clientSocket.inetAddress}")
+                        Log.d(TAG, "📡 Sent command to client: ${clientSocket.inetAddress.hostName}")
                     } catch (e: IOException) {
-                        Log.e("WiFiDirectHandler", "❌ Failed to send command: ${e.message}")
+                        Log.e(TAG, "❌ Failed to send command: ${e.message}")
                     }
                 }
             }
         }.start()
     }
 
-    fun discoverPeersAfterClear(context: Context) {
-        Log.d("WiFiDirectHandler", "📡 Clearing old service requests...")
+    fun stopServer() {
+        if (!isServerRunning) {
+            return
+        }
+        isServerRunning = false // ❌ Stop the loop
+
+        try {
+            serverSocket?.close() // ✅ Close the server socket
+            serverSocket = null
+            synchronized(clientSockets) {
+                for (clientSocket in clientSockets) {
+                    clientSocket.close() // ✅ Close all client sockets
+                }
+                clientSockets.clear()
+                connectedClients.clear()
+                WifiViewModel.connectedDevices = 0
+            }
+            Log.d(TAG, "🛑 Server stopped")
+        } catch (e: IOException) {
+            Log.e(TAG, "❌ Failed to stop server: ${e.message}")
+        }
+    }
+
+    fun discoverPeersAfterClear() {
+        Log.d(TAG, "📡 Clearing old service requests...")
 
         // ✅ First, clear previous service requests to prevent conflicts
         manager.clearServiceRequests(channel, object : WifiP2pManager.ActionListener {
             override fun onSuccess() {
-                Log.d("WiFiDirectHandler", "✅ Cleared old service requests")
-                discoverPeers(context)
+                Log.d(TAG, "✅ Cleared old service requests")
+                discoverPeers()
             }
 
             override fun onFailure(reason: Int) {
-                Log.e("WiFiDirectHandler", "❌ Failed to clear old service requests! Error: $reason")
-                discoverPeers(context)
+                Log.e(TAG, "❌ Failed to clear old service requests! Error: $reason")
+                discoverPeers()
             }
         })
     }
 
-    fun discoverPeers(context: Context) {
-        Log.d("WiFiDirectHandler", "📡 Starting Wi-Fi Direct service discovery...")
+    fun discoverPeers() {
+        Log.d(TAG, "📡 Starting Wi-Fi Direct service discovery...")
 
         val serviceRequest = WifiP2pDnsSdServiceRequest.newInstance()
         manager.addServiceRequest(channel, serviceRequest, object : WifiP2pManager.ActionListener {
             @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.NEARBY_WIFI_DEVICES])
             override fun onSuccess() {
-                Log.d("WiFiDirectHandler", "✅ Added service request")
+                Log.d(TAG, "✅ Added service request")
 
                 // ✅ Set response listeners BEFORE starting discovery
                 manager.setDnsSdResponseListeners(channel,
                     { instanceName, registrationType, device ->
                         if (instanceName == SERVICE_INSTANCE_NAME) { // ✅ Match the correct service
-                            Log.d("WiFiDirectHandler", "✅ Found correct server: ${device.deviceName}")
+                            Log.d(TAG, "✅ Found correct server: ${device.deviceName}")
                             connectToPeer(device) // Automatically connect to the correct server
                         } else {
-                            Log.d("WiFiDirectHandler", "⚠️ Found unknown service: $instanceName")
+                            Log.d(TAG, "⚠️ Found unknown service: $instanceName")
                         }
                     },
                     { fullDomainName, txtRecordMap, device ->
-                        Log.d("WiFiDirectHandler", "🔎 TXT Record from ${device.deviceName}, Data: $txtRecordMap")
+                        Log.d(TAG, "🔎 TXT Record from ${device.deviceName}, Data: $txtRecordMap")
                     }
                 )
 
                 // ✅ Now start service discovery
                 manager.discoverServices(channel, object : WifiP2pManager.ActionListener {
                     override fun onSuccess() {
-                        Log.d("WiFiDirectHandler", "✅ Service discovery started...")
+                        Log.d(TAG, "✅ Service discovery started...")
                     }
 
                     override fun onFailure(reason: Int) {
-                        Log.e("WiFiDirectHandler", "❌ Service discovery failed: $reason")
+                        Log.e(TAG, "❌ Service discovery failed: $reason")
                     }
                 })
             }
 
             override fun onFailure(reason: Int) {
-                Log.e("WiFiDirectHandler", "❌ Failed to add service request! Error: $reason")
+                Log.e(TAG, "❌ Failed to add service request! Error: $reason")
+            }
+        })
+    }
+
+    fun connectToPeer(device: WifiP2pDevice) {
+        manager.removeGroup(channel, object : WifiP2pManager.ActionListener {
+            @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.NEARBY_WIFI_DEVICES])
+            override fun onSuccess() {
+                Log.d(TAG, "✅ Removed existing group on client. Now connecting to server...")
+                initiatePeerConnection(device)
+            }
+
+            @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.NEARBY_WIFI_DEVICES])
+            override fun onFailure(reason: Int) {
+                Log.w(TAG, "⚠️ No existing group found on client. Continuing...")
+                initiatePeerConnection(device)
             }
         })
     }
 
     @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.NEARBY_WIFI_DEVICES])
-    fun connectToPeer(device: WifiP2pDevice) {
+    fun initiatePeerConnection(device: WifiP2pDevice) {
         val config = WifiP2pConfig().apply {
             deviceAddress = device.deviceAddress
             wps.setup = WpsInfo.PBC
+            groupOwnerIntent = 0
         }
 
         manager.connect(channel, config, object : WifiP2pManager.ActionListener {
             override fun onSuccess() {
-                Log.d("WiFiDirectHandler", "Connected to server!")
+                Log.d(TAG, "✅ Successfully requested connection to ${device.deviceName}")
             }
 
             override fun onFailure(reason: Int) {
-                Log.e("WiFiDirectHandler", "Connection failed: $reason")
+                Log.e(TAG, "Connection failed: $reason")
             }
         })
     }
 
     fun startClient(context: Context, serverIp: String) {
-        Log.d("WiFiDirectHandler", "startClient")
+        if (isClientRunning) {
+            Log.w(TAG, "⚠️ Client is already connected. Ignoring duplicate start request.")
+            return
+        }
+        isClientRunning = true
+
+        Log.d(TAG, "startClient")
+
         Thread {
             try {
-                val socket = Socket(serverIp, 8888)
-                val input = BufferedReader(InputStreamReader(socket.getInputStream()))
+                clientSocket = Socket(serverIp, 8888)
+                val input = BufferedReader(InputStreamReader(clientSocket!!.getInputStream()))
+                CoroutineScope(Dispatchers.Main).launch {
+                    Toast.makeText(context, context.getString(R.string.toast_connected_as_client), Toast.LENGTH_SHORT).show()
+                }
+                val serviceIntent = Intent(context, WiFiDirectService::class.java).apply {
+                    putExtra("MODE", 12)
+                }
+                context.startService(serviceIntent)
 
-                while (true) {
-                    val command = input.readLine()
-                    if (command != null && command.startsWith("START_ACTIVITY")) {
-                        val parts = command.split("|")
-                        if (parts.size >= 3) {
-                            val activityName = parts[1]
-                            val params = parts[2]
+                while (isClientRunning) {
+                    try {
+                        val command = input.readLine()
+                        if (command != null && command.startsWith("START_ACTIVITY")) {
+                            val parts = command.split("|")
+                            if (parts.size >= 3) {
+                                val activityName = parts[1]
+                                val params = parts[2]
 
-                            Log.d("WiFiDirectHandler", "✅ Received activity command: $activityName, Params: $params")
+                                Log.d(TAG, "✅ Received activity command: $activityName, Params: $params")
 
-                            val intent = Intent()
-                            intent.setClassName(context, activityName)
-                            intent.putExtra("SONG_ID", params)
-                            context.startActivity(intent)
+                                val intent = Intent()
+                                intent.setClassName(context, activityName)
+                                intent.putExtra("SONG_ID", params)
+                                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or FLAG_ACTIVITY_NEW_TASK)
+                                context.startActivity(intent)
+                            }
+                        }
+                    } catch (e: IOException) {
+                        if (isClientRunning) {
+                            Log.e(TAG, "❌ Client connection error: ${e.message}")
                         }
                     }
                 }
             } catch (e: IOException) {
-                Log.e("WiFiDirectHandler", "❌ Client error: ${e.message}")
+                Log.e(TAG, "❌ Failed to connect to server: ${e.message}")
+            } finally {
+                stopClient()
             }
         }.start()
     }
 
+    fun stopClient() {
+        if (!isClientRunning) {
+            return
+        }
+        isClientRunning = false // ❌ Stop the loop
+
+        try {
+            clientSocket?.close() // ✅ Close client socket
+            clientSocket = null
+            Log.d(TAG, "🛑 Client stopped")
+        } catch (e: IOException) {
+            Log.e(TAG, "❌ Failed to stop client: ${e.message}")
+        }
+    }
 
     @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.NEARBY_WIFI_DEVICES])
-    fun handleConnection(info: WifiP2pInfo, context: Context) {
+    fun handleConnection(info: WifiP2pInfo) {
         if (info.groupFormed) {
-            if (info.isGroupOwner) {
-                // ✅ This device is the server (group owner)
-                Log.d("WiFiDirectHandler", "✅ Server is connected to clients! Starting TCP server...")
-                startServer() // 🚀 Start the TCP server
-            } else {
-                // ✅ This device is a client
-                val serverIp = info.groupOwnerAddress.hostAddress
-                Log.d("WiFiDirectHandler", "✅ Connected to server at IP: $serverIp")
-                serverIp?.let {
-                    startClient(context, serverIp) // 🚀 Connect to the server
-                }
-            }
+            handleConnecton(info.isGroupOwner, info.groupOwnerAddress.hostAddress)
         } else {
-            Log.e("WiFiDirectHandler", "❌ Connection failed! No group formed.")
+            Log.e(TAG, "❌ Connection failed! No group formed.")
+        }
+    }
+
+    fun handleConnecton(isServer: Boolean, serverIp: String?) {
+        if (isServer) {
+            if (!isServerRunning) {
+                Log.d(TAG, "✅ Server is prepared. Starting TCP server...")
+                startServer()
+            }
+        }
+        else {
+            Log.d(TAG, "✅ Connected to server at IP: $serverIp")
+            serverIp?.let {
+                startClient(context, serverIp)
+            }
         }
     }
 
