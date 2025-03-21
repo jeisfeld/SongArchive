@@ -1,6 +1,12 @@
 package de.jeisfeld.songarchive.ui
 
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
@@ -49,11 +55,25 @@ import androidx.lifecycle.lifecycleScope
 import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.db.AppDatabase
 import de.jeisfeld.songarchive.db.Song
+import de.jeisfeld.songarchive.ui.theme.AppColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+const val STOP_LYRICS_VIEWER_ACTIVITY = "de.jeisfeld.songarchive.STOP_LYRICS_VIEWER_ACTIVITY"
+
 class LyricsViewerActivity : ComponentActivity() {
+
+    private val stopReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            Log.d("WifiDirect", "Received broadcast")
+            if (intent?.action == STOP_LYRICS_VIEWER_ACTIVITY) {
+                finish()
+            }
+        }
+    }
+    private var isReceiverRegistered = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -68,35 +88,58 @@ class LyricsViewerActivity : ComponentActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         // Get lyrics and optional short lyrics from intent
-        val song: Song? = intent.getParcelableExtra("SONG")
+        val song: Song? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            intent.getParcelableExtra("SONG", Song::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            intent.getParcelableExtra("SONG")
+        }
         val songId: String? = intent.getStringExtra("SONG_ID")
-
+        @Suppress("DEPRECATION")
+        val lyricsDisplayStyle = (intent.getSerializableExtra("STYLE") as LyricsDisplayStyle?) ?: LyricsDisplayStyle.STANDARD
         if (song == null && songId != null) {
             val songDao = AppDatabase.getDatabase(application).songDao()
             lifecycleScope.launch {
                 val fetchedSong = withContext(Dispatchers.IO) { songDao.getSongById(songId) }
-                updateUI(fetchedSong)
+                updateUI(fetchedSong, lyricsDisplayStyle)
             }
         } else {
-            updateUI(song)
+            updateUI(song, lyricsDisplayStyle)
+        }
+
+        if (lyricsDisplayStyle == LyricsDisplayStyle.REMOTE_DEFAULT || lyricsDisplayStyle == LyricsDisplayStyle.REMOTE_BLACK) {
+            registerReceiver(
+                stopReceiver,
+                IntentFilter(STOP_LYRICS_VIEWER_ACTIVITY),
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) Context.RECEIVER_EXPORTED else 0
+            )
+            isReceiverRegistered = true
         }
     }
 
-    private fun updateUI(song: Song?) {
-        val lyrics = song?.lyrics?.trim() ?: resources.getString(R.string.nolyrics)
+    private fun updateUI(song: Song?, lyricsDisplayStyle: LyricsDisplayStyle) {
+        val lyrics = song?.lyrics?.trim() ?: " "
         val lyricsShort = song?.lyricsShort?.trim() ?: lyrics
 
         setContent {
             MaterialTheme {
-                LyricsViewerScreen(lyrics, lyricsShort) { finish() }
+                LyricsViewerScreen(lyrics, lyricsShort, lyricsDisplayStyle) { finish() }
             }
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        if (isReceiverRegistered) {
+            unregisterReceiver(stopReceiver)
         }
     }
 }
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun LyricsViewerScreen(lyrics: String, lyricsShort: String, onClose: () -> Unit) {
+fun LyricsViewerScreen(lyrics: String, lyricsShort: String, lyricsDisplayStyle: LyricsDisplayStyle, onClose: () -> Unit) {
+    val fontSizeSepia = 48
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
     val displayedLyrics1 = if (isLandscape) lyricsShort else lyrics
@@ -142,7 +185,8 @@ fun LyricsViewerScreen(lyrics: String, lyricsShort: String, onClose: () -> Unit)
 
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = Color.White
+        color = if (lyricsDisplayStyle == LyricsDisplayStyle.REMOTE_DEFAULT && fontSize > fontSizeSepia) AppColors.Background else
+            if (lyricsDisplayStyle == LyricsDisplayStyle.REMOTE_BLACK) Color.Black else Color.White,
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             Column(
@@ -180,38 +224,40 @@ fun LyricsViewerScreen(lyrics: String, lyricsShort: String, onClose: () -> Unit)
                         fontSize = fontSize.sp,
                         lineHeight = (fontSize * lineHeight).sp,
                         fontWeight = FontWeight.Normal,
-                        color = Color.Black,
+                        color = if (lyricsDisplayStyle == LyricsDisplayStyle.REMOTE_DEFAULT && fontSize > fontSizeSepia) AppColors.TextColor else Color.Black,
                         textAlign = textAlign
                     ),
                     modifier = Modifier.padding(start = startPadding.dp)
                 )
             }
 
-            // Close button
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 0.dp, end = 0.dp),
-                contentAlignment = Alignment.TopEnd
-            ) {
-                IconButton(
-                    onClick = onClose,
+            if (lyricsDisplayStyle == LyricsDisplayStyle.STANDARD) {
+                // Close button
+                Box(
                     modifier = Modifier
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(Color.White.copy(alpha = 0.6f), Color.White.copy(alpha = 0.3f))
-                            ),
-                            shape = RoundedCornerShape(50)
-                        )
-                        .size(dimensionResource(id = R.dimen.icon_size_large))
-                        .clip(RoundedCornerShape(50))
+                        .fillMaxWidth()
+                        .padding(top = 0.dp, end = 0.dp),
+                    contentAlignment = Alignment.TopEnd
                 ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_close),
-                        contentDescription = "Close",
-                        tint = Color.Black,
-                        modifier = Modifier.padding(8.dp).size(dimensionResource(id = R.dimen.icon_size_small))
-                    )
+                    IconButton(
+                        onClick = onClose,
+                        modifier = Modifier
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(Color.White.copy(alpha = 0.6f), Color.White.copy(alpha = 0.3f))
+                                ),
+                                shape = RoundedCornerShape(50)
+                            )
+                            .size(dimensionResource(id = R.dimen.icon_size_large))
+                            .clip(RoundedCornerShape(50))
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_close),
+                            contentDescription = "Close",
+                            tint = Color.Black,
+                            modifier = Modifier.padding(8.dp).size(dimensionResource(id = R.dimen.icon_size_small))
+                        )
+                    }
                 }
             }
         }
@@ -222,12 +268,18 @@ class TextMeasurer {
     fun measureWidth(text: String, fontSize: Float): Float {
         val paint = android.graphics.Paint()
         paint.textSize = fontSize
-        return paint.measureText(text)
+        return paint.measureText(text).coerceIn(0.1f, 1e10f)
     }
 
     fun measureHeight(text: String, fontSize: Float, lineHeight: Float): Float {
         val lineCount = text.lines().size
         return (lineCount * fontSize * lineHeight)
     }
+}
+
+enum class LyricsDisplayStyle {
+    STANDARD,
+    REMOTE_DEFAULT,
+    REMOTE_BLACK
 }
 

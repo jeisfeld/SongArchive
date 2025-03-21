@@ -17,8 +17,11 @@ import android.util.Log
 import android.widget.Toast
 import androidx.annotation.RequiresPermission
 import de.jeisfeld.songarchive.R
+import de.jeisfeld.songarchive.ui.LyricsDisplayStyle
+import de.jeisfeld.songarchive.ui.STOP_LYRICS_VIEWER_ACTIVITY
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.BufferedReader
 import java.io.IOException
@@ -28,8 +31,7 @@ import java.net.ServerSocket
 import java.net.Socket
 
 class WiFiDirectHandler(private val context: Context) {
-    private val manager: WifiP2pManager =
-        context.getSystemService(Context.WIFI_P2P_SERVICE) as WifiP2pManager
+    private val manager: WifiP2pManager = context.getSystemService(Context.WIFI_P2P_SERVICE) as WifiP2pManager
     private val channel: WifiP2pManager.Channel = manager.initialize(context, context.mainLooper) { Log.d(TAG, "🛑 Channel disconnected") }
     private val receivers = mutableListOf<BroadcastReceiver>()
     private val intentFilter = IntentFilter().apply {
@@ -41,6 +43,7 @@ class WiFiDirectHandler(private val context: Context) {
     private val SERVICE_INSTANCE_NAME = "de.jeisfeld.songarchive.WIFI_SERVICE"
     private val SERVICE_TYPE = "_presence._tcp"
     private val TAG = "WiFiDirectHandler"
+    private val PORT = 8869
 
     @Volatile
     private var isServerRunning = false
@@ -50,6 +53,7 @@ class WiFiDirectHandler(private val context: Context) {
     private var clientSocket: Socket? = null
     private val connectedClients = mutableSetOf<String>() // Track connected clients
     private val clientSockets = mutableListOf<Socket>()
+    private var isClientRetryThreadRunning = false
 
     fun registerReceiver() {
         synchronized(receivers) {
@@ -75,7 +79,7 @@ class WiFiDirectHandler(private val context: Context) {
 
         Thread {
             try {
-                serverSocket = ServerSocket(8888)
+                serverSocket = ServerSocket(PORT)
                 Log.d(TAG, "✅ Server started, waiting for clients...")
 
                 while (isServerRunning) {
@@ -100,11 +104,13 @@ class WiFiDirectHandler(private val context: Context) {
                                         Toast.makeText(context, context.getString(R.string.toast_client_connected, clientSockets.size), Toast.LENGTH_SHORT).show()
                                     }
                                     val serviceIntent = Intent(context, WiFiDirectService::class.java).apply {
-                                        putExtra("MODE", 11)
+                                        setAction(WifiAction.CLIENTS_CONNECTED.toString())
+                                        putExtra("ACTION", WifiAction.CLIENTS_CONNECTED)
                                         putExtra("CLIENTS", connectedClients.size)
                                     }
                                     WifiViewModel.connectedDevices = connectedClients.size
                                     context.startService(serviceIntent)
+                                    startActivityInClient("", LyricsDisplayStyle.REMOTE_BLACK, clientSocket)
                                     handleClientDisconnect(clientSocket, clientIp)
                                 }
                             }
@@ -147,11 +153,14 @@ class WiFiDirectHandler(private val context: Context) {
                     clientSockets.removeIf { it.inetAddress.hostAddress == clientIp }
                 }
                 Log.d("WiFiDirectHandler", "🛑 Removed client: $clientIp")
-                CoroutineScope(Dispatchers.Main).launch {
-                    Toast.makeText(context, context.getString(R.string.toast_client_disconnected, clientSockets.size), Toast.LENGTH_SHORT).show()
+                if (isServerRunning) {
+                    CoroutineScope(Dispatchers.Main).launch {
+                        Toast.makeText(context, context.getString(R.string.toast_client_disconnected, clientSockets.size), Toast.LENGTH_SHORT).show()
+                    }
                 }
                 val serviceIntent = Intent(context, WiFiDirectService::class.java).apply {
-                    putExtra("MODE", 11)
+                    setAction(WifiAction.CLIENTS_CONNECTED.toString())
+                    putExtra("ACTION", WifiAction.CLIENTS_CONNECTED)
                     putExtra("CLIENTS", connectedClients.size)
                 }
                 WifiViewModel.connectedDevices = connectedClients.size
@@ -169,13 +178,19 @@ class WiFiDirectHandler(private val context: Context) {
             @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.NEARBY_WIFI_DEVICES])
             override fun onSuccess() {
                 Log.d(TAG, "✅ Removed existing Wi-Fi Direct group")
-                createNewWiFiDirectGroup() // Call function to create a new group
+                CoroutineScope(Dispatchers.Main).launch {
+                    delay(2000)
+                    createNewWiFiDirectGroup() // Call function to create a new group
+                }
             }
 
             @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.NEARBY_WIFI_DEVICES])
             override fun onFailure(reason: Int) {
                 Log.w(TAG, "⚠️ No existing group found or failed to remove. Continuing...")
-                createNewWiFiDirectGroup() // Still try to create a new group
+                CoroutineScope(Dispatchers.Main).launch {
+                    delay(2000)
+                    createNewWiFiDirectGroup() // Call function to create a new group
+                }
             }
         })
     }
@@ -216,20 +231,35 @@ class WiFiDirectHandler(private val context: Context) {
         })
     }
 
-    fun startActivityInClients(songId: String) {
+    fun startActivityInClients(songId: String, style: LyricsDisplayStyle) {
         CoroutineScope(Dispatchers.IO).launch {
             synchronized(clientSockets) {
                 for (clientSocket in clientSockets) {
-                    try {
-                        val output = PrintWriter(clientSocket.getOutputStream(), true)
-                        output.println("START_ACTIVITY|de.jeisfeld.songarchive.ui.LyricsViewerActivity|" + songId)
-                        Log.d(TAG, "📡 Sent command to client: ${clientSocket.inetAddress.hostName}")
-                    } catch (e: IOException) {
-                        Log.e(TAG, "❌ Failed to send command: ${e.message}")
-                    }
+                    startActivityInClient(songId, style, clientSocket)
                 }
             }
         }.start()
+    }
+
+    fun startActivityInClient(songId: String, style: LyricsDisplayStyle, clientSocket: Socket) {
+        sendCommandToClient(WifiCommand.START_ACTIVITY,
+            "de.jeisfeld.songarchive.ui.LyricsViewerActivity|" + style.name + "|" + songId,
+            clientSocket
+        )
+    }
+
+    fun triggerClientdisconnect(clientSocket: Socket) {
+        sendCommandToClient(WifiCommand.CLIENT_DISCONNECT, "", clientSocket)
+    }
+
+    fun sendCommandToClient(command: WifiCommand, params: String, clientSocket: Socket) {
+        try {
+            val output = PrintWriter(clientSocket.getOutputStream(), true)
+            output.println(command.name + "|" + params)
+            Log.d(TAG, "📡 Sent command " + command + " with parameters " + params + " to client: ${clientSocket.inetAddress.hostName}")
+        } catch (e: IOException) {
+            Log.e(TAG, "❌ Failed to send command: ${e.message}")
+        }
     }
 
     fun stopServer() {
@@ -243,7 +273,10 @@ class WiFiDirectHandler(private val context: Context) {
             serverSocket = null
             synchronized(clientSockets) {
                 for (clientSocket in clientSockets) {
-                    clientSocket.close() // ✅ Close all client sockets
+                    CoroutineScope(Dispatchers.IO).launch {
+                        triggerClientdisconnect(clientSocket)
+                        clientSocket.close()
+                    }
                 }
                 clientSockets.clear()
                 connectedClients.clear()
@@ -257,6 +290,15 @@ class WiFiDirectHandler(private val context: Context) {
 
     fun discoverPeersAfterClear() {
         Log.d(TAG, "📡 Clearing old service requests...")
+
+        clientSocket?.let {
+            try {
+                clientSocket!!.close()
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to close client socket: " + e.message)
+            }
+            clientSocket = null
+        }
 
         // ✅ First, clear previous service requests to prevent conflicts
         manager.clearServiceRequests(channel, object : WifiP2pManager.ActionListener {
@@ -296,16 +338,32 @@ class WiFiDirectHandler(private val context: Context) {
                     }
                 )
 
-                // ✅ Now start service discovery
-                manager.discoverServices(channel, object : WifiP2pManager.ActionListener {
-                    override fun onSuccess() {
-                        Log.d(TAG, "✅ Service discovery started...")
-                    }
+                CoroutineScope(Dispatchers.Main).launch {
+                    delay(2000)
+                    // ✅ Now start service discovery
+                    manager.discoverServices(channel, object : WifiP2pManager.ActionListener {
+                        override fun onSuccess() {
+                            Log.d(TAG, "✅ Service discovery started...")
+                            if (!isClientRetryThreadRunning) {
+                                isClientRetryThreadRunning = true
+                                CoroutineScope(Dispatchers.IO).launch {
+                                    Log.d(TAG, "Triggering retry..")
+                                    delay(30000)
+                                    Log.d(TAG, "Doing retry..")
+                                    isClientRetryThreadRunning = false
+                                    if (!isClientRunning && clientSocket == null && WifiViewModel.wifiTransferMode == WifiMode.CLIENT) {
+                                        Log.w(TAG, "⚠️ Failed to find service. Retrying...")
+                                        discoverPeersAfterClear()
+                                    }
+                                }
+                            }
+                        }
 
-                    override fun onFailure(reason: Int) {
-                        Log.e(TAG, "❌ Service discovery failed: $reason")
-                    }
-                })
+                        override fun onFailure(reason: Int) {
+                            Log.e(TAG, "❌ Service discovery failed: $reason")
+                        }
+                    })
+                }
             }
 
             override fun onFailure(reason: Int) {
@@ -360,37 +418,25 @@ class WiFiDirectHandler(private val context: Context) {
 
         Thread {
             try {
-                clientSocket = Socket(serverIp, 8888)
+                clientSocket = Socket(serverIp, PORT)
                 val input = BufferedReader(InputStreamReader(clientSocket!!.getInputStream()))
                 CoroutineScope(Dispatchers.Main).launch {
                     Toast.makeText(context, context.getString(R.string.toast_connected_as_client), Toast.LENGTH_SHORT).show()
                 }
                 val serviceIntent = Intent(context, WiFiDirectService::class.java).apply {
-                    putExtra("MODE", 12)
+                    setAction(WifiAction.CLIENT_CONNECTED.toString())
+                    putExtra("ACTION", WifiAction.CLIENT_CONNECTED)
                 }
                 context.startService(serviceIntent)
+
 
                 while (isClientRunning) {
                     try {
                         val command = input.readLine()
-                        if (command != null && command.startsWith("START_ACTIVITY")) {
-                            val parts = command.split("|")
-                            if (parts.size >= 3) {
-                                val activityName = parts[1]
-                                val params = parts[2]
-
-                                Log.d(TAG, "✅ Received activity command: $activityName, Params: $params")
-
-                                val intent = Intent()
-                                intent.setClassName(context, activityName)
-                                intent.putExtra("SONG_ID", params)
-                                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or FLAG_ACTIVITY_NEW_TASK)
-                                context.startActivity(intent)
-                            }
-                        }
+                        processCommand(command)
                     } catch (e: IOException) {
                         if (isClientRunning) {
-                            Log.e(TAG, "❌ Client connection error: ${e.message}")
+                            Log.e(TAG, "❌ Client connection error: ${e.message}", e)
                         }
                     }
                 }
@@ -400,6 +446,44 @@ class WiFiDirectHandler(private val context: Context) {
                 stopClient()
             }
         }.start()
+    }
+
+    fun processCommand(commandString: String?) {
+        commandString?.let {
+            try {
+                val parts = commandString.split("|")
+                val command = WifiCommand.valueOf(parts[0])
+                when (command) {
+                    WifiCommand.START_ACTIVITY -> {
+                        if (parts.size >= 4) {
+                            val activityName = parts[1]
+                            val style = LyricsDisplayStyle.valueOf(parts[2])
+                            val songId = parts[3]
+
+                            Log.d(TAG, "✅ Received activity command: $activityName, Style: $style, SongId: $songId")
+
+                            val intent = Intent()
+                            intent.setClassName(context, activityName)
+                            intent.putExtra("STYLE", style)
+                            if (songId.isNotEmpty()) intent.putExtra("SONG_ID", songId)
+                            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or FLAG_ACTIVITY_NEW_TASK)
+                            context.startActivity(intent)
+                        }
+                        else {
+
+                        }
+                    }
+                    WifiCommand.CLIENT_DISCONNECT -> {
+                        WifiViewModel.wifiTransferMode = WifiMode.DISABLED
+                        WifiViewModel.startWifiDirectService(context)
+                        val intent = Intent(STOP_LYRICS_VIEWER_ACTIVITY)
+                        context.sendBroadcast(intent)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Error when processing command " + commandString + ": " + e.message)
+            }
+        }
     }
 
     fun stopClient() {
@@ -441,4 +525,9 @@ class WiFiDirectHandler(private val context: Context) {
         }
     }
 
+}
+
+enum class WifiCommand {
+    START_ACTIVITY,
+    CLIENT_DISCONNECT
 }

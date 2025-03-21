@@ -1,7 +1,6 @@
 package de.jeisfeld.songarchive.ui
 
 import android.Manifest
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -52,6 +51,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -61,7 +61,7 @@ import de.jeisfeld.songarchive.db.Song
 import de.jeisfeld.songarchive.db.SongViewModel
 import de.jeisfeld.songarchive.ui.theme.AppColors
 import de.jeisfeld.songarchive.ui.theme.AppTheme
-import de.jeisfeld.songarchive.wifi.WiFiDirectService
+import de.jeisfeld.songarchive.wifi.WifiMode
 import de.jeisfeld.songarchive.wifi.WifiViewModel
 
 class MainActivity : ComponentActivity() {
@@ -73,6 +73,7 @@ class MainActivity : ComponentActivity() {
                 MainScreen(viewModel)
             }
         }
+        @Suppress("DEPRECATION")
         val song: Song? = intent.getParcelableExtra("SONG")
         song?.let {
             val searchString = if (song.id.length > 4) song.id.substring(0, 4) else song.id
@@ -101,10 +102,7 @@ fun MainScreen(viewModel: SongViewModel) {
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { result ->
         if (result.all { it.value }) {
-            val serviceIntent = Intent(context, WiFiDirectService::class.java).apply {
-                putExtra("MODE", WifiViewModel.wifiTransferMode)
-            }
-            context.startForegroundService(serviceIntent)
+            WifiViewModel.startWifiDirectService(context)
         }
     }
 
@@ -230,16 +228,11 @@ fun MainScreen(viewModel: SongViewModel) {
                                             val missingPermissions = requiredPermissions.filter {
                                                 ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
                                             }
-                                            val serviceIntent = Intent(context, WiFiDirectService::class.java).apply {
-                                                putExtra("MODE", mode)
-                                            }
-
-                                            if (mode == 0) {
-                                                context.stopService(serviceIntent)
-                                            } else if (missingPermissions.isNotEmpty()) {
+                                            if (missingPermissions.isNotEmpty()) {
                                                 permissionLauncher.launch(missingPermissions.toTypedArray())
-                                            } else {
-                                                context.startForegroundService(serviceIntent)
+                                            }
+                                            else {
+                                                WifiViewModel.startWifiDirectService(context)
                                             }
                                         },
                                         onDismiss = { showWifiDialog = false }
@@ -336,11 +329,11 @@ fun SearchBar(viewModel: SongViewModel) {
 
 @Composable
 fun WifiTransferDialog(
-    selectedMode: Int,
-    onModeSelected: (Int) -> Unit,
+    selectedMode: WifiMode,
+    onModeSelected: (WifiMode) -> Unit,
     onDismiss: () -> Unit
 ) {
-    val options = listOf("Disabled", "Server", "Client" )
+    val options = listOf(WifiMode.DISABLED, WifiMode.SERVER, WifiMode.CLIENT)
     var selectedOption by remember { mutableStateOf(selectedMode) }
 
     AlertDialog(
@@ -351,10 +344,10 @@ fun WifiTransferDialog(
                 options.forEachIndexed { index, option ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         RadioButton(
-                            selected = (selectedOption == index),
-                            onClick = { selectedOption = index }
+                            selected = (selectedOption == option),
+                            onClick = { selectedOption = option }
                         )
-                        Text(option)
+                        Text(stringArrayResource(R.array.wifi_modes)[index])
                     }
                 }
             }
@@ -371,3 +364,4 @@ fun WifiTransferDialog(
         }
     )
 }
+

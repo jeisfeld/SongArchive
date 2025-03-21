@@ -61,6 +61,8 @@ import de.jeisfeld.songarchive.db.Meaning
 import de.jeisfeld.songarchive.db.Song
 import de.jeisfeld.songarchive.ui.theme.AppTheme
 import de.jeisfeld.songarchive.wifi.WiFiDirectService
+import de.jeisfeld.songarchive.wifi.WifiAction
+import de.jeisfeld.songarchive.wifi.WifiMode
 import de.jeisfeld.songarchive.wifi.WifiViewModel
 
 class ChordsViewerActivity : ComponentActivity() {
@@ -82,8 +84,10 @@ class ChordsViewerActivity : ComponentActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         // Get the image path from intent
+        @Suppress("DEPRECATION")
         val song: Song? = intent.getParcelableExtra("SONG")
         val imagePath = intent.getStringExtra("IMAGE_PATH") ?: return
+        @Suppress("DEPRECATION")
         val meanings: List<Meaning> = intent.getParcelableArrayListExtra("MEANINGS") ?: emptyList()
 
         setContent {
@@ -98,6 +102,7 @@ class ChordsViewerActivity : ComponentActivity() {
 @Composable
 fun ChordsViewerScreen(song: Song?, imagePath: String, meanings: List<Meaning>, onClose: () -> Unit) {
     var showPopup by remember { mutableStateOf(false) }
+    var sendBlackScreen by remember { mutableStateOf(false) }
     val configuration = LocalConfiguration.current
     val bitmap = remember(imagePath) {
         val originalBitmap = BitmapFactory.decodeFile(imagePath)
@@ -156,15 +161,18 @@ fun ChordsViewerScreen(song: Song?, imagePath: String, meanings: List<Meaning>, 
                 contentAlignment = Alignment.TopEnd
             ) {
                 Row {
-                    if (WifiViewModel.wifiTransferMode == 1 && WifiViewModel.connectedDevices > 0) {
+                    if (WifiViewModel.wifiTransferMode == WifiMode.SERVER && WifiViewModel.connectedDevices > 0) {
                         IconButton(
                             onClick = {
                                 song?.let {
                                     val serviceIntent = Intent(context, WiFiDirectService::class.java).apply {
                                         putExtra("SONG_ID", song.id)
-                                        putExtra("MODE", 10)
+                                        putExtra("STYLE", if (sendBlackScreen) LyricsDisplayStyle.REMOTE_BLACK else LyricsDisplayStyle.REMOTE_DEFAULT)
+                                        putExtra("ACTION", WifiAction.DISPLAY_LYRICS)
+                                        setAction(WifiAction.DISPLAY_LYRICS.toString())
                                     }
                                     context.startForegroundService(serviceIntent)
+                                    sendBlackScreen = !sendBlackScreen
                                 }
                             },
                             modifier = Modifier
@@ -178,7 +186,7 @@ fun ChordsViewerScreen(song: Song?, imagePath: String, meanings: List<Meaning>, 
                                 .clip(RoundedCornerShape(50))
                         ) {
                             Icon(
-                                painter = painterResource(id = R.drawable.ic_send),
+                                painter = painterResource(id = if (sendBlackScreen) R.drawable.ic_send_black else R.drawable.ic_send),
                                 contentDescription = "Send",
                                 tint = Color.Black,
                                 modifier = Modifier

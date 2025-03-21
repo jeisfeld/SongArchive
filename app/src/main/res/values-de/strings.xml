@@ -20,9 +20,23 @@
     <string name="sync_success">Download erfolgreich!</string>
     <string name="sync_failed">Download fehlgeschlagen!</string>
     <string name="syncing">Lade die Liedinformationen…</string>
-    <string name="nolyrics">Kein Text verfügbar</string>
 
     <string name="toast_connected_as_client">Als Empfänger verbunden</string>
     <string name="toast_client_connected">Empfänger verbunden. Anzahl: %d"</string>
     <string name="toast_client_disconnected">Empfänger getrennt. Anzahl: %d"</string>
+
+    <string name="notification_server_created">Sender wartet auf Verbindung</string>
+    <string name="notification_client_created">Empfänger wartet auf Verbindung</string>
+    <plurals name="notification_server_connected">
+        <item quantity="one">Sender verbunden mit einem Empfänger</item>
+        <item quantity="other">Sender verbunden mit %d Empfängern</item>
+    </plurals>
+    <string name="notification_client_connected">Als Empfänger verbunden</string>
+    <string name="notification_unknown">Unbekannter Status</string>
+
+    <string-array name="wifi_modes">
+        <item>Deaktiviert</item>
+        <item>Sender</item>
+        <item>Empfänger</item>
+    </string-array>
 </resources>

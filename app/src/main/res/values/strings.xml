@@ -19,9 +19,24 @@
     <string name="sync_success">Download successful!</string>
     <string name="sync_failed">Download failed!</string>
     <string name="syncing">Downloading song information…</string>
-    <string name="nolyrics">No lyrics available</string>
 
     <string name="toast_connected_as_client">Connected as Client</string>
     <string name="toast_client_connected">Client connected - count: %d"</string>
     <string name="toast_client_disconnected">Client disconnected - count: %d"</string>
+
+    <string name="notification_server_created">Server waiting for connection</string>
+    <string name="notification_client_created">Client waiting for connection</string>
+    <plurals name="notification_server_connected">
+        <item quantity="zero">Server connected to no client</item>
+        <item quantity="one">Server connected to one client</item>
+        <item quantity="other">Server connected to %d clients</item>
+    </plurals>
+    <string name="notification_client_connected">Connected as client</string>
+    <string name="notification_unknown">Unknown status</string>
+
+    <string-array name="wifi_modes">
+        <item>Disabled</item>
+        <item>Server</item>
+        <item>Client</item>
+    </string-array>
 </resources>

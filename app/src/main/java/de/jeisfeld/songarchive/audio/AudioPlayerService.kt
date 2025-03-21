@@ -139,7 +139,7 @@ class AudioPlayerService : Service() {
         return NotificationCompat.Builder(this, "AUDIO_PLAYER_CHANNEL")
             .setContentTitle(song?.title ?: "Playing Audio")
             .setContentText(song?.author ?: "")
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_launcher_white)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOnlyAlertOnce(true)
             .setOngoing(true)
