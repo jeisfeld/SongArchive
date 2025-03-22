@@ -96,7 +96,7 @@ fun MainScreen(viewModel: SongViewModel) {
     var isSyncing by remember { mutableStateOf(false) }
 
     var showMenu by remember { mutableStateOf(false) }
-    var showWifiDialog by remember { mutableStateOf(false) }
+    var showNetworkDialog by remember { mutableStateOf(false) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
@@ -193,12 +193,12 @@ fun MainScreen(viewModel: SongViewModel) {
                                 DropdownMenuItem(
                                     text = {
                                         Text(
-                                            stringResource(id = R.string.wifi_transfer),
+                                            stringResource(id = R.string.network_connection),
                                             color = AppColors.TextColor // Ensure text is colored
                                         )
                                     },
                                     onClick = {
-                                        showWifiDialog = true
+                                        showNetworkDialog = true
                                     },
                                     leadingIcon = {
                                         Icon(
@@ -208,21 +208,39 @@ fun MainScreen(viewModel: SongViewModel) {
                                         )
                                     }
                                 )
-                                if (showWifiDialog) {
-                                    WifiTransferDialog(
+                                if (showNetworkDialog) {
+                                    NetworkModeDialog(
                                         selectedMode = PeerConnectionViewModel.peerConnectionMode,
                                         onModeSelected = { mode ->
                                             PeerConnectionViewModel.peerConnectionMode = mode
                                             showMenu = false
-                                            showWifiDialog = false
+                                            showNetworkDialog = false
                                             val requiredPermissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                                 arrayOf(
                                                     Manifest.permission.NEARBY_WIFI_DEVICES,
-                                                    Manifest.permission.ACCESS_FINE_LOCATION
+                                                    Manifest.permission.ACCESS_FINE_LOCATION,
+                                                    Manifest.permission.BLUETOOTH,
+                                                    Manifest.permission.BLUETOOTH_SCAN,
+                                                    Manifest.permission.BLUETOOTH_ADMIN,
+                                                    Manifest.permission.BLUETOOTH_CONNECT,
+                                                    Manifest.permission.BLUETOOTH_ADVERTISE
                                                 )
-                                            } else {
+                                            }
+                                            else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                                                 arrayOf(
-                                                    Manifest.permission.ACCESS_FINE_LOCATION
+                                                    Manifest.permission.ACCESS_FINE_LOCATION,
+                                                    Manifest.permission.BLUETOOTH,
+                                                    Manifest.permission.BLUETOOTH_SCAN,
+                                                    Manifest.permission.BLUETOOTH_ADMIN,
+                                                    Manifest.permission.BLUETOOTH_CONNECT,
+                                                    Manifest.permission.BLUETOOTH_ADVERTISE
+                                                )
+                                            }
+                                            else {
+                                                arrayOf(
+                                                    Manifest.permission.ACCESS_FINE_LOCATION,
+                                                    Manifest.permission.BLUETOOTH,
+                                                    Manifest.permission.BLUETOOTH_ADMIN,
                                                 )
                                             }
                                             val missingPermissions = requiredPermissions.filter {
@@ -235,7 +253,7 @@ fun MainScreen(viewModel: SongViewModel) {
                                                 PeerConnectionViewModel.startPeerConnectionService(context)
                                             }
                                         },
-                                        onDismiss = { showWifiDialog = false }
+                                        onDismiss = { showNetworkDialog = false }
                                     )
                                 }
                             }
@@ -328,7 +346,7 @@ fun SearchBar(viewModel: SongViewModel) {
 }
 
 @Composable
-fun WifiTransferDialog(
+fun NetworkModeDialog(
     selectedMode: PeerConnectionMode,
     onModeSelected: (PeerConnectionMode) -> Unit,
     onDismiss: () -> Unit
@@ -338,7 +356,7 @@ fun WifiTransferDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Wi-Fi Transfer Mode") },
+        title = { Text(stringResource(R.string.network_mode)) },
         text = {
             Column {
                 options.forEachIndexed { index, option ->
@@ -347,7 +365,7 @@ fun WifiTransferDialog(
                             selected = (selectedOption == option),
                             onClick = { selectedOption = option }
                         )
-                        Text(stringArrayResource(R.array.wifi_modes)[index])
+                        Text(stringArrayResource(R.array.network_modes)[index])
                     }
                 }
             }

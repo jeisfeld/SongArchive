@@ -16,7 +16,6 @@ import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceRequest
 import android.util.Log
 import android.widget.Toast
 import androidx.annotation.RequiresPermission
-import de.jeisfeld.songarchive.PeerConnectionHandler
 import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.ui.LyricsDisplayStyle
 import de.jeisfeld.songarchive.ui.STOP_LYRICS_VIEWER_ACTIVITY
@@ -243,17 +242,17 @@ class WiFiDirectHandler(private val context: Context) : PeerConnectionHandler {
     }
 
     fun startActivityInClient(songId: String, style: LyricsDisplayStyle, clientSocket: Socket) {
-        sendCommandToClient(WifiCommand.START_ACTIVITY,
+        sendCommandToClient(NetworkCommand.START_ACTIVITY,
             "de.jeisfeld.songarchive.ui.LyricsViewerActivity|" + style.name + "|" + songId,
             clientSocket
         )
     }
 
     fun triggerClientdisconnect(clientSocket: Socket) {
-        sendCommandToClient(WifiCommand.CLIENT_DISCONNECT, "", clientSocket)
+        sendCommandToClient(NetworkCommand.CLIENT_DISCONNECT, "", clientSocket)
     }
 
-    fun sendCommandToClient(command: WifiCommand, params: String, clientSocket: Socket) {
+    fun sendCommandToClient(command: NetworkCommand, params: String, clientSocket: Socket) {
         try {
             val output = PrintWriter(clientSocket.getOutputStream(), true)
             output.println(command.name + "|" + params)
@@ -453,9 +452,9 @@ class WiFiDirectHandler(private val context: Context) : PeerConnectionHandler {
         commandString?.let {
             try {
                 val parts = commandString.split("|")
-                val command = WifiCommand.valueOf(parts[0])
+                val command = NetworkCommand.valueOf(parts[0])
                 when (command) {
-                    WifiCommand.START_ACTIVITY -> {
+                    NetworkCommand.START_ACTIVITY -> {
                         if (parts.size >= 4) {
                             val activityName = parts[1]
                             val style = LyricsDisplayStyle.valueOf(parts[2])
@@ -474,7 +473,7 @@ class WiFiDirectHandler(private val context: Context) : PeerConnectionHandler {
 
                         }
                     }
-                    WifiCommand.CLIENT_DISCONNECT -> {
+                    NetworkCommand.CLIENT_DISCONNECT -> {
                         PeerConnectionViewModel.peerConnectionMode = PeerConnectionMode.DISABLED
                         PeerConnectionViewModel.startPeerConnectionService(context)
                         val intent = Intent(STOP_LYRICS_VIEWER_ACTIVITY)
@@ -528,7 +527,3 @@ class WiFiDirectHandler(private val context: Context) : PeerConnectionHandler {
 
 }
 
-enum class WifiCommand {
-    START_ACTIVITY,
-    CLIENT_DISCONNECT
-}

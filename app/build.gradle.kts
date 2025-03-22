@@ -67,4 +67,6 @@ dependencies {
     implementation(libs.androidx.media3.ui)
     implementation(libs.androidx.media3.session)
 
+    // Nearby Connection
+    implementation (libs.play.services.nearby)
 }

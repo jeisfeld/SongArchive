@@ -12,7 +12,8 @@
     <string name="cancel">Cancel</string>
 
     <string name="sync">Sync</string>
-    <string name="wifi_transfer">Wifi Tranfer</string>
+    <string name="network_connection">Network Connection</string>
+    <string name="network_mode">Network Mode</string>
     <string name="sync_title">Synchronization</string>
     <string name="yes">Yes</string>
     <string name="no">No</string>
@@ -21,6 +22,7 @@
     <string name="syncing">Downloading song information…</string>
 
     <string name="toast_connected_as_client">Connected as Client</string>
+    <string name="toast_disconnected_as_client">Disconnected as Client</string>
     <string name="toast_client_connected">Client connected - count: %d"</string>
     <string name="toast_client_disconnected">Client disconnected - count: %d"</string>
 
@@ -32,9 +34,10 @@
         <item quantity="other">Server connected to %d clients</item>
     </plurals>
     <string name="notification_client_connected">Connected as client</string>
+    <string name="notification_client_disconnected">Disconnected as client</string>
     <string name="notification_unknown">Unknown status</string>
 
-    <string-array name="wifi_modes">
+    <string-array name="network_modes">
         <item>Disabled</item>
         <item>Server</item>
         <item>Client</item>
