@@ -61,8 +61,8 @@ import de.jeisfeld.songarchive.db.Song
 import de.jeisfeld.songarchive.db.SongViewModel
 import de.jeisfeld.songarchive.ui.theme.AppColors
 import de.jeisfeld.songarchive.ui.theme.AppTheme
-import de.jeisfeld.songarchive.wifi.WifiMode
-import de.jeisfeld.songarchive.wifi.WifiViewModel
+import de.jeisfeld.songarchive.network.PeerConnectionMode
+import de.jeisfeld.songarchive.network.PeerConnectionViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -102,7 +102,7 @@ fun MainScreen(viewModel: SongViewModel) {
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { result ->
         if (result.all { it.value }) {
-            WifiViewModel.startPeerConnectionService(context)
+            PeerConnectionViewModel.startPeerConnectionService(context)
         }
     }
 
@@ -210,9 +210,9 @@ fun MainScreen(viewModel: SongViewModel) {
                                 )
                                 if (showWifiDialog) {
                                     WifiTransferDialog(
-                                        selectedMode = WifiViewModel.wifiTransferMode,
+                                        selectedMode = PeerConnectionViewModel.peerConnectionMode,
                                         onModeSelected = { mode ->
-                                            WifiViewModel.wifiTransferMode = mode
+                                            PeerConnectionViewModel.peerConnectionMode = mode
                                             showMenu = false
                                             showWifiDialog = false
                                             val requiredPermissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -232,7 +232,7 @@ fun MainScreen(viewModel: SongViewModel) {
                                                 permissionLauncher.launch(missingPermissions.toTypedArray())
                                             }
                                             else {
-                                                WifiViewModel.startPeerConnectionService(context)
+                                                PeerConnectionViewModel.startPeerConnectionService(context)
                                             }
                                         },
                                         onDismiss = { showWifiDialog = false }
@@ -329,11 +329,11 @@ fun SearchBar(viewModel: SongViewModel) {
 
 @Composable
 fun WifiTransferDialog(
-    selectedMode: WifiMode,
-    onModeSelected: (WifiMode) -> Unit,
+    selectedMode: PeerConnectionMode,
+    onModeSelected: (PeerConnectionMode) -> Unit,
     onDismiss: () -> Unit
 ) {
-    val options = listOf(WifiMode.DISABLED, WifiMode.SERVER, WifiMode.CLIENT)
+    val options = listOf(PeerConnectionMode.DISABLED, PeerConnectionMode.SERVER, PeerConnectionMode.CLIENT)
     var selectedOption by remember { mutableStateOf(selectedMode) }
 
     AlertDialog(

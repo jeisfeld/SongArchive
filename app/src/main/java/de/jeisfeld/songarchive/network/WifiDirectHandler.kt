@@ -1,4 +1,4 @@
-package de.jeisfeld.songarchive.wifi
+package de.jeisfeld.songarchive.network
 
 import android.Manifest
 import android.content.BroadcastReceiver
@@ -105,11 +105,11 @@ class WiFiDirectHandler(private val context: Context) : PeerConnectionHandler {
                                         Toast.makeText(context, context.getString(R.string.toast_client_connected, clientSockets.size), Toast.LENGTH_SHORT).show()
                                     }
                                     val serviceIntent = Intent(context, PeerConnectionService::class.java).apply {
-                                        setAction(WifiAction.CLIENTS_CONNECTED.toString())
-                                        putExtra("ACTION", WifiAction.CLIENTS_CONNECTED)
+                                        setAction(PeerConnectionAction.CLIENTS_CONNECTED.toString())
+                                        putExtra("ACTION", PeerConnectionAction.CLIENTS_CONNECTED)
                                         putExtra("CLIENTS", connectedClients.size)
                                     }
-                                    WifiViewModel.connectedDevices = connectedClients.size
+                                    PeerConnectionViewModel.connectedDevices = connectedClients.size
                                     context.startService(serviceIntent)
                                     startActivityInClient("", LyricsDisplayStyle.REMOTE_BLACK, clientSocket)
                                     handleClientDisconnect(clientSocket, clientIp)
@@ -146,25 +146,25 @@ class WiFiDirectHandler(private val context: Context) : PeerConnectionHandler {
                     Thread.sleep(2000) // ✅ Check every 2 seconds
                 }
             } catch (e: IOException) {
-                Log.w("WiFiDirectHandler", "⚠️ Client $clientIp disconnected: ${e.message}")
+                Log.w(TAG, "⚠️ Client $clientIp disconnected: ${e.message}")
                 synchronized(connectedClients) {
                     connectedClients.remove(clientIp)
                 }
                 synchronized(clientSockets) {
                     clientSockets.removeIf { it.inetAddress.hostAddress == clientIp }
                 }
-                Log.d("WiFiDirectHandler", "🛑 Removed client: $clientIp")
+                Log.d(TAG, "🛑 Removed client: $clientIp")
                 if (isServerRunning) {
                     CoroutineScope(Dispatchers.Main).launch {
                         Toast.makeText(context, context.getString(R.string.toast_client_disconnected, clientSockets.size), Toast.LENGTH_SHORT).show()
                     }
                 }
                 val serviceIntent = Intent(context, PeerConnectionService::class.java).apply {
-                    setAction(WifiAction.CLIENTS_CONNECTED.toString())
-                    putExtra("ACTION", WifiAction.CLIENTS_CONNECTED)
+                    setAction(PeerConnectionAction.CLIENTS_CONNECTED.toString())
+                    putExtra("ACTION", PeerConnectionAction.CLIENTS_CONNECTED)
                     putExtra("CLIENTS", connectedClients.size)
                 }
-                WifiViewModel.connectedDevices = connectedClients.size
+                PeerConnectionViewModel.connectedDevices = connectedClients.size
                 context.startForegroundService(serviceIntent)
             }
         }.start()
@@ -281,7 +281,7 @@ class WiFiDirectHandler(private val context: Context) : PeerConnectionHandler {
                 }
                 clientSockets.clear()
                 connectedClients.clear()
-                WifiViewModel.connectedDevices = 0
+                PeerConnectionViewModel.connectedDevices = 0
             }
             Log.d(TAG, "🛑 Server stopped")
         } catch (e: IOException) {
@@ -352,7 +352,7 @@ class WiFiDirectHandler(private val context: Context) : PeerConnectionHandler {
                                     delay(30000)
                                     Log.d(TAG, "Doing retry..")
                                     isClientRetryThreadRunning = false
-                                    if (!isClientRunning && clientSocket == null && WifiViewModel.wifiTransferMode == WifiMode.CLIENT) {
+                                    if (!isClientRunning && clientSocket == null && PeerConnectionViewModel.peerConnectionMode == PeerConnectionMode.CLIENT) {
                                         Log.w(TAG, "⚠️ Failed to find service. Retrying...")
                                         startClient()
                                     }
@@ -425,8 +425,8 @@ class WiFiDirectHandler(private val context: Context) : PeerConnectionHandler {
                     Toast.makeText(context, context.getString(R.string.toast_connected_as_client), Toast.LENGTH_SHORT).show()
                 }
                 val serviceIntent = Intent(context, PeerConnectionService::class.java).apply {
-                    setAction(WifiAction.CLIENT_CONNECTED.toString())
-                    putExtra("ACTION", WifiAction.CLIENT_CONNECTED)
+                    setAction(PeerConnectionAction.CLIENT_CONNECTED.toString())
+                    putExtra("ACTION", PeerConnectionAction.CLIENT_CONNECTED)
                 }
                 context.startService(serviceIntent)
 
@@ -475,8 +475,8 @@ class WiFiDirectHandler(private val context: Context) : PeerConnectionHandler {
                         }
                     }
                     WifiCommand.CLIENT_DISCONNECT -> {
-                        WifiViewModel.wifiTransferMode = WifiMode.DISABLED
-                        WifiViewModel.startPeerConnectionService(context)
+                        PeerConnectionViewModel.peerConnectionMode = PeerConnectionMode.DISABLED
+                        PeerConnectionViewModel.startPeerConnectionService(context)
                         val intent = Intent(STOP_LYRICS_VIEWER_ACTIVITY)
                         context.sendBroadcast(intent)
                     }

@@ -6,7 +6,6 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
@@ -66,7 +65,6 @@ class LyricsViewerActivity : ComponentActivity() {
 
     private val stopReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            Log.d("WifiDirect", "Received broadcast")
             if (intent?.action == STOP_LYRICS_VIEWER_ACTIVITY) {
                 finish()
             }

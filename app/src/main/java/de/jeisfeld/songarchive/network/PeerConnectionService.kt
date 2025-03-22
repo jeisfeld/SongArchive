@@ -1,4 +1,4 @@
-package de.jeisfeld.songarchive.wifi
+package de.jeisfeld.songarchive.network
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -17,7 +17,7 @@ import de.jeisfeld.songarchive.ui.LyricsDisplayStyle
 
 class PeerConnectionService : Service() {
     private lateinit var wifiHandler: PeerConnectionHandler
-    private var mode = WifiMode.DISABLED
+    private var mode = PeerConnectionMode.DISABLED
     private val TAG = "WiFiDirectService"
     private var isForegroundService = false
     private lateinit var lock: WifiLock
@@ -33,21 +33,21 @@ class PeerConnectionService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         @Suppress("DEPRECATION")
-        val action: WifiAction? = intent?.getSerializableExtra("ACTION") as WifiAction?
+        val action: PeerConnectionAction? = intent?.getSerializableExtra("ACTION") as PeerConnectionAction?
         Log.d(TAG, "Received message for action " + action)
 
         if (action == null) {
             return START_STICKY
         }
-        if (WifiViewModel.wifiTransferMode == WifiMode.DISABLED && action != WifiAction.WIFI_DISABLE) {
+        if (PeerConnectionViewModel.peerConnectionMode == PeerConnectionMode.DISABLED && action != PeerConnectionAction.CONNECTION_DISABLE) {
             startNotification(intent, action)
             stopForeground(STOP_FOREGROUND_REMOVE)
             return START_STICKY
         }
 
         when (action) {
-            WifiAction.WIFI_DISABLE -> {
-                mode = WifiMode.DISABLED
+            PeerConnectionAction.CONNECTION_DISABLE -> {
+                mode = PeerConnectionMode.DISABLED
                 Log.d(TAG, "❌ Stopping Wi-Fi Direct Service")
                 wifiHandler.stopServer() // ✅ Stop Server
                 wifiHandler.stopClient() // ✅ Stop Client
@@ -56,19 +56,19 @@ class PeerConnectionService : Service() {
                 stopSelf()
                 return START_STICKY
             }
-            WifiAction.WIFI_SERVER -> {
-                mode = WifiMode.SERVER
+            PeerConnectionAction.START_SERVER -> {
+                mode = PeerConnectionMode.SERVER
                 Log.d(TAG, "🚀 Starting in SERVER mode")
                 wifiHandler.registerReceiver()
                 wifiHandler.startServer()
             }
-            WifiAction.WIFI_CLIENT -> {
-                mode = WifiMode.CLIENT
+            PeerConnectionAction.START_CLIENT -> {
+                mode = PeerConnectionMode.CLIENT
                 Log.d(TAG, "🔄 Starting in CLIENT mode")
                 wifiHandler.registerReceiver()
                 wifiHandler.startClient() // Use correct IP
             }
-            WifiAction.DISPLAY_LYRICS -> {
+            PeerConnectionAction.DISPLAY_LYRICS -> {
                 val songId = intent?.getStringExtra("SONG_ID")
                 @Suppress("DEPRECATION")
                 val style = (intent?.getSerializableExtra("STYLE") as LyricsDisplayStyle?) ?: LyricsDisplayStyle.REMOTE_DEFAULT
@@ -76,7 +76,7 @@ class PeerConnectionService : Service() {
                     wifiHandler.sendCommandToClients(songId, style)
                 }
             }
-            WifiAction.CLIENT_CONNECTED, WifiAction.CLIENTS_CONNECTED -> {
+            PeerConnectionAction.CLIENT_CONNECTED, PeerConnectionAction.CLIENTS_CONNECTED -> {
             }
         }
 
@@ -90,13 +90,13 @@ class PeerConnectionService : Service() {
         wifiHandler.stopServer()
         wifiHandler.stopClient()
         lock.release()
-        WifiViewModel.wifiTransferMode = WifiMode.DISABLED
+        PeerConnectionViewModel.peerConnectionMode = PeerConnectionMode.DISABLED
         Log.d(TAG, "🛑 WiFiDirectService Stopped")
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    private fun startNotification(intent: Intent?, action: WifiAction) {
+    private fun startNotification(intent: Intent?, action: PeerConnectionAction) {
         val notification = createNotification(intent, action)
         val notificationManager = getSystemService(NotificationManager::class.java)
 
@@ -108,7 +108,7 @@ class PeerConnectionService : Service() {
         }
     }
 
-    private fun createNotification(intent: Intent?, action: WifiAction): Notification {
+    private fun createNotification(intent: Intent?, action: PeerConnectionAction): Notification {
         Log.d(TAG, "Creating service notification - action: " + action)
         val channelId = "WiFiDirectServiceChannel"
         val channel = NotificationChannel(
@@ -117,8 +117,8 @@ class PeerConnectionService : Service() {
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
 
         val stopIntent = Intent(this, PeerConnectionService::class.java).apply {
-            setAction(WifiAction.WIFI_DISABLE.toString())
-            putExtra("ACTION", WifiAction.WIFI_DISABLE)
+            setAction(PeerConnectionAction.CONNECTION_DISABLE.toString())
+            putExtra("ACTION", PeerConnectionAction.CONNECTION_DISABLE)
         }
         val stopPendingIntent = PendingIntent.getService(
             this, 0, stopIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
@@ -126,10 +126,10 @@ class PeerConnectionService : Service() {
         val numberOfClients = intent?.getIntExtra("CLIENTS", 0)?:0
 
         val contentText = when (action) {
-            WifiAction.WIFI_SERVER -> getString(R.string.notification_server_created)
-            WifiAction.WIFI_CLIENT -> getString(R.string.notification_client_created)
-            WifiAction.CLIENTS_CONNECTED -> resources.getQuantityString(R.plurals.notification_server_connected, numberOfClients, numberOfClients)
-            WifiAction.CLIENT_CONNECTED -> getString(R.string.notification_client_connected)
+            PeerConnectionAction.START_SERVER -> getString(R.string.notification_server_created)
+            PeerConnectionAction.START_CLIENT -> getString(R.string.notification_client_created)
+            PeerConnectionAction.CLIENTS_CONNECTED -> resources.getQuantityString(R.plurals.notification_server_connected, numberOfClients, numberOfClients)
+            PeerConnectionAction.CLIENT_CONNECTED -> getString(R.string.notification_client_connected)
             else -> getString(R.string.notification_unknown)
         }
 

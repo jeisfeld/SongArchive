@@ -60,10 +60,10 @@ import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.db.Meaning
 import de.jeisfeld.songarchive.db.Song
 import de.jeisfeld.songarchive.ui.theme.AppTheme
-import de.jeisfeld.songarchive.wifi.PeerConnectionService
-import de.jeisfeld.songarchive.wifi.WifiAction
-import de.jeisfeld.songarchive.wifi.WifiMode
-import de.jeisfeld.songarchive.wifi.WifiViewModel
+import de.jeisfeld.songarchive.network.PeerConnectionService
+import de.jeisfeld.songarchive.network.PeerConnectionAction
+import de.jeisfeld.songarchive.network.PeerConnectionMode
+import de.jeisfeld.songarchive.network.PeerConnectionViewModel
 
 class ChordsViewerActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -161,15 +161,15 @@ fun ChordsViewerScreen(song: Song?, imagePath: String, meanings: List<Meaning>, 
                 contentAlignment = Alignment.TopEnd
             ) {
                 Row {
-                    if (WifiViewModel.wifiTransferMode == WifiMode.SERVER && WifiViewModel.connectedDevices > 0) {
+                    if (PeerConnectionViewModel.peerConnectionMode == PeerConnectionMode.SERVER && PeerConnectionViewModel.connectedDevices > 0) {
                         IconButton(
                             onClick = {
                                 song?.let {
                                     val serviceIntent = Intent(context, PeerConnectionService::class.java).apply {
                                         putExtra("SONG_ID", song.id)
                                         putExtra("STYLE", if (sendBlackScreen) LyricsDisplayStyle.REMOTE_BLACK else LyricsDisplayStyle.REMOTE_DEFAULT)
-                                        putExtra("ACTION", WifiAction.DISPLAY_LYRICS)
-                                        setAction(WifiAction.DISPLAY_LYRICS.toString())
+                                        putExtra("ACTION", PeerConnectionAction.DISPLAY_LYRICS)
+                                        setAction(PeerConnectionAction.DISPLAY_LYRICS.toString())
                                     }
                                     context.startForegroundService(serviceIntent)
                                     sendBlackScreen = !sendBlackScreen

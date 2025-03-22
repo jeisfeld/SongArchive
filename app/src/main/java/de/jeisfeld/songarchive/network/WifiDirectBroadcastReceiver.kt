@@ -1,4 +1,4 @@
-package de.jeisfeld.songarchive.wifi
+package de.jeisfeld.songarchive.network
 
 
 import android.Manifest
@@ -45,7 +45,7 @@ class WiFiDirectBroadcastReceiver(
                     }
                 } else {
                     // ✅ Trigger reconnection attempt
-                    if (WifiViewModel.wifiTransferMode == WifiMode.CLIENT) {
+                    if (PeerConnectionViewModel.peerConnectionMode == PeerConnectionMode.CLIENT) {
                         Log.w(TAG, "❌ Wi-Fi Direct connection lost! Retrying discovery...")
                         handler.startClient()
                     }
