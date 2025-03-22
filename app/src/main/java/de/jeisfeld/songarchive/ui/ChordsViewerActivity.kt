@@ -60,7 +60,7 @@ import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.db.Meaning
 import de.jeisfeld.songarchive.db.Song
 import de.jeisfeld.songarchive.ui.theme.AppTheme
-import de.jeisfeld.songarchive.wifi.WiFiDirectService
+import de.jeisfeld.songarchive.wifi.PeerConnectionService
 import de.jeisfeld.songarchive.wifi.WifiAction
 import de.jeisfeld.songarchive.wifi.WifiMode
 import de.jeisfeld.songarchive.wifi.WifiViewModel
@@ -165,7 +165,7 @@ fun ChordsViewerScreen(song: Song?, imagePath: String, meanings: List<Meaning>, 
                         IconButton(
                             onClick = {
                                 song?.let {
-                                    val serviceIntent = Intent(context, WiFiDirectService::class.java).apply {
+                                    val serviceIntent = Intent(context, PeerConnectionService::class.java).apply {
                                         putExtra("SONG_ID", song.id)
                                         putExtra("STYLE", if (sendBlackScreen) LyricsDisplayStyle.REMOTE_BLACK else LyricsDisplayStyle.REMOTE_DEFAULT)
                                         putExtra("ACTION", WifiAction.DISPLAY_LYRICS)

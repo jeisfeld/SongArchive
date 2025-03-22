@@ -47,7 +47,7 @@ class WiFiDirectBroadcastReceiver(
                     // ✅ Trigger reconnection attempt
                     if (WifiViewModel.wifiTransferMode == WifiMode.CLIENT) {
                         Log.w(TAG, "❌ Wi-Fi Direct connection lost! Retrying discovery...")
-                        handler.discoverPeersAfterClear()
+                        handler.startClient()
                     }
                 }
             }

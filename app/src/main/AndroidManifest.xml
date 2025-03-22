@@ -45,7 +45,7 @@
             android:foregroundServiceType="mediaPlayback"
             android:exported="false" />
         <service
-            android:name=".wifi.WiFiDirectService"
+            android:name=".wifi.PeerConnectionService"
             android:foregroundServiceType="connectedDevice"
             android:exported="false" />
     </application>

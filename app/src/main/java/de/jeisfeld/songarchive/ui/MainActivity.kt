@@ -102,7 +102,7 @@ fun MainScreen(viewModel: SongViewModel) {
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { result ->
         if (result.all { it.value }) {
-            WifiViewModel.startWifiDirectService(context)
+            WifiViewModel.startPeerConnectionService(context)
         }
     }
 
@@ -232,7 +232,7 @@ fun MainScreen(viewModel: SongViewModel) {
                                                 permissionLauncher.launch(missingPermissions.toTypedArray())
                                             }
                                             else {
-                                                WifiViewModel.startWifiDirectService(context)
+                                                WifiViewModel.startPeerConnectionService(context)
                                             }
                                         },
                                         onDismiss = { showWifiDialog = false }

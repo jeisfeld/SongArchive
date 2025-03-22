@@ -8,8 +8,8 @@ object WifiViewModel : ViewModel() {
     var wifiTransferMode = WifiMode.DISABLED
     var connectedDevices = 0
 
-    fun startWifiDirectService(context: Context) {
-        val serviceIntent = Intent(context, WiFiDirectService::class.java).apply {
+    fun startPeerConnectionService(context: Context) {
+        val serviceIntent = Intent(context, PeerConnectionService::class.java).apply {
             val action = when (wifiTransferMode) {
                 WifiMode.DISABLED -> WifiAction.WIFI_DISABLE
                 WifiMode.SERVER -> WifiAction.WIFI_SERVER

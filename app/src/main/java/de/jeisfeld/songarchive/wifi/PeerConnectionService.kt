@@ -11,11 +11,12 @@ import android.net.wifi.WifiManager
 import android.net.wifi.WifiManager.WifiLock
 import android.os.IBinder
 import android.util.Log
+import de.jeisfeld.songarchive.PeerConnectionHandler
 import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.ui.LyricsDisplayStyle
 
-class WiFiDirectService : Service() {
-    private lateinit var wifiHandler: WiFiDirectHandler
+class PeerConnectionService : Service() {
+    private lateinit var wifiHandler: PeerConnectionHandler
     private var mode = WifiMode.DISABLED
     private val TAG = "WiFiDirectService"
     private var isForegroundService = false
@@ -53,34 +54,33 @@ class WiFiDirectService : Service() {
                 startNotification(intent, action)
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
+                return START_STICKY
             }
             WifiAction.WIFI_SERVER -> {
                 mode = WifiMode.SERVER
                 Log.d(TAG, "🚀 Starting in SERVER mode")
                 wifiHandler.registerReceiver()
-                wifiHandler.startWiFiDirectServer()
-                startNotification(intent, action)
+                wifiHandler.startServer()
             }
             WifiAction.WIFI_CLIENT -> {
                 mode = WifiMode.CLIENT
                 Log.d(TAG, "🔄 Starting in CLIENT mode")
                 wifiHandler.registerReceiver()
-                wifiHandler.discoverPeersAfterClear() // Use correct IP
-                startNotification(intent, action)
+                wifiHandler.startClient() // Use correct IP
             }
             WifiAction.DISPLAY_LYRICS -> {
                 val songId = intent?.getStringExtra("SONG_ID")
                 @Suppress("DEPRECATION")
                 val style = (intent?.getSerializableExtra("STYLE") as LyricsDisplayStyle?) ?: LyricsDisplayStyle.REMOTE_DEFAULT
                 if (songId != null) {
-                    wifiHandler.startActivityInClients(songId, style)
+                    wifiHandler.sendCommandToClients(songId, style)
                 }
             }
             WifiAction.CLIENT_CONNECTED, WifiAction.CLIENTS_CONNECTED -> {
-                startNotification(intent, action)
             }
         }
 
+        startNotification(intent, action)
         return START_STICKY
     }
 
@@ -116,7 +116,7 @@ class WiFiDirectService : Service() {
         )
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
 
-        val stopIntent = Intent(this, WiFiDirectService::class.java).apply {
+        val stopIntent = Intent(this, PeerConnectionService::class.java).apply {
             setAction(WifiAction.WIFI_DISABLE.toString())
             putExtra("ACTION", WifiAction.WIFI_DISABLE)
         }
