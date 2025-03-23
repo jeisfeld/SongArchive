@@ -35,7 +35,7 @@
     </plurals>
     <string name="notification_client_connected">Als Empfänger verbunden</string>
     <string name="notification_client_disconnected">Als Empfänger getrennt</string>
-    <string name="notification_unknown">Unbekannter Status</string>
+    <string name="notification_unknown">Unbekannter Status (%d Verbindungen)</string>
 
     <string-array name="network_modes">
         <item>Deaktiviert</item>

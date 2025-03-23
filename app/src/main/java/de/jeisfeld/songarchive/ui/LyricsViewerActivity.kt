@@ -82,8 +82,32 @@ class LyricsViewerActivity : ComponentActivity() {
                         View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
                 )
 
-        // Prevent screen timeout
-        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        val lyricsDisplayStyle = (intent.getSerializableExtra("STYLE") as LyricsDisplayStyle?) ?: LyricsDisplayStyle.STANDARD
+
+        // allow to turn off screen
+        if (lyricsDisplayStyle != LyricsDisplayStyle.REMOTE_BLACK) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+
+        // wakeup if required
+        if (lyricsDisplayStyle == LyricsDisplayStyle.REMOTE_DEFAULT || lyricsDisplayStyle == LyricsDisplayStyle.REMOTE_BLACK) {
+            registerReceiver(
+                stopReceiver,
+                IntentFilter(STOP_LYRICS_VIEWER_ACTIVITY),
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) Context.RECEIVER_EXPORTED else 0
+            )
+            isReceiverRegistered = true
+        }
+        if (lyricsDisplayStyle == LyricsDisplayStyle.REMOTE_DEFAULT) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                setTurnScreenOn(true)
+                setShowWhenLocked(true)
+            } else {
+                val window = window
+                window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED)
+                window.addFlags(WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON)
+            }
+        }
 
         // Get lyrics and optional short lyrics from intent
         val song: Song? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -93,8 +117,6 @@ class LyricsViewerActivity : ComponentActivity() {
             intent.getParcelableExtra("SONG")
         }
         val songId: String? = intent.getStringExtra("SONG_ID")
-        @Suppress("DEPRECATION")
-        val lyricsDisplayStyle = (intent.getSerializableExtra("STYLE") as LyricsDisplayStyle?) ?: LyricsDisplayStyle.STANDARD
         if (song == null && songId != null) {
             val songDao = AppDatabase.getDatabase(application).songDao()
             lifecycleScope.launch {
@@ -103,15 +125,6 @@ class LyricsViewerActivity : ComponentActivity() {
             }
         } else {
             updateUI(song, lyricsDisplayStyle)
-        }
-
-        if (lyricsDisplayStyle == LyricsDisplayStyle.REMOTE_DEFAULT || lyricsDisplayStyle == LyricsDisplayStyle.REMOTE_BLACK) {
-            registerReceiver(
-                stopReceiver,
-                IntentFilter(STOP_LYRICS_VIEWER_ACTIVITY),
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) Context.RECEIVER_EXPORTED else 0
-            )
-            isReceiverRegistered = true
         }
     }
 

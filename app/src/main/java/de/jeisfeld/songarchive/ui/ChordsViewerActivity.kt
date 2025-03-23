@@ -171,7 +171,7 @@ fun ChordsViewerScreen(song: Song?, imagePath: String, meanings: List<Meaning>, 
                                         putExtra("ACTION", PeerConnectionAction.DISPLAY_LYRICS)
                                         setAction(PeerConnectionAction.DISPLAY_LYRICS.toString())
                                     }
-                                    context.startForegroundService(serviceIntent)
+                                    context.startService(serviceIntent)
                                     sendBlackScreen = !sendBlackScreen
                                 }
                             },

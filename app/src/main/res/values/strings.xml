@@ -35,7 +35,7 @@
     </plurals>
     <string name="notification_client_connected">Connected as client</string>
     <string name="notification_client_disconnected">Disconnected as client</string>
-    <string name="notification_unknown">Unknown status</string>
+    <string name="notification_unknown">Unknown status (%d connections)</string>
 
     <string-array name="network_modes">
         <item>Disabled</item>

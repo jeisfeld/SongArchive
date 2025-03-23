@@ -50,11 +50,13 @@ class PeerConnectionService : Service() {
                 mode = PeerConnectionMode.SERVER
                 Log.d(TAG, "🚀 Starting in SERVER mode")
                 peerConnectionHandler.startServer()
+                startNotification(intent, action)
             }
             PeerConnectionAction.START_CLIENT -> {
                 mode = PeerConnectionMode.CLIENT
                 Log.d(TAG, "🔄 Starting in CLIENT mode")
                 peerConnectionHandler.startClient() // Use correct IP
+                startNotification(intent, action)
             }
             PeerConnectionAction.DISPLAY_LYRICS -> {
                 val songId = intent?.getStringExtra("SONG_ID")
@@ -66,10 +68,10 @@ class PeerConnectionService : Service() {
             }
             PeerConnectionAction.CLIENT_CONNECTED, PeerConnectionAction.CLIENT_DISCONNECTED,
             PeerConnectionAction.CLIENTS_CONNECTED -> {
+                startNotification(intent, action)
             }
         }
 
-        startNotification(intent, action)
         return START_STICKY
     }
 
@@ -117,7 +119,7 @@ class PeerConnectionService : Service() {
             PeerConnectionAction.CLIENTS_CONNECTED -> resources.getQuantityString(R.plurals.notification_server_connected, numberOfClients, numberOfClients)
             PeerConnectionAction.CLIENT_CONNECTED -> getString(R.string.notification_client_connected)
             PeerConnectionAction.CLIENT_DISCONNECTED -> getString(R.string.notification_client_disconnected)
-            else -> getString(R.string.notification_unknown)
+            else -> getString(R.string.notification_unknown, numberOfClients)
         }
 
         return Notification.Builder(this, channelId)
