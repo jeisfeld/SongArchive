@@ -18,6 +18,7 @@ import com.google.android.gms.nearby.connection.PayloadTransferUpdate
 import com.google.android.gms.nearby.connection.Strategy
 import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.ui.LyricsDisplayStyle
+import de.jeisfeld.songarchive.ui.LyricsViewerActivity
 import de.jeisfeld.songarchive.ui.STOP_LYRICS_VIEWER_ACTIVITY
 import java.nio.charset.StandardCharsets
 
@@ -29,9 +30,6 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
 
     private var type = PeerConnectionMode.DISABLED
     private val connectedEndpoints = mutableSetOf<String>()
-
-    override fun registerReceiver() { /* not needed */ }
-    override fun unregisterReceiver() { /* not needed */ }
 
     override fun startServer() {
         type = PeerConnectionMode.SERVER
@@ -61,37 +59,30 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
         }
     }
 
-    override fun sendCommandToClients(songId: String, style: LyricsDisplayStyle) {
+    override fun sendCommandToClients(command: NetworkCommand, vararg params: String) {
         for (endpointId in connectedEndpoints) {
-            sendCommandToClient(songId, style, endpointId)
+            sendCommandToClient(endpointId, command, *params)
         }
     }
 
-    fun sendCommandToClient(songId: String, style: LyricsDisplayStyle, endpointId: String) {
-        sendCommandToClient(NetworkCommand.START_ACTIVITY, "de.jeisfeld.songarchive.ui.LyricsViewerActivity|${style.name}|$songId", endpointId)
-    }
-
-    fun sendCommandToClient(command: NetworkCommand, params: String, endpointId: String) {
-        val output = command.name + "|" + params
+    fun sendCommandToClient(endpointId: String, command: NetworkCommand, vararg params: String) {
+        val jointParams = params.joinToString(separator = "|")
+        val output = command.name + "|" + jointParams
         val payload = Payload.fromBytes(output.toByteArray(StandardCharsets.UTF_8))
         connectionsClient.sendPayload(endpointId, payload)
-        Log.d(TAG, "Sent command to endpoint " + endpointId + ": " + command)
-    }
-
-    override fun stopServer() {
-        for (endpointId in connectedEndpoints) {
-                triggerClientDisconnect(endpointId)
-        }
-        connectionsClient.stopAllEndpoints()
-        connectedEndpoints.clear()
-        type = PeerConnectionMode.DISABLED
+        Log.d(TAG, "Sent command to endpoint " + endpointId + ": " + output)
     }
 
     fun triggerClientDisconnect(endpointId: String) {
-        sendCommandToClient(NetworkCommand.CLIENT_DISCONNECT, "", endpointId)
+        sendCommandToClient(endpointId, NetworkCommand.CLIENT_DISCONNECT)
     }
 
-    override fun stopClient() {
+    override fun stopEndpoint() {
+        if (type == PeerConnectionMode.SERVER) {
+            for (endpointId in connectedEndpoints) {
+                triggerClientDisconnect(endpointId)
+            }
+        }
         connectionsClient.stopAllEndpoints()
         connectedEndpoints.clear()
         type = PeerConnectionMode.DISABLED
@@ -109,23 +100,14 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
                     PeerConnectionMode.CLIENT -> {
                         Log.d(TAG, "Connected as client")
                         Toast.makeText(context, context.getString(R.string.toast_connected_as_client), Toast.LENGTH_SHORT).show()
-                        val serviceIntent = Intent(context, PeerConnectionService::class.java).apply {
-                            setAction(PeerConnectionAction.CLIENT_CONNECTED.toString())
-                            putExtra("ACTION", PeerConnectionAction.CLIENT_CONNECTED)
-                        }
-                        context.startService(serviceIntent)
+                        updateNotification(PeerConnectionAction.CLIENT_CONNECTED)
                     }
                     PeerConnectionMode.SERVER -> {
                         Log.d(TAG, "Client connected")
                         Toast.makeText(context, context.getString(R.string.toast_client_connected, connectedEndpoints.size), Toast.LENGTH_SHORT).show()
-                        val serviceIntent = Intent(context, PeerConnectionService::class.java).apply {
-                            setAction(PeerConnectionAction.CLIENTS_CONNECTED.toString())
-                            putExtra("ACTION", PeerConnectionAction.CLIENTS_CONNECTED)
-                            putExtra("CLIENTS", connectedEndpoints.size)
-                        }
+                        updateNotification(PeerConnectionAction.CLIENTS_CONNECTED)
                         PeerConnectionViewModel.connectedDevices = connectedEndpoints.size
-                        context.startService(serviceIntent)
-                        sendCommandToClient("", LyricsDisplayStyle.REMOTE_BLACK, endpointId)
+                        sendCommandToClient(endpointId, NetworkCommand.DISPLAY_LYRICS, "", LyricsDisplayStyle.REMOTE_BLACK.toString())
                     }
                     PeerConnectionMode.DISABLED -> { }
                 }
@@ -138,22 +120,13 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
                 PeerConnectionMode.CLIENT -> {
                     Log.d(TAG, "Disconnected as client")
                     Toast.makeText(context, context.getString(R.string.toast_disconnected_as_client), Toast.LENGTH_SHORT).show()
-                    val serviceIntent = Intent(context, PeerConnectionService::class.java).apply {
-                        setAction(PeerConnectionAction.CLIENT_CONNECTED.toString())
-                        putExtra("ACTION", PeerConnectionAction.CLIENT_DISCONNECTED)
-                    }
-                    context.startService(serviceIntent)
+                    updateNotification(PeerConnectionAction.CLIENT_DISCONNECTED)
                 }
                 PeerConnectionMode.SERVER -> {
                     Log.d(TAG, "Client connected")
                     Toast.makeText(context, context.getString(R.string.toast_client_disconnected, connectedEndpoints.size), Toast.LENGTH_SHORT).show()
-                    val serviceIntent = Intent(context, PeerConnectionService::class.java).apply {
-                        setAction(PeerConnectionAction.CLIENTS_CONNECTED.toString())
-                        putExtra("ACTION", PeerConnectionAction.CLIENTS_CONNECTED)
-                        putExtra("CLIENTS", connectedEndpoints.size)
-                    }
+                    updateNotification(PeerConnectionAction.CLIENTS_CONNECTED)
                     PeerConnectionViewModel.connectedDevices = connectedEndpoints.size
-                    context.startForegroundService(serviceIntent)
                 }
                 PeerConnectionMode.DISABLED -> { }
             }
@@ -185,16 +158,17 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
     }
 
     private fun processCommand(commandString: String) {
+        Log.d(TAG, "Processing command: " + commandString)
         val parts = commandString.split("|")
-        when (parts[0]) {
-            "START_ACTIVITY" -> {
-                if (parts.size >= 4) {
-                    val activityName = parts[1]
+        val command = NetworkCommand.valueOf(parts[0])
+        when (command) {
+            NetworkCommand.DISPLAY_LYRICS -> {
+                if (parts.size >= 3) {
+                    val songId = parts[1]
                     val style = LyricsDisplayStyle.valueOf(parts[2])
-                    val songId = parts[3]
 
                     val intent = Intent().apply {
-                        setClassName(context, activityName)
+                        setClass(context, LyricsViewerActivity::class.java)
                         putExtra("STYLE", style)
                         if (songId.isNotEmpty()) putExtra("SONG_ID", songId)
                         addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -202,13 +176,22 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
                     context.startActivity(intent)
                 }
             }
-            "CLIENT_DISCONNECT" -> {
+            NetworkCommand.CLIENT_DISCONNECT -> {
                 PeerConnectionViewModel.peerConnectionMode = PeerConnectionMode.DISABLED
                 PeerConnectionViewModel.startPeerConnectionService(context)
                 val intent = Intent(STOP_LYRICS_VIEWER_ACTIVITY)
                 context.sendBroadcast(intent)
             }
         }
+    }
+
+    fun updateNotification(action: PeerConnectionAction) {
+        val serviceIntent = Intent(context, PeerConnectionService::class.java).apply {
+            setAction(action.toString())
+            putExtra("ACTION", action)
+            putExtra("CLIENTS", connectedEndpoints.size)
+        }
+        context.startForegroundService(serviceIntent)
     }
 }
 

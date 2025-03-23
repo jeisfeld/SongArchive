@@ -40,8 +40,7 @@ class PeerConnectionService : Service() {
             PeerConnectionAction.CONNECTION_DISABLE -> {
                 mode = PeerConnectionMode.DISABLED
                 Log.d(TAG, "❌ Stopping Peer Connection Service")
-                peerConnectionHandler.stopServer() // ✅ Stop Server
-                peerConnectionHandler.stopClient() // ✅ Stop Client
+                peerConnectionHandler.stopEndpoint()
                 startNotification(intent, action)
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
@@ -50,13 +49,11 @@ class PeerConnectionService : Service() {
             PeerConnectionAction.START_SERVER -> {
                 mode = PeerConnectionMode.SERVER
                 Log.d(TAG, "🚀 Starting in SERVER mode")
-                peerConnectionHandler.registerReceiver()
                 peerConnectionHandler.startServer()
             }
             PeerConnectionAction.START_CLIENT -> {
                 mode = PeerConnectionMode.CLIENT
                 Log.d(TAG, "🔄 Starting in CLIENT mode")
-                peerConnectionHandler.registerReceiver()
                 peerConnectionHandler.startClient() // Use correct IP
             }
             PeerConnectionAction.DISPLAY_LYRICS -> {
@@ -64,7 +61,7 @@ class PeerConnectionService : Service() {
                 @Suppress("DEPRECATION")
                 val style = (intent?.getSerializableExtra("STYLE") as LyricsDisplayStyle?) ?: LyricsDisplayStyle.REMOTE_DEFAULT
                 if (songId != null) {
-                    peerConnectionHandler.sendCommandToClients(songId, style)
+                    peerConnectionHandler.sendCommandToClients(NetworkCommand.DISPLAY_LYRICS, songId, style.toString())
                 }
             }
             PeerConnectionAction.CLIENT_CONNECTED, PeerConnectionAction.CLIENT_DISCONNECTED,
@@ -78,9 +75,7 @@ class PeerConnectionService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        peerConnectionHandler.unregisterReceiver()
-        peerConnectionHandler.stopServer()
-        peerConnectionHandler.stopClient()
+        peerConnectionHandler.stopEndpoint()
         PeerConnectionViewModel.peerConnectionMode = PeerConnectionMode.DISABLED
         Log.d(TAG, "🛑 PeerConnectionService Stopped")
     }
