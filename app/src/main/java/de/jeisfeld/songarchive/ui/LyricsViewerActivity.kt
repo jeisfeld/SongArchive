@@ -118,9 +118,6 @@ class LyricsViewerActivity : ComponentActivity() {
     }
 
     private fun updateUI(song: Song?, displayStyle: DisplayStyle) {
-        if (song == null) {
-            finish()
-        }
         val lyrics = song?.lyrics?.trim() ?: " "
         val lyricsShort = song?.lyricsShort?.trim() ?: lyrics
 

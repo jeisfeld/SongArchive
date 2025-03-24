@@ -106,7 +106,7 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
                         Toast.makeText(context, context.getString(R.string.toast_client_connected, connectedEndpoints.size), Toast.LENGTH_SHORT).show()
                         updateNotification(PeerConnectionAction.CLIENTS_CONNECTED)
                         PeerConnectionViewModel.connectedDevices = connectedEndpoints.size
-                        sendCommandToClient(endpointId, NetworkCommand.DISPLAY_LYRICS, "", DisplayStyle.REMOTE_BLACK.toString())
+                        sendCommandToClient(endpointId, NetworkCommand.DISPLAY_SONG, "", DisplayStyle.REMOTE_BLACK.toString())
                     }
                     PeerConnectionMode.DISABLED -> { }
                 }
@@ -161,7 +161,7 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
         val parts = commandString.split("|")
         val command = NetworkCommand.valueOf(parts[0])
         when (command) {
-            NetworkCommand.DISPLAY_LYRICS -> {
+            NetworkCommand.DISPLAY_SONG -> {
                 if (parts.size >= 3) {
                     val songId = parts[1]
                     val style = DisplayStyle.valueOf(parts[2])

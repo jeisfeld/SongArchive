@@ -48,21 +48,21 @@ class PeerConnectionService : Service() {
             PeerConnectionAction.START_SERVER -> {
                 mode = PeerConnectionMode.SERVER
                 Log.d(TAG, "🚀 Starting in SERVER mode")
-                peerConnectionHandler.startServer()
                 startNotification(intent, action)
+                peerConnectionHandler.startServer()
             }
             PeerConnectionAction.START_CLIENT -> {
                 mode = PeerConnectionMode.CLIENT
                 Log.d(TAG, "🔄 Starting in CLIENT mode")
-                peerConnectionHandler.startClient() // Use correct IP
                 startNotification(intent, action)
+                peerConnectionHandler.startClient() // Use correct IP
             }
             PeerConnectionAction.DISPLAY_LYRICS -> {
                 val songId = intent?.getStringExtra("SONG_ID")
                 @Suppress("DEPRECATION")
                 val style = (intent?.getSerializableExtra("STYLE") as DisplayStyle?) ?: DisplayStyle.REMOTE_DEFAULT
                 if (songId != null) {
-                    peerConnectionHandler.sendCommandToClients(NetworkCommand.DISPLAY_LYRICS, songId, style.toString())
+                    peerConnectionHandler.sendCommandToClients(NetworkCommand.DISPLAY_SONG, songId, style.toString())
                 }
             }
             PeerConnectionAction.CLIENT_CONNECTED, PeerConnectionAction.CLIENT_DISCONNECTED,

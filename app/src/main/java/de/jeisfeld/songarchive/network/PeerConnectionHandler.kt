@@ -8,7 +8,7 @@ interface PeerConnectionHandler {
 }
 
 enum class NetworkCommand {
-    DISPLAY_LYRICS,
+    DISPLAY_SONG,
     CLIENT_DISCONNECT
 }
 
