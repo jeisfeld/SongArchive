@@ -17,7 +17,7 @@ import com.google.android.gms.nearby.connection.PayloadCallback
 import com.google.android.gms.nearby.connection.PayloadTransferUpdate
 import com.google.android.gms.nearby.connection.Strategy
 import de.jeisfeld.songarchive.R
-import de.jeisfeld.songarchive.ui.LyricsDisplayStyle
+import de.jeisfeld.songarchive.ui.ChordsViewerActivity
 import de.jeisfeld.songarchive.ui.LyricsViewerActivity
 import java.nio.charset.StandardCharsets
 
@@ -106,7 +106,7 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
                         Toast.makeText(context, context.getString(R.string.toast_client_connected, connectedEndpoints.size), Toast.LENGTH_SHORT).show()
                         updateNotification(PeerConnectionAction.CLIENTS_CONNECTED)
                         PeerConnectionViewModel.connectedDevices = connectedEndpoints.size
-                        sendCommandToClient(endpointId, NetworkCommand.DISPLAY_LYRICS, "", LyricsDisplayStyle.REMOTE_BLACK.toString())
+                        sendCommandToClient(endpointId, NetworkCommand.DISPLAY_LYRICS, "", DisplayStyle.REMOTE_BLACK.toString())
                     }
                     PeerConnectionMode.DISABLED -> { }
                 }
@@ -164,10 +164,13 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
             NetworkCommand.DISPLAY_LYRICS -> {
                 if (parts.size >= 3) {
                     val songId = parts[1]
-                    val style = LyricsDisplayStyle.valueOf(parts[2])
+                    val style = DisplayStyle.valueOf(parts[2])
 
                     val intent = Intent().apply {
-                        setClass(context, LyricsViewerActivity::class.java)
+                        setClass(context, when (PeerConnectionViewModel.clientMode) {
+                            ClientMode.LYRICS -> LyricsViewerActivity::class.java
+                            ClientMode.CHORDS -> ChordsViewerActivity::class.java
+                        })
                         putExtra("STYLE", style)
                         if (songId.isNotEmpty()) putExtra("SONG_ID", songId)
                         addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)

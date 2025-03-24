@@ -1,5 +1,6 @@
 package de.jeisfeld.songarchive.ui
 
+import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -7,7 +8,6 @@ import android.graphics.Matrix
 import android.os.Build
 import android.os.Bundle
 import android.view.View
-import android.view.WindowInsetsController
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -56,14 +56,21 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.times
+import androidx.lifecycle.lifecycleScope
 import de.jeisfeld.songarchive.R
+import de.jeisfeld.songarchive.db.AppDatabase
 import de.jeisfeld.songarchive.db.Meaning
 import de.jeisfeld.songarchive.db.Song
-import de.jeisfeld.songarchive.ui.theme.AppTheme
-import de.jeisfeld.songarchive.network.PeerConnectionService
+import de.jeisfeld.songarchive.network.DisplayStyle
 import de.jeisfeld.songarchive.network.PeerConnectionAction
 import de.jeisfeld.songarchive.network.PeerConnectionMode
+import de.jeisfeld.songarchive.network.PeerConnectionService
 import de.jeisfeld.songarchive.network.PeerConnectionViewModel
+import de.jeisfeld.songarchive.ui.theme.AppTheme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 
 class ChordsViewerActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -76,27 +83,60 @@ class ChordsViewerActivity : ComponentActivity() {
                         View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
                 )
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            window.insetsController?.hide(WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE)
-        }
-
         // Prevent screen timeout
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
+        val displayStyle = (intent.getSerializableExtra("STYLE") as DisplayStyle?) ?: DisplayStyle.STANDARD
+
+        if (displayStyle == DisplayStyle.REMOTE_DEFAULT) {
+            PeerConnectionViewModel.stopLyricsViewer.observe(this) { finish() }
+        }
+        if (displayStyle == DisplayStyle.REMOTE_BLACK) {
+            finish()
+        }
+
+        // wakeup if required
+        if (displayStyle == DisplayStyle.REMOTE_DEFAULT) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                setTurnScreenOn(true)
+                setShowWhenLocked(true)
+            } else {
+                val window = window
+                window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED)
+                window.addFlags(WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON)
+            }
+        }
 
         // Get the image path from intent
         @Suppress("DEPRECATION")
         val song: Song? = intent.getParcelableExtra("SONG")
-        val imagePath = intent.getStringExtra("IMAGE_PATH") ?: return
-        @Suppress("DEPRECATION")
-        val meanings: List<Meaning> = intent.getParcelableArrayListExtra("MEANINGS") ?: emptyList()
-
-        setContent {
-            AppTheme {
-                ChordsViewerScreen(song, imagePath, meanings) { finish() }
+        val songId: String? = intent.getStringExtra("SONG_ID")
+        if (song == null && songId != null) {
+            val songDao = AppDatabase.getDatabase(application).songDao()
+            lifecycleScope.launch {
+                val fetchedSong = withContext(Dispatchers.IO) { songDao.getSongById(songId) }
+                updateUI(this@ChordsViewerActivity, fetchedSong, displayStyle)
             }
+        } else {
+            updateUI(this, song, displayStyle)
         }
     }
 
+    private fun updateUI(context: Context, song: Song?, displayStyle: DisplayStyle) {
+        if (song == null) {
+            finish()
+        }
+
+        val imageFile = File(context.filesDir, "chords/${song?.tabfilename}")
+
+        @Suppress("DEPRECATION")
+        val meanings: List<Meaning> = intent.getParcelableArrayListExtra("MEANINGS") ?: emptyList()
+        setContent {
+            AppTheme {
+                ChordsViewerScreen(song, imageFile.absolutePath, meanings) { finish() }
+            }
+        }
+    }
 }
 
 @Composable
@@ -167,7 +207,7 @@ fun ChordsViewerScreen(song: Song?, imagePath: String, meanings: List<Meaning>, 
                                 song?.let {
                                     val serviceIntent = Intent(context, PeerConnectionService::class.java).apply {
                                         putExtra("SONG_ID", song.id)
-                                        putExtra("STYLE", if (sendBlackScreen) LyricsDisplayStyle.REMOTE_BLACK else LyricsDisplayStyle.REMOTE_DEFAULT)
+                                        putExtra("STYLE", if (sendBlackScreen) DisplayStyle.REMOTE_BLACK else DisplayStyle.REMOTE_DEFAULT)
                                         putExtra("ACTION", PeerConnectionAction.DISPLAY_LYRICS)
                                         setAction(PeerConnectionAction.DISPLAY_LYRICS.toString())
                                     }

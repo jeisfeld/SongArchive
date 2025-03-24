@@ -140,7 +140,6 @@ fun SongTable(viewModel: SongViewModel, songs: List<Song>, isWideScreen: Boolean
                                                 withContext(Dispatchers.Main) {  // Switch back to Main thread to start Activity
                                                     val intent = Intent(context, ChordsViewerActivity::class.java).apply {
                                                         putExtra("SONG", song)
-                                                        putExtra("IMAGE_PATH", imageFile.absolutePath)
                                                         putExtra("MEANINGS", meanings)  // Ensure Meaning is Parcelable
                                                     }
                                                     context.startActivity(intent)

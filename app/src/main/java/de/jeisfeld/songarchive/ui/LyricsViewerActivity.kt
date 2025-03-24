@@ -54,13 +54,12 @@ import androidx.lifecycle.lifecycleScope
 import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.db.AppDatabase
 import de.jeisfeld.songarchive.db.Song
+import de.jeisfeld.songarchive.network.DisplayStyle
 import de.jeisfeld.songarchive.network.PeerConnectionViewModel
 import de.jeisfeld.songarchive.ui.theme.AppColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-
-const val STOP_LYRICS_VIEWER_ACTIVITY = "de.jeisfeld.songarchive.STOP_LYRICS_VIEWER_ACTIVITY"
 
 class LyricsViewerActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -76,18 +75,19 @@ class LyricsViewerActivity : ComponentActivity() {
                         View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
                 )
 
-        val lyricsDisplayStyle = (intent.getSerializableExtra("STYLE") as LyricsDisplayStyle?) ?: LyricsDisplayStyle.STANDARD
+        val displayStyle = (intent.getSerializableExtra("STYLE") as DisplayStyle?) ?: DisplayStyle.STANDARD
 
         // allow to turn off screen
-        if (lyricsDisplayStyle != LyricsDisplayStyle.REMOTE_BLACK) {
+        if (displayStyle != DisplayStyle.REMOTE_BLACK) {
             window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
 
-        // wakeup if required
-        if (lyricsDisplayStyle == LyricsDisplayStyle.REMOTE_DEFAULT || lyricsDisplayStyle == LyricsDisplayStyle.REMOTE_BLACK) {
+        if (displayStyle == DisplayStyle.REMOTE_DEFAULT || displayStyle == DisplayStyle.REMOTE_BLACK) {
             PeerConnectionViewModel.stopLyricsViewer.observe(this) { finish() }
         }
-        if (lyricsDisplayStyle == LyricsDisplayStyle.REMOTE_DEFAULT) {
+
+        // wakeup if required
+        if (displayStyle == DisplayStyle.REMOTE_DEFAULT) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
                 setTurnScreenOn(true)
                 setShowWhenLocked(true)
@@ -110,20 +110,23 @@ class LyricsViewerActivity : ComponentActivity() {
             val songDao = AppDatabase.getDatabase(application).songDao()
             lifecycleScope.launch {
                 val fetchedSong = withContext(Dispatchers.IO) { songDao.getSongById(songId) }
-                updateUI(fetchedSong, lyricsDisplayStyle)
+                updateUI(fetchedSong, displayStyle)
             }
         } else {
-            updateUI(song, lyricsDisplayStyle)
+            updateUI(song, displayStyle)
         }
     }
 
-    private fun updateUI(song: Song?, lyricsDisplayStyle: LyricsDisplayStyle) {
+    private fun updateUI(song: Song?, displayStyle: DisplayStyle) {
+        if (song == null) {
+            finish()
+        }
         val lyrics = song?.lyrics?.trim() ?: " "
         val lyricsShort = song?.lyricsShort?.trim() ?: lyrics
 
         setContent {
             MaterialTheme {
-                LyricsViewerScreen(lyrics, lyricsShort, lyricsDisplayStyle) { finish() }
+                LyricsViewerScreen(lyrics, lyricsShort, displayStyle) { finish() }
             }
         }
     }
@@ -131,7 +134,7 @@ class LyricsViewerActivity : ComponentActivity() {
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun LyricsViewerScreen(lyrics: String, lyricsShort: String, lyricsDisplayStyle: LyricsDisplayStyle, onClose: () -> Unit) {
+fun LyricsViewerScreen(lyrics: String, lyricsShort: String, displayStyle: DisplayStyle, onClose: () -> Unit) {
     val fontSizeSepia = 48
     val configuration = LocalConfiguration.current
     val density = LocalDensity.current
@@ -185,8 +188,8 @@ fun LyricsViewerScreen(lyrics: String, lyricsShort: String, lyricsDisplayStyle: 
 
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = if (lyricsDisplayStyle == LyricsDisplayStyle.REMOTE_DEFAULT && fontSize > fontSizeSepia) AppColors.Background else
-            if (lyricsDisplayStyle == LyricsDisplayStyle.REMOTE_BLACK) Color.Black else Color.White,
+        color = if (displayStyle == DisplayStyle.REMOTE_DEFAULT && fontSize > fontSizeSepia) AppColors.Background else
+            if (displayStyle == DisplayStyle.REMOTE_BLACK) Color.Black else Color.White,
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             Column(
@@ -228,7 +231,7 @@ fun LyricsViewerScreen(lyrics: String, lyricsShort: String, lyricsDisplayStyle: 
                         fontSize = fontSize.sp,
                         lineHeight = (fontSize * lineHeight).sp,
                         fontWeight = FontWeight.Normal,
-                        color = if (lyricsDisplayStyle == LyricsDisplayStyle.REMOTE_DEFAULT && fontSize > fontSizeSepia) AppColors.TextColor else Color.Black,
+                        color = if (displayStyle == DisplayStyle.REMOTE_DEFAULT && fontSize > fontSizeSepia) AppColors.TextColor else Color.Black,
                         textAlign = textAlign
                     ),
                     modifier = Modifier
@@ -236,7 +239,7 @@ fun LyricsViewerScreen(lyrics: String, lyricsShort: String, lyricsDisplayStyle: 
                 )
             }
 
-            if (lyricsDisplayStyle == LyricsDisplayStyle.STANDARD) {
+            if (displayStyle == DisplayStyle.STANDARD) {
                 // Close button
                 Box(
                     modifier = Modifier
@@ -280,11 +283,5 @@ class TextMeasurer {
         val lineCount = text.lines().size
         return (lineCount * fontSize * lineHeight)
     }
-}
-
-enum class LyricsDisplayStyle {
-    STANDARD,
-    REMOTE_DEFAULT,
-    REMOTE_BLACK
 }
 

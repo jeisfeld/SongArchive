@@ -11,3 +11,9 @@ enum class NetworkCommand {
     DISPLAY_LYRICS,
     CLIENT_DISCONNECT
 }
+
+enum class DisplayStyle {
+    STANDARD,
+    REMOTE_DEFAULT,
+    REMOTE_BLACK
+}

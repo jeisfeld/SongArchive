@@ -9,7 +9,6 @@ import android.content.Intent
 import android.os.IBinder
 import android.util.Log
 import de.jeisfeld.songarchive.R
-import de.jeisfeld.songarchive.ui.LyricsDisplayStyle
 
 class PeerConnectionService : Service() {
     private lateinit var peerConnectionHandler: PeerConnectionHandler
@@ -61,7 +60,7 @@ class PeerConnectionService : Service() {
             PeerConnectionAction.DISPLAY_LYRICS -> {
                 val songId = intent?.getStringExtra("SONG_ID")
                 @Suppress("DEPRECATION")
-                val style = (intent?.getSerializableExtra("STYLE") as LyricsDisplayStyle?) ?: LyricsDisplayStyle.REMOTE_DEFAULT
+                val style = (intent?.getSerializableExtra("STYLE") as DisplayStyle?) ?: DisplayStyle.REMOTE_DEFAULT
                 if (songId != null) {
                     peerConnectionHandler.sendCommandToClients(NetworkCommand.DISPLAY_LYRICS, songId, style.toString())
                 }
