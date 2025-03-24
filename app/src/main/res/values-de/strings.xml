@@ -15,6 +15,7 @@
     <string name="sync">Synchronisieren</string>
     <string name="network_connection">Netzwerkverbindung</string>
     <string name="network_mode">Netzwerkmodus</string>
+    <string name="client_type">Empfängertyp</string>
     <string name="sync_title">Synchronisierung</string>
     <string name="yes">Ja</string>
     <string name="no">Nein</string>
@@ -43,5 +44,9 @@
         <item>Deaktiviert</item>
         <item>Sender</item>
         <item>Empfänger</item>
+    </string-array>
+    <string-array name="client_modes">
+        <item>Texte</item>
+        <item>Akkorde</item>
     </string-array>
 </resources>

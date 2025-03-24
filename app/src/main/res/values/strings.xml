@@ -14,6 +14,7 @@
     <string name="sync">Sync</string>
     <string name="network_connection">Network Connection</string>
     <string name="network_mode">Network Mode</string>
+    <string name="client_type">Client Type</string>
     <string name="sync_title">Synchronization</string>
     <string name="yes">Yes</string>
     <string name="no">No</string>
@@ -43,5 +44,9 @@
         <item>Disabled</item>
         <item>Server</item>
         <item>Client</item>
+    </string-array>
+    <string-array name="client_modes">
+        <item>Lyrics</item>
+        <item>Chords</item>
     </string-array>
 </resources>
