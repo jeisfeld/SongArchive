@@ -16,6 +16,7 @@ import com.google.android.gms.nearby.connection.Payload
 import com.google.android.gms.nearby.connection.PayloadCallback
 import com.google.android.gms.nearby.connection.PayloadTransferUpdate
 import com.google.android.gms.nearby.connection.Strategy
+import com.google.gson.Gson
 import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.ui.ChordsViewerActivity
 import de.jeisfeld.songarchive.ui.LyricsViewerActivity
@@ -58,18 +59,20 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
         }
     }
 
-    override fun sendCommandToClients(command: NetworkCommand, vararg params: String) {
+    override fun sendCommandToClients(command: NetworkCommand, params: Map<String, String>) {
         for (endpointId in connectedEndpoints) {
-            sendCommandToClient(endpointId, command, *params)
+            sendCommandToClient(endpointId, command, params)
         }
     }
 
-    fun sendCommandToClient(endpointId: String, command: NetworkCommand, vararg params: String) {
-        val jointParams = params.joinToString(separator = "|")
-        val output = command.name + "|" + jointParams
-        val payload = Payload.fromBytes(output.toByteArray(StandardCharsets.UTF_8))
+    private val gson = Gson()
+
+    fun sendCommandToClient(endpointId: String, command: NetworkCommand, params: Map<String, String> = emptyMap()) {
+        val message = Message(command.name, params)
+        val json = gson.toJson(message)
+        val payload = Payload.fromBytes(json.toByteArray(StandardCharsets.UTF_8))
         connectionsClient.sendPayload(endpointId, payload)
-        Log.d(TAG, "Sent command to endpoint " + endpointId + ": " + output)
+        Log.d(TAG, "Sent JSON message to $endpointId: $json")
     }
 
     fun triggerClientDisconnect(endpointId: String) {
@@ -106,7 +109,9 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
                         Toast.makeText(context, context.getString(R.string.toast_client_connected, connectedEndpoints.size), Toast.LENGTH_SHORT).show()
                         updateNotification(PeerConnectionAction.CLIENTS_CONNECTED)
                         PeerConnectionViewModel.connectedDevices = connectedEndpoints.size
-                        sendCommandToClient(endpointId, NetworkCommand.DISPLAY_SONG, "", DisplayStyle.REMOTE_BLACK.toString())
+                        sendCommandToClient(endpointId, NetworkCommand.DISPLAY_SONG, mapOf(
+                            "style" to DisplayStyle.REMOTE_BLACK.toString()
+                        ))
                     }
                     PeerConnectionMode.DISABLED -> { }
                 }
@@ -144,9 +149,10 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
 
     private val payloadCallback = object : PayloadCallback() {
         override fun onPayloadReceived(endpointId: String, payload: Payload) {
-            Log.d(TAG, "Processing payload " + payload)
             payload.asBytes()?.let {
-                val message = String(it, StandardCharsets.UTF_8)
+                val json = String(it, StandardCharsets.UTF_8)
+                Log.d(TAG, "Processing payload " + json)
+                val message = gson.fromJson(json, Message::class.java)
                 processCommand(message)
             }
         }
@@ -156,27 +162,21 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
         }
     }
 
-    private fun processCommand(commandString: String) {
-        Log.d(TAG, "Processing command: " + commandString)
-        val parts = commandString.split("|")
-        val command = NetworkCommand.valueOf(parts[0])
-        when (command) {
+    private fun processCommand(message: Message) {
+        when (NetworkCommand.valueOf(message.command)) {
             NetworkCommand.DISPLAY_SONG -> {
-                if (parts.size >= 3) {
-                    val songId = parts[1]
-                    val style = DisplayStyle.valueOf(parts[2])
-
-                    val intent = Intent().apply {
-                        setClass(context, when (PeerConnectionViewModel.clientMode) {
-                            ClientMode.LYRICS -> LyricsViewerActivity::class.java
-                            ClientMode.CHORDS -> ChordsViewerActivity::class.java
-                        })
-                        putExtra("STYLE", style)
-                        if (songId.isNotEmpty()) putExtra("SONG_ID", songId)
-                        addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
-                    }
-                    context.startActivity(intent)
+                val songId = message.params?.get("songId") ?: ""
+                val style = message.params?.get("style")?.let { DisplayStyle.valueOf(it) } ?: return
+                val intent = Intent().apply {
+                    setClass(context, when (PeerConnectionViewModel.clientMode) {
+                        ClientMode.LYRICS -> LyricsViewerActivity::class.java
+                        ClientMode.CHORDS -> ChordsViewerActivity::class.java
+                    })
+                    putExtra("STYLE", style)
+                    if (songId.isNotEmpty()) putExtra("SONG_ID", songId)
+                    addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
+                context.startActivity(intent)
             }
             NetworkCommand.CLIENT_DISCONNECT -> {
                 PeerConnectionViewModel.peerConnectionMode = PeerConnectionMode.DISABLED

@@ -62,7 +62,10 @@ class PeerConnectionService : Service() {
                 @Suppress("DEPRECATION")
                 val style = (intent?.getSerializableExtra("STYLE") as DisplayStyle?) ?: DisplayStyle.REMOTE_DEFAULT
                 if (songId != null) {
-                    peerConnectionHandler.sendCommandToClients(NetworkCommand.DISPLAY_SONG, songId, style.toString())
+                    peerConnectionHandler.sendCommandToClients(NetworkCommand.DISPLAY_SONG, mapOf(
+                        "songId" to songId,
+                        "style" to style.toString()
+                    ))
                 }
             }
             PeerConnectionAction.CLIENT_CONNECTED, PeerConnectionAction.CLIENT_DISCONNECTED,

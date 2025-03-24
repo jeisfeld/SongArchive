@@ -4,7 +4,7 @@ interface PeerConnectionHandler {
     fun startServer()
     fun startClient()
     fun stopEndpoint()
-    fun sendCommandToClients(command: NetworkCommand, vararg params: String)
+    fun sendCommandToClients(command: NetworkCommand, params: Map<String, String> = emptyMap())
 }
 
 enum class NetworkCommand {
@@ -17,3 +17,8 @@ enum class DisplayStyle {
     REMOTE_DEFAULT,
     REMOTE_BLACK
 }
+
+data class Message(
+    val command: String,
+    val params: Map<String, String>? = null
+)
