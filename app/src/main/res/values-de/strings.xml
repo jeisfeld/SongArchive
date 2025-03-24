@@ -21,6 +21,8 @@
     <string name="sync_success">Download erfolgreich!</string>
     <string name="sync_failed">Download fehlgeschlagen!</string>
     <string name="syncing">Lade die Liedinformationen…</string>
+    <string name="further_options">Weitere Optionen</string>
+    <string name="configure_battery_optimizations">Batterieoptimierung konfigurieren</string>
 
     <string name="toast_connected_as_client">Als Empfänger verbunden</string>
     <string name="toast_disconnected_as_client">Als Empfänger getrennt</string>

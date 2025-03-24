@@ -1,15 +1,20 @@
 package de.jeisfeld.songarchive.ui
 
 import android.Manifest
+import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,11 +26,12 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.AlertDialog
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -33,6 +39,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -54,15 +61,16 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
 import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.db.Song
 import de.jeisfeld.songarchive.db.SongViewModel
-import de.jeisfeld.songarchive.ui.theme.AppColors
-import de.jeisfeld.songarchive.ui.theme.AppTheme
 import de.jeisfeld.songarchive.network.PeerConnectionMode
 import de.jeisfeld.songarchive.network.PeerConnectionViewModel
+import de.jeisfeld.songarchive.ui.theme.AppColors
+import de.jeisfeld.songarchive.ui.theme.AppTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -210,6 +218,7 @@ fun MainScreen(viewModel: SongViewModel) {
                                 )
                                 if (showNetworkDialog) {
                                     NetworkModeDialog(
+                                        context = context,
                                         selectedMode = PeerConnectionViewModel.peerConnectionMode,
                                         onModeSelected = { mode ->
                                             PeerConnectionViewModel.peerConnectionMode = mode
@@ -347,6 +356,7 @@ fun SearchBar(viewModel: SongViewModel) {
 
 @Composable
 fun NetworkModeDialog(
+    context: Context,
     selectedMode: PeerConnectionMode,
     onModeSelected: (PeerConnectionMode) -> Unit,
     onDismiss: () -> Unit
@@ -354,32 +364,72 @@ fun NetworkModeDialog(
     val options = listOf(PeerConnectionMode.DISABLED, PeerConnectionMode.SERVER, PeerConnectionMode.CLIENT)
     var selectedOption by remember { mutableStateOf(selectedMode) }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.network_mode)) },
-        text = {
-            Column {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(8.dp),
+            tonalElevation = 4.dp
+        ) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Text(
+                    text = stringResource(R.string.network_mode),
+                    style = MaterialTheme.typography.headlineSmall
+                )
+
+                Spacer(modifier = Modifier.height(dimensionResource(R.dimen.spacing_heading_vertical)))
+
                 options.forEachIndexed { index, option ->
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = dimensionResource(R.dimen.spacing_small))
+                            .clickable { selectedOption = option }
+                    ) {
                         RadioButton(
                             selected = (selectedOption == option),
                             onClick = { selectedOption = option }
                         )
-                        Text(stringArrayResource(R.array.network_modes)[index])
+                        Text(
+                            text = stringArrayResource(R.array.network_modes)[index],
+                            modifier = Modifier.padding(start = dimensionResource(R.dimen.spacing_medium))
+                        )
                     }
                 }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = { onModeSelected(selectedOption) }) {
-                Text("OK")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
+
+                Spacer(modifier = Modifier.height(dimensionResource(R.dimen.spacing_heading_vertical)))
+
+                // Action Buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Cancel")
+                    }
+                    Spacer(modifier = Modifier.width(dimensionResource(R.dimen.spacing_medium)))
+                    TextButton(onClick = { onModeSelected(selectedOption) }) {
+                        Text("OK")
+                    }
+                }
+
+                // Bottom Section (below confirm/dismiss)
+                Spacer(modifier = Modifier.height(dimensionResource(R.dimen.spacing_heading_vertical)))
+                HorizontalDivider()
+                Spacer(modifier = Modifier.height(dimensionResource(R.dimen.spacing_heading_vertical)))
+                Text(
+                    text = context.getString(R.string.further_options),
+                    style = MaterialTheme.typography.headlineSmall
+                )
+                Spacer(modifier = Modifier.height(dimensionResource(R.dimen.spacing_small)))
+                TextButton(onClick = {
+                    val intent = Intent()
+                    intent.setAction(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                    context.startActivity(intent)
+                }) {
+                    Text(context.getString(R.string.configure_battery_optimizations)) // Example label
+                }
             }
         }
-    )
+    }
 }
 

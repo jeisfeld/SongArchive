@@ -20,6 +20,8 @@
     <string name="sync_success">Download successful!</string>
     <string name="sync_failed">Download failed!</string>
     <string name="syncing">Downloading song information…</string>
+    <string name="further_options">Further options</string>
+    <string name="configure_battery_optimizations">Configure battery optimizations</string>
 
     <string name="toast_connected_as_client">Connected as Client</string>
     <string name="toast_disconnected_as_client">Disconnected as Client</string>
