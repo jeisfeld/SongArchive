@@ -19,7 +19,6 @@ import com.google.android.gms.nearby.connection.Strategy
 import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.ui.LyricsDisplayStyle
 import de.jeisfeld.songarchive.ui.LyricsViewerActivity
-import de.jeisfeld.songarchive.ui.STOP_LYRICS_VIEWER_ACTIVITY
 import java.nio.charset.StandardCharsets
 
 class NearbyConnectionHandler(private val context: Context) : PeerConnectionHandler {
@@ -178,9 +177,7 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
             }
             NetworkCommand.CLIENT_DISCONNECT -> {
                 PeerConnectionViewModel.peerConnectionMode = PeerConnectionMode.DISABLED
-                PeerConnectionViewModel.startPeerConnectionService(context)
-                val intent = Intent(STOP_LYRICS_VIEWER_ACTIVITY)
-                context.sendBroadcast(intent)
+                PeerConnectionViewModel.triggerStopLyrics()
             }
         }
     }

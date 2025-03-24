@@ -1,9 +1,5 @@
 package de.jeisfeld.songarchive.ui
 
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -58,6 +54,7 @@ import androidx.lifecycle.lifecycleScope
 import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.db.AppDatabase
 import de.jeisfeld.songarchive.db.Song
+import de.jeisfeld.songarchive.network.PeerConnectionViewModel
 import de.jeisfeld.songarchive.ui.theme.AppColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -66,16 +63,6 @@ import kotlinx.coroutines.withContext
 const val STOP_LYRICS_VIEWER_ACTIVITY = "de.jeisfeld.songarchive.STOP_LYRICS_VIEWER_ACTIVITY"
 
 class LyricsViewerActivity : ComponentActivity() {
-
-    private val stopReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == STOP_LYRICS_VIEWER_ACTIVITY) {
-                finish()
-            }
-        }
-    }
-    private var isReceiverRegistered = false
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -98,12 +85,7 @@ class LyricsViewerActivity : ComponentActivity() {
 
         // wakeup if required
         if (lyricsDisplayStyle == LyricsDisplayStyle.REMOTE_DEFAULT || lyricsDisplayStyle == LyricsDisplayStyle.REMOTE_BLACK) {
-            registerReceiver(
-                stopReceiver,
-                IntentFilter(STOP_LYRICS_VIEWER_ACTIVITY),
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) Context.RECEIVER_EXPORTED else 0
-            )
-            isReceiverRegistered = true
+            PeerConnectionViewModel.stopLyricsViewer.observe(this) { finish() }
         }
         if (lyricsDisplayStyle == LyricsDisplayStyle.REMOTE_DEFAULT) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
@@ -143,13 +125,6 @@ class LyricsViewerActivity : ComponentActivity() {
             MaterialTheme {
                 LyricsViewerScreen(lyrics, lyricsShort, lyricsDisplayStyle) { finish() }
             }
-        }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        if (isReceiverRegistered) {
-            unregisterReceiver(stopReceiver)
         }
     }
 }

@@ -2,11 +2,15 @@ package de.jeisfeld.songarchive.network
 
 import android.content.Context
 import android.content.Intent
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 
 object PeerConnectionViewModel : ViewModel() {
     var peerConnectionMode = PeerConnectionMode.DISABLED
     var connectedDevices = 0
+
+    val stopLyricsViewer = MutableLiveData<Unit>()
+    fun triggerStopLyrics() { stopLyricsViewer.postValue(Unit) }
 
     fun startPeerConnectionService(context: Context) {
         val serviceIntent = Intent(context, PeerConnectionService::class.java).apply {
