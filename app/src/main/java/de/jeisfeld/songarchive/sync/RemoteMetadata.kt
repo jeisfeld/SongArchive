@@ -1,23 +1,4 @@
-package de.jeisfeld.songarchive
-
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
-import retrofit2.http.GET
-
-interface ApiService {
-    @GET("download_data2.php")
-    suspend fun fetchAllData(): SyncResponse
-}
-
-object RetrofitClient {
-    val api: ApiService by lazy {
-        Retrofit.Builder()
-            .baseUrl("https://heilsame-lieder.de/")
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-            .create(ApiService::class.java)
-    }
-}
+package de.jeisfeld.songarchive.sync
 
 data class SongResponse(
     val id: String,
@@ -48,3 +29,7 @@ data class SyncResponse(
     val song_meanings: List<SongMeaningResponse>
 )
 
+data class CheckUpdateResponse(
+   val tab_count: Int?,
+   val chords_zip_size: Long?
+)

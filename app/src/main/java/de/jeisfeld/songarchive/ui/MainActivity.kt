@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -32,6 +33,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -81,6 +83,8 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -92,6 +96,7 @@ fun MainScreen(viewModel: SongViewModel) {
 
     var showMenu by remember { mutableStateOf(false) }
     var showNetworkDialog by remember { mutableStateOf(false) }
+    var showSyncDialog by remember { mutableStateOf(false) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
@@ -109,6 +114,14 @@ fun MainScreen(viewModel: SongViewModel) {
                 viewModel.synchronizeDatabaseAndImages { success ->
                     isSyncing = false
                 }
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.checkForSongUpdates { needsUpdate ->
+            if (needsUpdate) {
+                showSyncDialog = true
             }
         }
     }
@@ -284,6 +297,30 @@ fun MainScreen(viewModel: SongViewModel) {
         }
         if (isSyncing) {
             ProgressOverlay()
+        }
+        if (showSyncDialog) {
+            AlertDialog(
+                onDismissRequest = { showSyncDialog = false },
+                title = { Text(context.getString(R.string.update_available_title)) },
+                text = { Text(context.getString(R.string.update_available_text)) },
+                confirmButton = {
+                    TextButton(onClick = {
+                        showSyncDialog = false
+                        isSyncing = true
+                        viewModel.synchronizeDatabaseAndImages { success ->
+                            isSyncing = false
+                            viewModel.searchSongs(viewModel.searchQuery.value)
+                        }
+                    }) {
+                        Text(context.getString(R.string.ok))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showSyncDialog = false }) {
+                        Text(context.getString(R.string.cancel))
+                    }
+                }
+            )
         }
     }
 }

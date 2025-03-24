@@ -115,13 +115,13 @@ fun NetworkModeDialog(
                     horizontalArrangement = Arrangement.End
                 ) {
                     TextButton(onClick = onDismiss) {
-                        Text("Cancel")
+                        Text(context.getString(R.string.cancel))
                     }
                     Spacer(modifier = Modifier.width(dimensionResource(R.dimen.spacing_medium)))
                     TextButton(onClick = {
                         onModeSelected(selectedNetworkOption, selectedClientOption)
                     }) {
-                        Text("OK")
+                        Text(context.getString(R.string.ok))
                     }
                 }
 

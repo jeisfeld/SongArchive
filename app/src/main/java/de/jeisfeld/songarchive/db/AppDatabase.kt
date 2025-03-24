@@ -5,9 +5,10 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [Song::class, Meaning::class, SongMeaning::class], version = 9, exportSchema = false)
+@Database(entities = [Song::class, Meaning::class, SongMeaning::class, AppMetadata::class], version = 10, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun songDao(): SongDao
+    abstract fun appMetadataDao(): AppMetadataDao
 
     companion object {
         @Volatile

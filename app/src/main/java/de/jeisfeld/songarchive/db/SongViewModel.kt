@@ -7,7 +7,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
-import de.jeisfeld.songarchive.RetrofitClient
+import de.jeisfeld.songarchive.sync.CheckUpdateResponse
+import de.jeisfeld.songarchive.sync.RetrofitClient
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,12 +25,14 @@ import java.util.regex.Pattern
 import java.util.zip.ZipInputStream
 
 class SongViewModel(application: Application) : AndroidViewModel(application) {
+    val TAG = "SongViewModel"
     private val songDao = AppDatabase.getDatabase(application).songDao()
     private val _songs = MutableStateFlow<List<Song>>(emptyList())
     val songs: StateFlow<List<Song>> = _songs
     private val client = OkHttpClient()
     var searchQuery = mutableStateOf("")
-    var initState = MutableLiveData<Int> (0)
+    var initState = MutableLiveData<Int>(0)
+    var checkUpdateResponse: CheckUpdateResponse? = null
 
     init {
         viewModelScope.launch {
@@ -68,6 +72,10 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
     fun synchronizeDatabaseAndImages(onComplete: (Boolean) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                if (checkUpdateResponse == null) {
+                    checkUpdateResponse = RetrofitClient.api.checkUpdate()
+                }
+
                 // Fetch all data in one API call
                 val response = RetrofitClient.api.fetchAllData()
 
@@ -121,10 +129,14 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
                 // Step 2: Download and Extract Images
                 val success = downloadAndExtractZip(getApplication(), "https://heilsame-lieder.de/download_chords.php")
 
+                if (success) {
+                    storeLastAppMetadata()
+                }
+
                 // Step 3: Notify UI
                 onComplete(success)
             } catch (e: Exception) {
-                Log.e("SyncError", "Failed to synchronize: ${e.message}")
+                Log.e(TAG, "Failed to synchronize: ${e.message}")
                 onComplete(false)
             }
         }
@@ -178,8 +190,42 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
 
             true // Success
         } catch (e: Exception) {
-            Log.e("ZipError", "Failed to download or extract ZIP: ${e.message}")
+            Log.e(TAG, "Failed to download or extract ZIP: ${e.message}")
             false // Failure
         }
     }
+
+    fun checkForSongUpdates(onResult: (Boolean) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                checkUpdateResponse = RetrofitClient.api.checkUpdate()
+                Log.d(TAG, "Remote Metadata: " + checkUpdateResponse)
+
+                val localMetadata =
+                    AppDatabase.getDatabase(getApplication()).appMetadataDao().get() ?: AppMetadata(numberOfTabs = 0, chordsZipSize = 0)
+                Log.d(TAG, "Local Metadata: " + localMetadata)
+
+                val tabsChanged = checkUpdateResponse?.tab_count != null && checkUpdateResponse?.tab_count != localMetadata.numberOfTabs
+                val sizeChanged = checkUpdateResponse?.chords_zip_size != null && checkUpdateResponse?.chords_zip_size != localMetadata.chordsZipSize
+
+                onResult(tabsChanged || sizeChanged)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to check for update: ${e.message}")
+                onResult(false)
+            }
+        }
+    }
+
+    fun storeLastAppMetadata() {
+        CoroutineScope(Dispatchers.IO).launch {
+            checkUpdateResponse?.tab_count?.let { tabCount ->
+                checkUpdateResponse?.chords_zip_size?.let { zipSize ->
+                    AppDatabase.getDatabase(getApplication()).appMetadataDao().insert(
+                        AppMetadata(numberOfTabs = tabCount, chordsZipSize = zipSize))
+                }
+            }
+            checkUpdateResponse = null
+        }
+    }
+
 }
