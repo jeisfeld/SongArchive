@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
@@ -42,7 +43,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.pointerInteropFilter
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -76,6 +80,9 @@ class LyricsViewerActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         // Enable full-screen mode
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.setDecorFitsSystemWindows(false)
+        }
         window.decorView.systemUiVisibility = (
                 View.SYSTEM_UI_FLAG_FULLSCREEN or
                         View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
@@ -152,6 +159,7 @@ class LyricsViewerActivity : ComponentActivity() {
 fun LyricsViewerScreen(lyrics: String, lyricsShort: String, lyricsDisplayStyle: LyricsDisplayStyle, onClose: () -> Unit) {
     val fontSizeSepia = 48
     val configuration = LocalConfiguration.current
+    val density = LocalDensity.current
     val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
     val displayedLyrics1 = if (isLandscape) lyricsShort else lyrics
     val displayedLyrics = displayedLyrics1.lines().joinToString("\n") { it.trimEnd() }
@@ -161,31 +169,37 @@ fun LyricsViewerScreen(lyrics: String, lyricsShort: String, lyricsDisplayStyle: 
     var isZooming by remember { mutableStateOf(false) }
     var startPadding = if (isLandscape) 0f else 8f
 
-    val screenWidth = configuration.screenWidthDp - 8
-    val screenHeight = configuration.screenHeightDp
     val textMeasurer = TextMeasurer()
     val longestLine = displayedLyrics.lines().maxByOrNull { textMeasurer.measureWidth(it, 24f) } ?: ""
 
     var fontSize by remember { mutableStateOf(24f) }
     var lineHeight by remember { mutableStateOf(1.3f) }
 
-    LaunchedEffect(longestLine) {
+    val localView = LocalView.current
+    var screenWidth by remember { mutableStateOf(with(density) { localView.width.toDp().value }) }
+    var screenHeight by remember { mutableStateOf(with(density) { localView.height.toDp().value }) }
+
+    LaunchedEffect(screenWidth, screenHeight) {
+        Log.d("LyricsViewerActivity", "View size: " + screenWidth + "," + screenHeight)
+
         var testFontSize = 24f
 
         for (i in 1..3) {
-            testFontSize = testFontSize * screenWidth / textMeasurer.measureWidth(longestLine, testFontSize)
+            testFontSize = testFontSize * (screenWidth - 8) / textMeasurer.measureWidth(longestLine, testFontSize)
         }
-        if (screenWidth < textMeasurer.measureWidth(longestLine, testFontSize)) testFontSize -= 1f
+        if (screenWidth - 8 < textMeasurer.measureWidth(longestLine, testFontSize)) {
+            testFontSize -= 1f
+        }
 
         fontSize = testFontSize * 0.98f
 
         val totalTextHeight = textMeasurer.measureHeight(displayedLyrics, fontSize, lineHeight)
-        if (totalTextHeight > screenHeight) {
-            lineHeight *= (screenHeight.toFloat() / totalTextHeight)
+        if (totalTextHeight > screenHeight * 0.95f) {
+            lineHeight *= (screenHeight * 0.95f / totalTextHeight)
         }
 
         if (lineHeight < 1.02) {
-            fontSize *= lineHeight
+            fontSize *= lineHeight / 1.02f
             lineHeight = 1.02f
         }
 
@@ -203,6 +217,10 @@ fun LyricsViewerScreen(lyrics: String, lyricsShort: String, lyricsDisplayStyle: 
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .onGloballyPositioned { coordinates ->
+                        screenWidth = with(density) { coordinates.size.width.toDp().value }
+                        screenHeight = with(density) { coordinates.size.height.toDp().value }
+                    }
                     .pointerInput(Unit) {
                         detectTransformGestures { _, pan, zoom, _ ->
                             if (zoom != 1f) { // Two-finger gesture detected
@@ -238,7 +256,8 @@ fun LyricsViewerScreen(lyrics: String, lyricsShort: String, lyricsDisplayStyle: 
                         color = if (lyricsDisplayStyle == LyricsDisplayStyle.REMOTE_DEFAULT && fontSize > fontSizeSepia) AppColors.TextColor else Color.Black,
                         textAlign = textAlign
                     ),
-                    modifier = Modifier.padding(start = startPadding.dp)
+                    modifier = Modifier
+                        .padding(start = startPadding.dp)
                 )
             }
 
