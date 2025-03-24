@@ -74,6 +74,7 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 if (checkUpdateResponse == null) {
                     checkUpdateResponse = RetrofitClient.api.checkUpdate()
+                    Log.d(TAG, "Retrieved update information: " + checkUpdateResponse)
                 }
 
                 // Fetch all data in one API call

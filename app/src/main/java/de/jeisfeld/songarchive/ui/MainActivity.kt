@@ -83,8 +83,6 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-
-
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -115,13 +113,12 @@ fun MainScreen(viewModel: SongViewModel) {
                     isSyncing = false
                 }
             }
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        viewModel.checkForSongUpdates { needsUpdate ->
-            if (needsUpdate) {
-                showSyncDialog = true
+            else {
+                viewModel.checkForSongUpdates { needsUpdate ->
+                    if (needsUpdate) {
+                        showSyncDialog = true
+                    }
+                }
             }
         }
     }
