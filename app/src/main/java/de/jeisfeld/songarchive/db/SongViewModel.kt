@@ -69,12 +69,11 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun synchronizeDatabaseAndImages(onComplete: (Boolean) -> Unit) {
+    fun synchronizeDatabaseAndImages(recheckUpdate: Boolean, onComplete: (Boolean) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                if (checkUpdateResponse == null) {
+                if (recheckUpdate) {
                     checkUpdateResponse = RetrofitClient.api.checkUpdate()
-                    Log.d(TAG, "Retrieved update information: " + checkUpdateResponse)
                 }
 
                 // Fetch all data in one API call
