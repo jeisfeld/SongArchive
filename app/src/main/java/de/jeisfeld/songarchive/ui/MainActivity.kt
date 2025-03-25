@@ -37,6 +37,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -53,8 +54,12 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import de.jeisfeld.songarchive.R
+import de.jeisfeld.songarchive.audio.isInternetAvailable
 import de.jeisfeld.songarchive.db.Song
 import de.jeisfeld.songarchive.db.SongViewModel
 import de.jeisfeld.songarchive.network.PeerConnectionViewModel
@@ -89,12 +94,14 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainScreen(viewModel: SongViewModel) {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val isWideScreen = LocalConfiguration.current.screenWidthDp > 600
     var isSyncing by remember { mutableStateOf(false) }
 
     var showMenu by remember { mutableStateOf(false) }
     var showNetworkDialog by remember { mutableStateOf(false) }
     var showSyncDialog by remember { mutableStateOf(false) }
+    val isConnectedState = remember { mutableStateOf(isInternetAvailable(context)) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
@@ -120,6 +127,18 @@ fun MainScreen(viewModel: SongViewModel) {
                     }
                 }
             }
+        }
+    }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                isConnectedState.value = isInternetAvailable(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
 
@@ -288,7 +307,7 @@ fun MainScreen(viewModel: SongViewModel) {
                     modifier = Modifier
                         .fillMaxSize()
                 ) {
-                    SongTable(viewModel, viewModel.songs.collectAsState().value, isWideScreen)
+                    SongTable(viewModel, viewModel.songs.collectAsState().value, isWideScreen, isConnectedState.value)
                 }
             }
         }

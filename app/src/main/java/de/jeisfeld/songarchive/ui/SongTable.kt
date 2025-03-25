@@ -35,9 +35,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.audio.AudioPlayerService
 import de.jeisfeld.songarchive.audio.PlaybackViewModel
-import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.db.Song
 import de.jeisfeld.songarchive.db.SongViewModel
 import de.jeisfeld.songarchive.ui.theme.AppColors
@@ -48,7 +48,7 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 @Composable
-fun SongTable(viewModel: SongViewModel, songs: List<Song>, isWideScreen: Boolean) {
+fun SongTable(viewModel: SongViewModel, songs: List<Song>, isWideScreen: Boolean, isConnected: Boolean) {
     val context = LocalContext.current
     val currentlyPlayingSong by PlaybackViewModel.currentlyPlayingSong.collectAsState()
     val isPlaying by PlaybackViewModel.isPlaying.collectAsState()
@@ -151,7 +151,7 @@ fun SongTable(viewModel: SongViewModel, songs: List<Song>, isWideScreen: Boolean
                                 Spacer(modifier = Modifier.width(dimensionResource(id = R.dimen.spacing_medium)))
                             }
 
-                            song.mp3filename?.takeIf { it.isNotBlank() }?.let { filename ->
+                            song.mp3filename?.takeIf { it.isNotBlank() && isConnected }?.let { filename ->
                                 Image(
                                     painter = painterResource(
                                         id = if (currentlyPlayingSong?.id == song.id) R.drawable.ic_stop else R.drawable.ic_play

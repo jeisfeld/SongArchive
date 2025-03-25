@@ -1,5 +1,8 @@
 package de.jeisfeld.songarchive.audio
 
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import androidx.lifecycle.ViewModel
 import de.jeisfeld.songarchive.db.Song
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,4 +47,12 @@ object PlaybackViewModel : ViewModel() {
     fun changeSong() {
         _currentMp3Id.update { (currentMp3Id.value + 1) % 2 }
     }
+}
+
+fun isInternetAvailable(context: Context): Boolean {
+    val connectivityManager =
+        context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    val network = connectivityManager.activeNetwork ?: return false
+    val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
+    return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
 }
