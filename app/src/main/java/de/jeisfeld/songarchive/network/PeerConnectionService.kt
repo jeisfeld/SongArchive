@@ -32,6 +32,7 @@ class PeerConnectionService : Service() {
         if (PeerConnectionViewModel.peerConnectionMode == PeerConnectionMode.DISABLED && action != PeerConnectionAction.CONNECTION_DISABLE) {
             startNotification(intent, action)
             stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
             return START_STICKY
         }
 

@@ -89,7 +89,12 @@ class ChordsViewerActivity : ComponentActivity() {
         val displayStyle = (intent.getSerializableExtra("STYLE") as DisplayStyle?) ?: DisplayStyle.STANDARD
 
         if (displayStyle == DisplayStyle.REMOTE_DEFAULT) {
-            PeerConnectionViewModel.stopLyricsViewer.observe(this) { finish() }
+            PeerConnectionViewModel.stopRemoteActivity.observe(this) {
+                if (it) {
+                    finish()
+                    PeerConnectionViewModel.stopRemoteActivity.postValue(false)
+                }
+            }
         }
         if (displayStyle == DisplayStyle.REMOTE_BLACK) {
             finish()

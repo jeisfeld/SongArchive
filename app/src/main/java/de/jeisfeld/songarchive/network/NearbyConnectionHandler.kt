@@ -180,7 +180,8 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
             }
             NetworkCommand.CLIENT_DISCONNECT -> {
                 PeerConnectionViewModel.peerConnectionMode = PeerConnectionMode.DISABLED
-                PeerConnectionViewModel.triggerStopLyrics()
+                updateNotification(PeerConnectionAction.CONNECTION_DISABLE)
+                PeerConnectionViewModel.stopRemoteActivity.postValue(true)
             }
         }
     }

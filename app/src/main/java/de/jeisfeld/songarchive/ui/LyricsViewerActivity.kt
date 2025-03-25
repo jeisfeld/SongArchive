@@ -2,7 +2,6 @@ package de.jeisfeld.songarchive.ui
 
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
@@ -83,7 +82,12 @@ class LyricsViewerActivity : ComponentActivity() {
         }
 
         if (displayStyle == DisplayStyle.REMOTE_DEFAULT || displayStyle == DisplayStyle.REMOTE_BLACK) {
-            PeerConnectionViewModel.stopLyricsViewer.observe(this) { finish() }
+            PeerConnectionViewModel.stopRemoteActivity.observe(this) {
+                if (it) {
+                    finish()
+                    PeerConnectionViewModel.stopRemoteActivity.postValue(false)
+                }
+            }
         }
 
         // wakeup if required
@@ -155,8 +159,6 @@ fun LyricsViewerScreen(lyrics: String, lyricsShort: String, displayStyle: Displa
     var screenHeight by remember { mutableStateOf(with(density) { localView.height.toDp().value }) }
 
     LaunchedEffect(screenWidth, screenHeight) {
-        Log.d("LyricsViewerActivity", "View size: " + screenWidth + "," + screenHeight)
-
         var testFontSize = 24f
 
         for (i in 1..3) {

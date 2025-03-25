@@ -10,8 +10,7 @@ object PeerConnectionViewModel : ViewModel() {
     var clientMode = ClientMode.LYRICS
     var connectedDevices = 0
 
-    val stopLyricsViewer = MutableLiveData<Unit>()
-    fun triggerStopLyrics() { stopLyricsViewer.postValue(Unit) }
+    val stopRemoteActivity = MutableLiveData(false)
 
     fun startPeerConnectionService(context: Context) {
         val serviceIntent = Intent(context, PeerConnectionService::class.java).apply {
