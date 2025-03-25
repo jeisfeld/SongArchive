@@ -47,6 +47,7 @@ class AudioPlayerService : Service() {
             "PLAY" -> {
                 song = intent.getParcelableExtra("SONG")
                 song?.mp3filename?.let { filename ->
+                    PlaybackViewModel.firstSong()
                     val encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8.toString()).replace("+", "%20")
                     url = "https://heilsame-lieder.de/audio/songs/$encodedFilename".toUri()
                     exoPlayer.stop()

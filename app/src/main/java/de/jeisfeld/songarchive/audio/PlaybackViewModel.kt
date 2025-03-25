@@ -36,16 +36,15 @@ object PlaybackViewModel : ViewModel() {
         _isPlaying.update { !_isPlaying.value }
     }
 
-    fun setPlaying(isPlaying: Boolean) {
-        _isPlaying.update { isPlaying }
-    }
-
     fun setProgress(progress: Long) {
         _currentProgress.update { progress }
     }
 
     fun changeSong() {
         _currentMp3Id.update { (currentMp3Id.value + 1) % 2 }
+    }
+    fun firstSong() {
+        _currentMp3Id.update { 0 }
     }
 }
 

@@ -36,6 +36,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -58,6 +59,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.times
 import androidx.lifecycle.lifecycleScope
 import de.jeisfeld.songarchive.R
+import de.jeisfeld.songarchive.audio.AudioPlayerService
+import de.jeisfeld.songarchive.audio.PlaybackViewModel
+import de.jeisfeld.songarchive.audio.isInternetAvailable
 import de.jeisfeld.songarchive.db.AppDatabase
 import de.jeisfeld.songarchive.db.Meaning
 import de.jeisfeld.songarchive.db.Song
@@ -138,14 +142,14 @@ class ChordsViewerActivity : ComponentActivity() {
         val meanings: List<Meaning> = intent.getParcelableArrayListExtra("MEANINGS") ?: emptyList()
         setContent {
             AppTheme {
-                ChordsViewerScreen(song, imageFile.absolutePath, meanings) { finish() }
+                ChordsViewerScreen(song, imageFile.absolutePath, displayStyle, meanings) { finish() }
             }
         }
     }
 }
 
 @Composable
-fun ChordsViewerScreen(song: Song?, imagePath: String, meanings: List<Meaning>, onClose: () -> Unit) {
+fun ChordsViewerScreen(song: Song?, imagePath: String, displayStyle: DisplayStyle, meanings: List<Meaning>, onClose: () -> Unit) {
     var showPopup by remember { mutableStateOf(false) }
     var sendBlackScreen by remember { mutableStateOf(false) }
     val configuration = LocalConfiguration.current
@@ -240,6 +244,75 @@ fun ChordsViewerScreen(song: Song?, imagePath: String, meanings: List<Meaning>, 
                         }
                         Spacer(modifier = Modifier.width(dimensionResource(id = R.dimen.spacing_medium)))
                     }
+                    if (displayStyle == DisplayStyle.STANDARD && isInternetAvailable(context) && song?.mp3filename != null) {
+                        val isCurrentSong = PlaybackViewModel.currentlyPlayingSong.collectAsState().value?.id == song.id
+                        val isPlaying = PlaybackViewModel.isPlaying.collectAsState().value
+                        IconButton(
+                            onClick = {
+                                if (isCurrentSong) {
+                                    val intent = Intent(context, AudioPlayerService::class.java).apply {
+                                        action = if (isPlaying) "PAUSE" else "RESUME"
+                                    }
+                                    context.startService(intent)
+                                    PlaybackViewModel.toggleIsPlaying()
+                                }
+                                else {
+                                    PlaybackViewModel.updatePlaybackState(song, true, 0L, 0L)
+                                    val intent = Intent(context, AudioPlayerService::class.java).apply {
+                                        action = "PLAY"
+                                        putExtra("SONG", song)
+                                    }
+                                    context.startForegroundService(intent)
+                                }
+                            },
+                            modifier = Modifier
+                                .background(
+                                    Brush.verticalGradient(
+                                        listOf(Color.White.copy(alpha = 0.6f), Color.White.copy(alpha = 0.3f))
+                                    ),
+                                    shape = RoundedCornerShape(50)
+                                )
+                                .size(dimensionResource(id = R.dimen.icon_size_large))
+                                .clip(RoundedCornerShape(50))
+                        ) {
+                            Icon(
+                                painter = painterResource(id = if (isCurrentSong && isPlaying) R.drawable.ic_pause else R.drawable.ic_play),
+                                contentDescription = if (isCurrentSong && isPlaying) "PAUSE" else "PLAY",
+                                tint = Color.Black,
+                                modifier = Modifier
+                                    .size(dimensionResource(id = R.dimen.icon_size_small))
+                            )
+                        }
+                        if (isCurrentSong) {
+                            IconButton(
+                                onClick = {
+                                    val intent = Intent(context, AudioPlayerService::class.java).apply {
+                                        action = "STOP"
+                                    }
+                                    context.startService(intent)
+                                    PlaybackViewModel.updatePlaybackState(null, false, 0L, 0L)
+                                },
+                                modifier = Modifier
+                                    .background(
+                                        Brush.verticalGradient(
+                                            listOf(Color.White.copy(alpha = 0.6f), Color.White.copy(alpha = 0.3f))
+                                        ),
+                                        shape = RoundedCornerShape(50)
+                                    )
+                                    .size(dimensionResource(id = R.dimen.icon_size_large))
+                                    .clip(RoundedCornerShape(50))
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_stop),
+                                    contentDescription = "STOP",
+                                    tint = Color.Black,
+                                    modifier = Modifier
+                                        .size(dimensionResource(id = R.dimen.icon_size_small))
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(dimensionResource(id = R.dimen.spacing_medium)))
+                    }
                     if (!meanings.isEmpty()) {
                         IconButton(
                             onClick = { showPopup = true },
@@ -264,24 +337,26 @@ fun ChordsViewerScreen(song: Song?, imagePath: String, meanings: List<Meaning>, 
                         Spacer(modifier = Modifier.width(dimensionResource(id = R.dimen.spacing_medium)))
                     }
 
-                    IconButton(
-                        onClick = onClose,
-                        modifier = Modifier
-                            .background(
-                                Brush.verticalGradient(
-                                    listOf(Color.White.copy(alpha = 0.6f), Color.White.copy(alpha = 0.3f))
-                                ),
-                                shape = RoundedCornerShape(50)
+                    if (displayStyle == DisplayStyle.STANDARD) {
+                        IconButton(
+                            onClick = onClose,
+                            modifier = Modifier
+                                .background(
+                                    Brush.verticalGradient(
+                                        listOf(Color.White.copy(alpha = 0.6f), Color.White.copy(alpha = 0.3f))
+                                    ),
+                                    shape = RoundedCornerShape(50)
+                                )
+                                .size(dimensionResource(id = R.dimen.icon_size_large))
+                                .clip(RoundedCornerShape(50))
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_close),
+                                contentDescription = "Close",
+                                tint = Color.Black,
+                                modifier = Modifier.padding(8.dp).size(dimensionResource(id = R.dimen.icon_size_small))
                             )
-                            .size(dimensionResource(id = R.dimen.icon_size_large))
-                            .clip(RoundedCornerShape(50))
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_close),
-                            contentDescription = "Close",
-                            tint = Color.Black,
-                            modifier = Modifier.padding(8.dp).size(dimensionResource(id = R.dimen.icon_size_small))
-                        )
+                        }
                     }
                 }
             }
