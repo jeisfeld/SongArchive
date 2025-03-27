@@ -62,10 +62,14 @@ class PeerConnectionService : Service() {
                 val songId = intent?.getStringExtra("SONG_ID")
                 @Suppress("DEPRECATION")
                 val style = (intent?.getSerializableExtra("STYLE") as DisplayStyle?) ?: DisplayStyle.REMOTE_DEFAULT
+                val lyrics = intent?.getStringExtra("LYRICS")
+                val lyricsShort = intent?.getStringExtra("LYRICS_SHORT")
                 if (songId != null) {
                     peerConnectionHandler.sendCommandToClients(NetworkCommand.DISPLAY_SONG, mapOf(
                         "songId" to songId,
-                        "style" to style.toString()
+                        "style" to style.toString(),
+                        "lyrics" to lyrics,
+                        "lyricsShort" to lyricsShort
                     ))
                 }
             }

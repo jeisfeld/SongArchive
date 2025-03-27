@@ -109,25 +109,31 @@ class LyricsViewerActivity : ComponentActivity() {
             @Suppress("DEPRECATION")
             intent.getParcelableExtra("SONG")
         }
-        val songId: String? = intent.getStringExtra("SONG_ID")
-        if (song == null && songId != null) {
-            val songDao = AppDatabase.getDatabase(application).songDao()
-            lifecycleScope.launch {
-                val fetchedSong = withContext(Dispatchers.IO) { songDao.getSongById(songId) }
-                updateUI(fetchedSong, displayStyle)
+        if (song == null) {
+            val songId: String? = intent.getStringExtra("SONG_ID")
+            val lyrics: String? = intent.getStringExtra("LYRICS")
+            val lyricsShort: String? = intent.getStringExtra("LYRICS_SHORT")
+            if (songId != null) {
+                val songDao = AppDatabase.getDatabase(application).songDao()
+                lifecycleScope.launch {
+                    val fetchedSong = withContext(Dispatchers.IO) { songDao.getSongById(songId) }
+                    updateUI(fetchedSong, lyrics, lyricsShort, displayStyle)
+                }
+            }
+            else {
+                updateUI(null, lyrics, lyricsShort, displayStyle)
             }
         } else {
-            updateUI(song, displayStyle)
+            updateUI(song, null, null, displayStyle)
         }
     }
 
-    private fun updateUI(song: Song?, displayStyle: DisplayStyle) {
-        val lyrics = song?.lyrics?.trim() ?: " "
-        val lyricsShort = song?.lyricsShort?.trim() ?: lyrics
-
+    private fun updateUI(song: Song?, lyrics: String?, lyricsShort: String?, displayStyle: DisplayStyle) {
+        val displayLyrics = song?.lyrics?.trim() ?: lyrics ?: " "
+        val displayLyricsShort = song?.lyricsShort?.trim() ?: lyricsShort ?: displayLyrics
         setContent {
             MaterialTheme {
-                LyricsViewerScreen(lyrics, lyricsShort, displayStyle) { finish() }
+                LyricsViewerScreen(displayLyrics, displayLyricsShort, displayStyle) { finish() }
             }
         }
     }

@@ -4,7 +4,7 @@ interface PeerConnectionHandler {
     fun startServer()
     fun startClient()
     fun stopEndpoint()
-    fun sendCommandToClients(command: NetworkCommand, params: Map<String, String> = emptyMap())
+    fun sendCommandToClients(command: NetworkCommand, params: Map<String, String?> = emptyMap())
 }
 
 enum class NetworkCommand {

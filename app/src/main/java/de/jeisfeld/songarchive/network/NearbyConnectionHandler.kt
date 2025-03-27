@@ -59,7 +59,7 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
         }
     }
 
-    override fun sendCommandToClients(command: NetworkCommand, params: Map<String, String>) {
+    override fun sendCommandToClients(command: NetworkCommand, params: Map<String, String?>) {
         for (endpointId in connectedEndpoints) {
             sendCommandToClient(endpointId, command, params)
         }
@@ -67,8 +67,8 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
 
     private val gson = Gson()
 
-    fun sendCommandToClient(endpointId: String, command: NetworkCommand, params: Map<String, String> = emptyMap()) {
-        val message = Message(command.name, params)
+    fun sendCommandToClient(endpointId: String, command: NetworkCommand, params: Map<String, String?> = emptyMap()) {
+        val message = Message(command.name, params.filterValues { it != null } .mapValues { it.value!! })
         val json = gson.toJson(message)
         val payload = Payload.fromBytes(json.toByteArray(StandardCharsets.UTF_8))
         connectionsClient.sendPayload(endpointId, payload)
@@ -167,6 +167,8 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
             NetworkCommand.DISPLAY_SONG -> {
                 val songId = message.params?.get("songId") ?: ""
                 val style = message.params?.get("style")?.let { DisplayStyle.valueOf(it) } ?: return
+                val lyrics = message.params.get("lyrics") ?: ""
+                val lyricsShort = message.params.get("lyricsShort") ?: ""
                 val intent = Intent().apply {
                     setClass(context, when (PeerConnectionViewModel.clientMode) {
                         ClientMode.LYRICS -> LyricsViewerActivity::class.java
@@ -174,6 +176,8 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
                     })
                     putExtra("STYLE", style)
                     if (songId.isNotEmpty()) putExtra("SONG_ID", songId)
+                    if (lyrics.isNotEmpty()) putExtra("LYRICS", lyrics)
+                    if (lyricsShort.isNotEmpty()) putExtra("LYRICS_SHORT", lyricsShort)
                     addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
                 context.startActivity(intent)

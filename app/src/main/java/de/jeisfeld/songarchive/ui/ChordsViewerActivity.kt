@@ -44,7 +44,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -233,9 +232,11 @@ fun ChordsViewerScreen(song: Song?, imagePath: String, displayStyle: DisplayStyl
                                 onClick = {
                                     song?.let {
                                         val serviceIntent = Intent(context, PeerConnectionService::class.java).apply {
+                                            putExtra("ACTION", PeerConnectionAction.DISPLAY_LYRICS)
                                             putExtra("SONG_ID", song.id)
                                             putExtra("STYLE", if (sendBlackScreen) DisplayStyle.REMOTE_BLACK else DisplayStyle.REMOTE_DEFAULT)
-                                            putExtra("ACTION", PeerConnectionAction.DISPLAY_LYRICS)
+                                            putExtra("LYRICS", song.lyrics)
+                                            putExtra("LYRICS_SHORT", song.lyricsShort)
                                             setAction(PeerConnectionAction.DISPLAY_LYRICS.toString())
                                         }
                                         context.startService(serviceIntent)
