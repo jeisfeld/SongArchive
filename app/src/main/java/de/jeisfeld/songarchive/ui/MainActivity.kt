@@ -1,6 +1,7 @@
 package de.jeisfeld.songarchive.ui
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -62,6 +63,10 @@ import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.audio.isInternetAvailable
 import de.jeisfeld.songarchive.db.Song
 import de.jeisfeld.songarchive.db.SongViewModel
+import de.jeisfeld.songarchive.network.DisplayStyle
+import de.jeisfeld.songarchive.network.PeerConnectionAction
+import de.jeisfeld.songarchive.network.PeerConnectionMode
+import de.jeisfeld.songarchive.network.PeerConnectionService
 import de.jeisfeld.songarchive.network.PeerConnectionViewModel
 import de.jeisfeld.songarchive.ui.theme.AppColors
 import de.jeisfeld.songarchive.ui.theme.AppTheme
@@ -102,6 +107,9 @@ fun MainScreen(viewModel: SongViewModel) {
     var showNetworkDialog by remember { mutableStateOf(false) }
     var showSyncDialog by remember { mutableStateOf(false) }
     val isConnectedState = remember { mutableStateOf(isInternetAvailable(context)) }
+
+    var showShareLyricsDialog by remember { mutableStateOf(false) }
+    var sharedLyricsText by remember { mutableStateOf("") }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
@@ -283,6 +291,27 @@ fun MainScreen(viewModel: SongViewModel) {
                                         onDismiss = { showNetworkDialog = false }
                                     )
                                 }
+                                if (PeerConnectionViewModel.peerConnectionMode == PeerConnectionMode.SERVER && PeerConnectionViewModel.connectedDevices > 0) {
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                stringResource(id = R.string.share_lyrics),
+                                                color = AppColors.TextColor
+                                            )
+                                        },
+                                        onClick = {
+                                            showMenu = false
+                                            showShareLyricsDialog = true
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                painter = painterResource(id = R.drawable.ic_send),
+                                                contentDescription = "Send Lyrics",
+                                                modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small))
+                                            )
+                                        }
+                                    )
+                                }
                             }
                         }
                     )
@@ -334,6 +363,51 @@ fun MainScreen(viewModel: SongViewModel) {
                 dismissButton = {
                     TextButton(onClick = { showSyncDialog = false }) {
                         Text(context.getString(R.string.cancel))
+                    }
+                }
+            )
+        }
+        if (showShareLyricsDialog) {
+            AlertDialog(
+                onDismissRequest = { showShareLyricsDialog = false },
+                title = { Text(stringResource(id = R.string.share_lyrics)) },
+                text = {
+                    OutlinedTextField(
+                        value = sharedLyricsText,
+                        onValueChange = { sharedLyricsText = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp),
+                        placeholder = { Text(stringResource(id = R.string.enter_lyrics_for_sharing)) },
+                        singleLine = false,
+                        maxLines = 20
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        val serviceIntent = Intent(context, PeerConnectionService::class.java).apply {
+                            setAction(PeerConnectionAction.DISPLAY_LYRICS.toString())
+                            putExtra("ACTION", PeerConnectionAction.DISPLAY_LYRICS)
+                            putExtra("STYLE", DisplayStyle.REMOTE_DEFAULT)
+                            putExtra("LYRICS", sharedLyricsText)
+                        }
+                        context.startService(serviceIntent)
+                    }) {
+                        Text(stringResource(id = R.string.share_lyrics))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = {
+                        val serviceIntent = Intent(context, PeerConnectionService::class.java).apply {
+                            setAction(PeerConnectionAction.DISPLAY_LYRICS.toString())
+                            putExtra("ACTION", PeerConnectionAction.DISPLAY_LYRICS)
+                            putExtra("STYLE", DisplayStyle.REMOTE_BLACK)
+                            putExtra("LYRICS", " ")
+                        }
+                        context.startService(serviceIntent)
+                        showShareLyricsDialog = false
+                    }) {
+                        Text(stringResource(id = R.string.stop_share_lyrics))
                     }
                 }
             )

@@ -17,6 +17,9 @@
     <string name="network_mode">Netzwerkmodus</string>
     <string name="client_type">Empfängertyp</string>
     <string name="sync_title">Synchronisierung</string>
+    <string name="share_lyrics">Text teilen</string>
+    <string name="stop_share_lyrics">Teilen beenden</string>
+    <string name="enter_lyrics_for_sharing">Text zum Teilen eingeben…</string>
     <string name="yes">Ja</string>
     <string name="no">Nein</string>
     <string name="sync_success">Download erfolgreich!</string>

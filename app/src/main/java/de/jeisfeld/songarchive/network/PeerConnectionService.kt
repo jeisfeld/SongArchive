@@ -59,12 +59,12 @@ class PeerConnectionService : Service() {
                 peerConnectionHandler.startClient() // Use correct IP
             }
             PeerConnectionAction.DISPLAY_LYRICS -> {
-                val songId = intent?.getStringExtra("SONG_ID")
                 @Suppress("DEPRECATION")
                 val style = (intent?.getSerializableExtra("STYLE") as DisplayStyle?) ?: DisplayStyle.REMOTE_DEFAULT
+                val songId = intent?.getStringExtra("SONG_ID")
                 val lyrics = intent?.getStringExtra("LYRICS")
                 val lyricsShort = intent?.getStringExtra("LYRICS_SHORT")
-                if (songId != null) {
+                if (songId != null || lyrics != null) {
                     peerConnectionHandler.sendCommandToClients(NetworkCommand.DISPLAY_SONG, mapOf(
                         "songId" to songId,
                         "style" to style.toString(),

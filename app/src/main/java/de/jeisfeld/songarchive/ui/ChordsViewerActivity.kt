@@ -232,12 +232,12 @@ fun ChordsViewerScreen(song: Song?, imagePath: String, displayStyle: DisplayStyl
                                 onClick = {
                                     song?.let {
                                         val serviceIntent = Intent(context, PeerConnectionService::class.java).apply {
+                                            setAction(PeerConnectionAction.DISPLAY_LYRICS.toString())
                                             putExtra("ACTION", PeerConnectionAction.DISPLAY_LYRICS)
                                             putExtra("SONG_ID", song.id)
                                             putExtra("STYLE", if (sendBlackScreen) DisplayStyle.REMOTE_BLACK else DisplayStyle.REMOTE_DEFAULT)
                                             putExtra("LYRICS", song.lyrics)
                                             putExtra("LYRICS_SHORT", song.lyricsShort)
-                                            setAction(PeerConnectionAction.DISPLAY_LYRICS.toString())
                                         }
                                         context.startService(serviceIntent)
                                         sendBlackScreen = !sendBlackScreen
