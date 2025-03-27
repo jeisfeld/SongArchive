@@ -72,10 +72,6 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
     fun synchronizeDatabaseAndImages(recheckUpdate: Boolean, onComplete: (Boolean) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                if (recheckUpdate) {
-                    checkUpdateResponse = RetrofitClient.api.checkUpdate()
-                }
-
                 // Fetch all data in one API call
                 val response = RetrofitClient.api.fetchAllData()
 
@@ -130,6 +126,9 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
                 val success = downloadAndExtractZip(getApplication(), "https://heilsame-lieder.de/download_chords.php")
 
                 if (success) {
+                    if (recheckUpdate) {
+                        checkUpdateResponse = RetrofitClient.api.checkUpdate()
+                    }
                     storeLastAppMetadata()
                 }
 
