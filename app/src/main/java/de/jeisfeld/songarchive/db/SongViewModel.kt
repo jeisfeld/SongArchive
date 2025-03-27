@@ -152,6 +152,7 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
             .replace("´", "'") // Normalize accents to plain apostrophe
             .replace("`", "'")
             .replace("’", "'")
+            .replace("\n", " ")
     }
 
     private fun downloadAndExtractZip(context: Context, url: String): Boolean {
