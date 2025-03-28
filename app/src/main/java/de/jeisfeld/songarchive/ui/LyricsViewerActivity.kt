@@ -6,21 +6,15 @@ import android.view.View
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -33,8 +27,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.pointerInteropFilter
@@ -42,15 +34,12 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.res.dimensionResource
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.lifecycleScope
-import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.db.AppDatabase
 import de.jeisfeld.songarchive.db.Song
 import de.jeisfeld.songarchive.network.ClientMode
@@ -134,7 +123,7 @@ class LyricsViewerActivity : ComponentActivity() {
         val displayLyricsShort = song?.lyricsShort?.trim() ?: lyricsShort ?: displayLyrics
         setContent {
             MaterialTheme {
-                LyricsViewerScreen(displayLyrics, displayLyricsShort, displayStyle) { finish() }
+                LyricsViewerScreen(song, displayLyrics, displayLyricsShort, displayStyle) { finish() }
             }
         }
     }
@@ -142,7 +131,7 @@ class LyricsViewerActivity : ComponentActivity() {
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun LyricsViewerScreen(lyrics: String, lyricsShort: String, displayStyle: DisplayStyle, onClose: () -> Unit) {
+fun LyricsViewerScreen(song: Song?, lyrics: String, lyricsShort: String, displayStyle: DisplayStyle, onClose: () -> Unit) {
     val configuration = LocalConfiguration.current
     val density = LocalDensity.current
     val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
@@ -163,6 +152,7 @@ fun LyricsViewerScreen(lyrics: String, lyricsShort: String, displayStyle: Displa
     val localView = LocalView.current
     var screenWidth by remember { mutableStateOf(with(density) { localView.width.toDp().value }) }
     var screenHeight by remember { mutableStateOf(with(density) { localView.height.toDp().value }) }
+    var showButtons by remember { mutableStateOf(true) }
 
     LaunchedEffect(screenWidth, screenHeight) {
         var testFontSize = 24f
@@ -232,6 +222,7 @@ fun LyricsViewerScreen(lyrics: String, lyricsShort: String, displayStyle: Displa
                     }
                     .verticalScroll(if (isZooming) rememberScrollState() else scrollState) // Enable scrolling only if not zooming
                     .clickable {
+                        showButtons = if (textAlign == TextAlign.Center) !showButtons else showButtons
                         textAlign = if (textAlign == TextAlign.Left) TextAlign.Center else TextAlign.Left
                         startPadding = if (textAlign == TextAlign.Left) 8f else 0f
                     },
@@ -261,35 +252,14 @@ fun LyricsViewerScreen(lyrics: String, lyricsShort: String, displayStyle: Displa
                 )
             }
 
-            if (displayStyle == DisplayStyle.STANDARD) {
-                // Close button
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 0.dp, end = 0.dp),
-                    contentAlignment = Alignment.TopEnd
-                ) {
-                    IconButton(
-                        onClick = onClose,
-                        modifier = Modifier
-                            .background(
-                                Brush.verticalGradient(
-                                    listOf(Color.White.copy(alpha = 0.6f), Color.White.copy(alpha = 0.3f))
-                                ),
-                                shape = RoundedCornerShape(50)
-                            )
-                            .size(dimensionResource(id = R.dimen.icon_size_large))
-                            .clip(RoundedCornerShape(50))
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_close),
-                            contentDescription = "Close",
-                            tint = Color.Black,
-                            modifier = Modifier.padding(8.dp).size(dimensionResource(id = R.dimen.icon_size_small))
-                        )
-                    }
-                }
-            }
+            ViewerControlButtons(
+                showButtons = showButtons,
+                song = song,
+                displayStyle = displayStyle,
+                meanings = emptyList(),
+                onShowMeaningChange = { },
+                onClose = onClose,
+            )
         }
     }
 }
