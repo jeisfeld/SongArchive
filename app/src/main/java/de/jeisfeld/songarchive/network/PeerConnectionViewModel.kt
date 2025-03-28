@@ -7,7 +7,7 @@ import androidx.lifecycle.ViewModel
 
 object PeerConnectionViewModel : ViewModel() {
     var peerConnectionMode = PeerConnectionMode.DISABLED
-    var clientMode = ClientMode.LYRICS
+    var clientMode = ClientMode.LYRICS_BS
     var connectedDevices = 0
 
     val stopRemoteActivity = MutableLiveData(false)
@@ -34,7 +34,9 @@ enum class PeerConnectionMode {
 }
 
 enum class ClientMode {
-    LYRICS,
+    LYRICS_BW,
+    LYRICS_BS,
+    LYRICS_WB,
     CHORDS
 }
 

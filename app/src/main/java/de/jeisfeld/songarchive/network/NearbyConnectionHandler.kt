@@ -171,7 +171,7 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
                 val lyricsShort = message.params.get("lyricsShort") ?: ""
                 val intent = Intent().apply {
                     setClass(context, when (PeerConnectionViewModel.clientMode) {
-                        ClientMode.LYRICS -> LyricsViewerActivity::class.java
+                        ClientMode.LYRICS_BS,  ClientMode.LYRICS_BW, ClientMode.LYRICS_WB -> LyricsViewerActivity::class.java
                         ClientMode.CHORDS -> ChordsViewerActivity::class.java
                     })
                     putExtra("STYLE", style)

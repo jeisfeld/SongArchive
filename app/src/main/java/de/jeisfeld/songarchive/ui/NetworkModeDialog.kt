@@ -45,7 +45,7 @@ fun NetworkModeDialog(
 ) {
     val networkOptions = listOf(PeerConnectionMode.DISABLED, PeerConnectionMode.SERVER, PeerConnectionMode.CLIENT)
     var selectedNetworkOption by remember { mutableStateOf(selectedNetworkMode) }
-    val clientOptions = listOf(ClientMode.LYRICS, ClientMode.CHORDS)
+    val clientOptions = listOf(ClientMode.LYRICS_BS, ClientMode.LYRICS_BW, ClientMode.LYRICS_WB, ClientMode.CHORDS)
     var selectedClientOption by remember { mutableStateOf(selectedClientMode) }
 
     Dialog(onDismissRequest = onDismiss) {

@@ -53,6 +53,7 @@ import androidx.lifecycle.lifecycleScope
 import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.db.AppDatabase
 import de.jeisfeld.songarchive.db.Song
+import de.jeisfeld.songarchive.network.ClientMode
 import de.jeisfeld.songarchive.network.DisplayStyle
 import de.jeisfeld.songarchive.network.PeerConnectionViewModel
 import de.jeisfeld.songarchive.ui.theme.AppColors
@@ -142,7 +143,6 @@ class LyricsViewerActivity : ComponentActivity() {
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun LyricsViewerScreen(lyrics: String, lyricsShort: String, displayStyle: DisplayStyle, onClose: () -> Unit) {
-    val fontSizeSepia = 48
     val configuration = LocalConfiguration.current
     val density = LocalDensity.current
     val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
@@ -193,8 +193,16 @@ fun LyricsViewerScreen(lyrics: String, lyricsShort: String, displayStyle: Displa
 
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = if (displayStyle == DisplayStyle.REMOTE_DEFAULT && fontSize > fontSizeSepia) AppColors.Background else
-            if (displayStyle == DisplayStyle.REMOTE_BLACK) Color.Black else Color.White,
+        color = when (displayStyle) {
+            DisplayStyle.STANDARD -> Color.White
+            DisplayStyle.REMOTE_BLACK -> Color.Black
+            DisplayStyle.REMOTE_DEFAULT -> when (PeerConnectionViewModel.clientMode) {
+                ClientMode.LYRICS_WB -> Color.Black
+                ClientMode.LYRICS_BW -> Color.White
+                ClientMode.LYRICS_BS -> AppColors.Background
+                ClientMode.CHORDS -> Color.White
+            }
+        }
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             Column(
@@ -236,7 +244,16 @@ fun LyricsViewerScreen(lyrics: String, lyricsShort: String, displayStyle: Displa
                         fontSize = fontSize.sp,
                         lineHeight = (fontSize * lineHeight).sp,
                         fontWeight = FontWeight.Normal,
-                        color = if (displayStyle == DisplayStyle.REMOTE_DEFAULT && fontSize > fontSizeSepia) AppColors.TextColor else Color.Black,
+                        color = when (displayStyle) {
+                            DisplayStyle.STANDARD -> Color.Black
+                            DisplayStyle.REMOTE_BLACK -> Color.Black
+                            DisplayStyle.REMOTE_DEFAULT -> when (PeerConnectionViewModel.clientMode) {
+                                ClientMode.LYRICS_BS -> AppColors.TextColor
+                                ClientMode.LYRICS_BW -> Color.Black
+                                ClientMode.LYRICS_WB -> Color.White
+                                ClientMode.CHORDS -> Color.Black
+                            }
+                        },
                         textAlign = textAlign
                     ),
                     modifier = Modifier

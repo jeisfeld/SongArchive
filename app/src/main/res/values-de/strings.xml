@@ -51,7 +51,9 @@
         <item>Empfänger</item>
     </string-array>
     <string-array name="client_modes">
-        <item>Texte</item>
+        <item>Texte (schwarz/sepia)</item>
+        <item>Texte (schwarz/weiß)</item>
+        <item>Texte (weiß/schwarz)</item>
         <item>Akkorde</item>
     </string-array>
 </resources>

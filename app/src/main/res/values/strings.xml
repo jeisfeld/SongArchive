@@ -51,7 +51,9 @@
         <item>Client</item>
     </string-array>
     <string-array name="client_modes">
-        <item>Lyrics</item>
+        <item>Lyrics (black/sepia)</item>
+        <item>Lyrics (black/white)</item>
+        <item>Lyrics (white/black)</item>
         <item>Chords</item>
     </string-array>
 </resources>
