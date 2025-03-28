@@ -389,7 +389,7 @@ fun MainScreen(viewModel: SongViewModel) {
                             setAction(PeerConnectionAction.DISPLAY_LYRICS.toString())
                             putExtra("ACTION", PeerConnectionAction.DISPLAY_LYRICS)
                             putExtra("STYLE", DisplayStyle.REMOTE_DEFAULT)
-                            putExtra("LYRICS", sharedLyricsText)
+                            putExtra("LYRICS", sharedLyricsText.trim())
                         }
                         context.startService(serviceIntent)
                     }) {
