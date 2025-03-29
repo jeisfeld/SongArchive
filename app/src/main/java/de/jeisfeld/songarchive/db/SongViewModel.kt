@@ -7,6 +7,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
+import de.jeisfeld.songarchive.network.PeerConnectionMode
+import de.jeisfeld.songarchive.network.PeerConnectionViewModel
 import de.jeisfeld.songarchive.sync.CheckUpdateResponse
 import de.jeisfeld.songarchive.sync.RetrofitClient
 import kotlinx.coroutines.CoroutineScope
@@ -72,8 +74,11 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
     fun synchronizeDatabaseAndImages(recheckUpdate: Boolean, onComplete: (Boolean) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                // Synchronize private songs only in server mode
+                val queryUser = if (PeerConnectionViewModel.peerConnectionMode == PeerConnectionMode.SERVER) "private" else null
+
                 // Fetch all data in one API call
-                val response = RetrofitClient.api.fetchAllData()
+                val response = RetrofitClient.api.fetchAllData(user = queryUser)
 
                 // Process Songs
                 val fetchedSongs = response.songs.map {

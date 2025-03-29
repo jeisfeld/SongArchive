@@ -3,10 +3,11 @@ package de.jeisfeld.songarchive.sync
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.GET
+import retrofit2.http.Query
 
 interface ApiService {
     @GET("download_data2.php")
-    suspend fun fetchAllData(): SyncResponse
+    suspend fun fetchAllData(@Query("user") user: String? = null): SyncResponse
 
     @GET("check_update.php")
     suspend fun checkUpdate(): CheckUpdateResponse
