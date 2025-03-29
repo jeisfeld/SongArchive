@@ -9,7 +9,7 @@ require_once "db_config.php";
 $query = isset ( $_GET ['q'] ) ? trim ( $_GET ['q'] ) : "";
 
 // Use regex to check if query is a valid ID (numeric OR numeric + single letter)
-$is_valid_id = preg_match ( '/^\d{4}[a-zA-Z]?$/', $query );
+$is_valid_id = preg_match ( '/^[X\d]\d{3}[a-zA-Z]?$/', $query );
 $isSingleLetter = preg_match ( '/^[a-zA-Z]$/', $query );
 
 function interpolateQuery($query, $params) {
@@ -78,12 +78,13 @@ if ($is_valid_id) {
 
 // now the case where input is not exact id.
 if ($query === "*" || $query === "") {
-	$sql = "SELECT id, title, tabfilename, mp3filename, mp3filename2, author FROM songs order by id";
+	$sql = "SELECT id, title, tabfilename, mp3filename, mp3filename2, author FROM songs where id not like 'X%' order by id";
 }
 else if ($isSingleLetter) {
 	$sql = "SELECT id, title, author, tabfilename, mp3filename, mp3filename2, author FROM songs
-            WHERE title REGEXP CONCAT('(^| )', ?, '.*')
-               OR lyrics REGEXP CONCAT('(^| )', ?, '.*')
+            WHERE (title REGEXP CONCAT('(^| )', ?, '.*')
+               OR lyrics REGEXP CONCAT('(^| )', ?, '.*'))
+			AND id not like 'X%'
             ORDER BY CASE WHEN title REGEXP CONCAT('(^| )', ?, '.*') THEN 1 ELSE 2 END, CAST(id AS UNSIGNED) ASC";
 	$params = [ 
 			$query,
@@ -100,7 +101,7 @@ else {
 	], "'", $query );
 
 	$words = explode ( " ", $normalizedQuery );
-	$conditions = [ ];
+	$conditions = [ "id not like 'X%'" ];
 	$titleMatch = [ ];
 	$lyricsMatch = [ ];
 	$selectParams = [ ];

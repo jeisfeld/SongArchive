@@ -11,8 +11,17 @@ if ($conn->connect_error) {
 
 $response = [];
 
+// Get flag
+$user = isset ( $_GET ['user'] ) ? trim ( $_GET ['user'] ) : "";
+if ($user == 'private') {
+	$sqladd = "";
+}
+else {
+	$sqladd = " where id not like 'X%'";
+}
+
 // Fetch songs
-$sql_songs = "SELECT id, title, lyrics, lyrics_short, author, keywords, tabfilename, mp3filename, mp3filename2 FROM songs ORDER BY id";
+$sql_songs = "SELECT id, title, lyrics, lyrics_short, author, keywords, tabfilename, mp3filename, mp3filename2 FROM songs" . $sqladd . " ORDER BY id";
 $result_songs = $conn->query($sql_songs);
 $songs = [];
 if ($result_songs->num_rows > 0) {
