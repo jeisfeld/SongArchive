@@ -20,6 +20,13 @@
                 <action android:name="de.jeisfeld.songarchivexplugin.ACTION_VERIFY" />
             </intent-filter>
         </receiver>
+
+        <provider
+            android:name=".PluginContentProvider"
+            android:authorities="de.jeisfeld.songarchivexplugin.provider"
+            android:exported="true"
+            android:permission="de.jeisfeld.songarchive.PERMISSION_COMMUNICATE" />
+
     </application>
 
 </manifest>

@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import androidx.compose.runtime.mutableStateOf
+import androidx.core.net.toUri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
@@ -235,12 +236,14 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    val pluginVerified = MutableLiveData<Boolean>()
+    val pluginVerified = MutableLiveData<Boolean>(false)
 
     val pluginResponseReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             val token = intent.getStringExtra("verification_token")
-            pluginVerified.postValue(token == "PLUGIN_VERIFIED_12345")
+            if (token == "PLUGIN_VERIFIED_12345") {
+                pluginVerified.postValue(true)
+            }
         }
     }
 
@@ -253,5 +256,23 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
             )
         )
         context.sendBroadcast(intent)
+
+        // Secondary mechanism via content provider - seems to work better on OEM devices
+        try {
+            val bundle = context.contentResolver.call(
+                "content://de.jeisfeld.songarchivexplugin.provider".toUri(),
+                "verify", // method name
+                null,     // optional arg
+                null      // optional extras
+            )
+            val status = bundle?.getString("status")
+            if (status == "PLUGIN_VERIFIED_12345") {
+                pluginVerified.postValue(true)
+            }
+        }
+        catch (e: Exception) {
+            // Ignore
+        }
+
     }
 }
