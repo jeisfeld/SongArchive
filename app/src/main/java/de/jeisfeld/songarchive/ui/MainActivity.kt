@@ -2,6 +2,7 @@ package de.jeisfeld.songarchive.ui
 
 import android.Manifest
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -72,9 +73,17 @@ import de.jeisfeld.songarchive.ui.theme.AppColors
 import de.jeisfeld.songarchive.ui.theme.AppTheme
 
 class MainActivity : ComponentActivity() {
+    lateinit var viewModel: SongViewModel
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val viewModel = ViewModelProvider(this)[SongViewModel::class.java]
+        viewModel = ViewModelProvider(this)[SongViewModel::class.java]
+
+        registerReceiver(
+            viewModel.pluginResponseReceiver, IntentFilter("de.jeisfeld.songarchive.ACTION_PLUGIN_RESPONSE"),
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) RECEIVER_EXPORTED else 0
+        )
+
         setContent {
             AppTheme {
                 MainScreen(viewModel)
@@ -92,6 +101,13 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+
+        viewModel.sendPluginVerificationBroadcast(this)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        unregisterReceiver(viewModel.pluginResponseReceiver)
     }
 }
 
@@ -127,8 +143,7 @@ fun MainScreen(viewModel: SongViewModel) {
                 viewModel.synchronizeDatabaseAndImages(true) { success ->
                     isSyncing = false
                 }
-            }
-            else {
+            } else {
                 viewModel.checkForSongUpdates { needsUpdate ->
                     if (needsUpdate) {
                         showSyncDialog = true
@@ -260,8 +275,7 @@ fun MainScreen(viewModel: SongViewModel) {
                                                     Manifest.permission.BLUETOOTH_CONNECT,
                                                     Manifest.permission.BLUETOOTH_ADVERTISE
                                                 )
-                                            }
-                                            else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                                                 arrayOf(
                                                     Manifest.permission.ACCESS_FINE_LOCATION,
                                                     Manifest.permission.BLUETOOTH,
@@ -270,8 +284,7 @@ fun MainScreen(viewModel: SongViewModel) {
                                                     Manifest.permission.BLUETOOTH_CONNECT,
                                                     Manifest.permission.BLUETOOTH_ADVERTISE
                                                 )
-                                            }
-                                            else {
+                                            } else {
                                                 arrayOf(
                                                     Manifest.permission.ACCESS_FINE_LOCATION,
                                                     Manifest.permission.BLUETOOTH,
@@ -283,8 +296,7 @@ fun MainScreen(viewModel: SongViewModel) {
                                             }
                                             if (missingPermissions.isNotEmpty()) {
                                                 permissionLauncher.launch(missingPermissions.toTypedArray())
-                                            }
-                                            else {
+                                            } else {
                                                 PeerConnectionViewModel.startPeerConnectionService(context)
                                             }
                                         },

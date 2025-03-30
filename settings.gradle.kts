@@ -21,4 +21,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "Circle Song Archive"
 include(":app")
- 
+include(":songarchivexplugin")

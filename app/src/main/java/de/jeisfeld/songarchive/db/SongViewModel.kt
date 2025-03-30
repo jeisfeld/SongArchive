@@ -1,14 +1,15 @@
 package de.jeisfeld.songarchive.db
 
 import android.app.Application
+import android.content.BroadcastReceiver
+import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
 import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
-import de.jeisfeld.songarchive.network.PeerConnectionMode
-import de.jeisfeld.songarchive.network.PeerConnectionViewModel
 import de.jeisfeld.songarchive.sync.CheckUpdateResponse
 import de.jeisfeld.songarchive.sync.RetrofitClient
 import kotlinx.coroutines.CoroutineScope
@@ -75,7 +76,7 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 // Synchronize private songs only in server mode
-                val queryUser = if (PeerConnectionViewModel.peerConnectionMode == PeerConnectionMode.SERVER) "private" else null
+                val queryUser = if (pluginVerified.value ?: false) "private" else null
 
                 // Fetch all data in one API call
                 val response = RetrofitClient.api.fetchAllData(user = queryUser)
@@ -226,11 +227,31 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
             checkUpdateResponse?.tab_count?.let { tabCount ->
                 checkUpdateResponse?.chords_zip_size?.let { zipSize ->
                     AppDatabase.getDatabase(getApplication()).appMetadataDao().insert(
-                        AppMetadata(numberOfTabs = tabCount, chordsZipSize = zipSize))
+                        AppMetadata(numberOfTabs = tabCount, chordsZipSize = zipSize)
+                    )
                 }
             }
             checkUpdateResponse = null
         }
     }
 
+    val pluginVerified = MutableLiveData<Boolean>()
+
+    val pluginResponseReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val token = intent.getStringExtra("verification_token")
+            pluginVerified.postValue(token == "PLUGIN_VERIFIED_12345")
+        }
+    }
+
+    fun sendPluginVerificationBroadcast(context: Context) {
+        val intent = Intent("de.jeisfeld.songarchivexplugin.ACTION_VERIFY")
+        intent.setComponent(
+            ComponentName(
+                "de.jeisfeld.songarchivexplugin",
+                "de.jeisfeld.songarchivexplugin.PluginReceiver"
+            )
+        )
+        context.sendBroadcast(intent)
+    }
 }
