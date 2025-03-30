@@ -261,6 +261,7 @@ fun MainScreen(viewModel: SongViewModel) {
                                         selectedNetworkMode = PeerConnectionViewModel.peerConnectionMode,
                                         selectedClientMode = PeerConnectionViewModel.clientMode,
                                         onModeSelected = { networkMode, clientMode ->
+                                            val isPeerConnectionModeChanged = networkMode != PeerConnectionViewModel.peerConnectionMode
                                             PeerConnectionViewModel.peerConnectionMode = networkMode
                                             PeerConnectionViewModel.clientMode = clientMode
                                             showMenu = false
@@ -294,10 +295,12 @@ fun MainScreen(viewModel: SongViewModel) {
                                             val missingPermissions = requiredPermissions.filter {
                                                 ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
                                             }
-                                            if (missingPermissions.isNotEmpty()) {
-                                                permissionLauncher.launch(missingPermissions.toTypedArray())
-                                            } else {
-                                                PeerConnectionViewModel.startPeerConnectionService(context)
+                                            if (isPeerConnectionModeChanged) {
+                                                if (missingPermissions.isNotEmpty()) {
+                                                    permissionLauncher.launch(missingPermissions.toTypedArray())
+                                                } else {
+                                                    PeerConnectionViewModel.startPeerConnectionService(context)
+                                                }
                                             }
                                         },
                                         onDismiss = { showNetworkDialog = false }
