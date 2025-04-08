@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -229,27 +230,29 @@ fun LyricsViewerScreen(song: Song?, lyrics: String, lyricsShort: String, display
                 verticalArrangement = if (scrollState.maxValue == 0) Arrangement.Center else Arrangement.Top,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(
-                    text = displayedLyrics,
-                    style = TextStyle(
-                        fontSize = fontSize.sp,
-                        lineHeight = (fontSize * lineHeight).sp,
-                        fontWeight = FontWeight.Normal,
-                        color = when (displayStyle) {
-                            DisplayStyle.STANDARD -> Color.Black
-                            DisplayStyle.REMOTE_BLACK -> Color.Black
-                            DisplayStyle.REMOTE_DEFAULT -> when (PeerConnectionViewModel.clientMode) {
-                                ClientMode.LYRICS_BS -> AppColors.TextColor
-                                ClientMode.LYRICS_BW -> Color.Black
-                                ClientMode.LYRICS_WB -> Color.White
-                                ClientMode.CHORDS -> Color.Black
-                            }
-                        },
-                        textAlign = textAlign
-                    ),
-                    modifier = Modifier
-                        .padding(start = startPadding.dp)
-                )
+                SelectionContainer {
+                    Text(
+                        text = displayedLyrics,
+                        style = TextStyle(
+                            fontSize = fontSize.sp,
+                            lineHeight = (fontSize * lineHeight).sp,
+                            fontWeight = FontWeight.Normal,
+                            color = when (displayStyle) {
+                                DisplayStyle.STANDARD -> Color.Black
+                                DisplayStyle.REMOTE_BLACK -> Color.Black
+                                DisplayStyle.REMOTE_DEFAULT -> when (PeerConnectionViewModel.clientMode) {
+                                    ClientMode.LYRICS_BS -> AppColors.TextColor
+                                    ClientMode.LYRICS_BW -> Color.Black
+                                    ClientMode.LYRICS_WB -> Color.White
+                                    ClientMode.CHORDS -> Color.Black
+                                }
+                            },
+                            textAlign = textAlign
+                        ),
+                        modifier = Modifier
+                            .padding(start = startPadding.dp)
+                    )
+                }
             }
 
             ViewerControlButtons(
