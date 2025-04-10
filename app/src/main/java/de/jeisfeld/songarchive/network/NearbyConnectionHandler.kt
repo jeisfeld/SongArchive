@@ -2,8 +2,10 @@ package de.jeisfeld.songarchive.network
 
 import android.content.Context
 import android.content.Intent
+import android.os.PowerManager
 import android.util.Log
 import android.widget.Toast
+import androidx.core.content.ContextCompat.getSystemService
 import com.google.android.gms.nearby.Nearby
 import com.google.android.gms.nearby.connection.AdvertisingOptions
 import com.google.android.gms.nearby.connection.ConnectionInfo
@@ -181,6 +183,16 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
                     if (lyricsShort.isNotEmpty()) putExtra("LYRICS_SHORT", lyricsShort)
                     addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
+
+                val powerManager = getSystemService(context, PowerManager::class.java) as PowerManager
+                val wakeLock = powerManager.newWakeLock(
+                    PowerManager.FULL_WAKE_LOCK or
+                            PowerManager.ACQUIRE_CAUSES_WAKEUP or
+                            PowerManager.ON_AFTER_RELEASE,
+                    "CircleSongArchive:wakeLock"
+                )
+                wakeLock.acquire(4000)
+                Thread.sleep(500)
                 context.startActivity(intent)
             }
             NetworkCommand.CLIENT_DISCONNECT -> {
