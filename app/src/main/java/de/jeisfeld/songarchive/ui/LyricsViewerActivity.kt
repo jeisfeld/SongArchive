@@ -67,7 +67,6 @@ class LyricsViewerActivity : ComponentActivity() {
 
         val displayStyle = (intent.getSerializableExtra("STYLE") as DisplayStyle?) ?: DisplayStyle.STANDARD
 
-        // allow to turn off screen
         if (displayStyle != DisplayStyle.REMOTE_BLACK) {
             window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }

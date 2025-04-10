@@ -86,9 +86,6 @@ class ChordsViewerActivity : ComponentActivity() {
                 }
             }
         }
-        if (displayStyle == DisplayStyle.REMOTE_BLACK) {
-            finish()
-        }
 
         // wakeup if required
         if (displayStyle == DisplayStyle.REMOTE_DEFAULT) {
