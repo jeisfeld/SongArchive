@@ -185,16 +185,20 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
                     addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
 
-                val powerManager = getSystemService(context, PowerManager::class.java) as PowerManager
-                val wakeLock = powerManager.newWakeLock(
-                    PowerManager.FULL_WAKE_LOCK or
-                            PowerManager.ACQUIRE_CAUSES_WAKEUP or
-                            PowerManager.ON_AFTER_RELEASE,
-                    "CircleSongArchive:wakeLock"
-                )
-                wakeLock.acquire(4000)
-                Thread.sleep(500)
                 context.startActivity(intent)
+                val powerManager = getSystemService(context, PowerManager::class.java) as PowerManager
+
+                if (!powerManager.isInteractive) {
+                    val wakeLock = powerManager.newWakeLock(
+                        PowerManager.FULL_WAKE_LOCK or
+                                PowerManager.ACQUIRE_CAUSES_WAKEUP or
+                                PowerManager.ON_AFTER_RELEASE,
+                        "CircleSongArchive:wakeLock"
+                    )
+                    wakeLock.acquire(4000)
+                    Thread.sleep(1000)
+                    context.startActivity(intent)
+                }
             }
             NetworkCommand.CLIENT_DISCONNECT -> {
                 PeerConnectionViewModel.peerConnectionMode = PeerConnectionMode.DISABLED
