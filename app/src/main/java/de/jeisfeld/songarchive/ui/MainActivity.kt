@@ -69,6 +69,7 @@ import de.jeisfeld.songarchive.network.PeerConnectionAction
 import de.jeisfeld.songarchive.network.PeerConnectionMode
 import de.jeisfeld.songarchive.network.PeerConnectionService
 import de.jeisfeld.songarchive.network.PeerConnectionViewModel
+import de.jeisfeld.songarchive.network.isNearbyConnectionPossible
 import de.jeisfeld.songarchive.ui.theme.AppColors
 import de.jeisfeld.songarchive.ui.theme.AppTheme
 
@@ -237,24 +238,26 @@ fun MainScreen(viewModel: SongViewModel) {
                                         )
                                     }
                                 )
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            stringResource(id = R.string.network_connection),
-                                            color = AppColors.TextColor // Ensure text is colored
-                                        )
-                                    },
-                                    onClick = {
-                                        showNetworkDialog = true
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            painter = painterResource(id = R.drawable.ic_wifi),
-                                            contentDescription = "Wi-Fi Transfer",
-                                            modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small))
-                                        )
-                                    }
-                                )
+                                if (isNearbyConnectionPossible(context)) {
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                stringResource(id = R.string.network_connection),
+                                                color = AppColors.TextColor // Ensure text is colored
+                                            )
+                                        },
+                                        onClick = {
+                                            showNetworkDialog = true
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                painter = painterResource(id = R.drawable.ic_wifi),
+                                                contentDescription = "Wi-Fi Transfer",
+                                                modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small))
+                                            )
+                                        }
+                                    )
+                                }
                                 if (showNetworkDialog) {
                                     NetworkModeDialog(
                                         context = context,
