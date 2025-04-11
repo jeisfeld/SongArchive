@@ -134,7 +134,7 @@ class ChordsViewerActivity : ComponentActivity() {
 @Composable
 fun ChordsViewerScreen(song: Song?, imagePath: String, displayStyle: DisplayStyle, meanings: List<Meaning>, onClose: () -> Unit) {
     var showMeaningsPopup by remember { mutableStateOf(false) }
-    var showButtons by remember { mutableStateOf(true) }
+    var showButtons by remember { mutableStateOf(displayStyle == DisplayStyle.STANDARD) }
 
     val configuration = LocalConfiguration.current
     val bitmap = remember(imagePath) {

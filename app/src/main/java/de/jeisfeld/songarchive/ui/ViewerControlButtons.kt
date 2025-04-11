@@ -113,8 +113,7 @@ fun ViewerControlButtons(
                                 }
                                 context.startService(intent)
                                 PlaybackViewModel.toggleIsPlaying()
-                            }
-                            else {
+                            } else {
                                 PlaybackViewModel.updatePlaybackState(song, true, 0L, 0L)
                                 val intent = Intent(context, AudioPlayerService::class.java).apply {
                                     action = "PLAY"
@@ -195,26 +194,24 @@ fun ViewerControlButtons(
                     Spacer(modifier = Modifier.width(dimensionResource(id = R.dimen.spacing_medium)))
                 }
 
-                if (displayStyle == DisplayStyle.STANDARD) {
-                    IconButton(
-                        onClick = onClose,
-                        modifier = Modifier
-                            .background(
-                                Brush.verticalGradient(
-                                    listOf(Color.White.copy(alpha = 0.6f), Color.White.copy(alpha = 0.3f))
-                                ),
-                                shape = RoundedCornerShape(50)
-                            )
-                            .size(dimensionResource(id = R.dimen.icon_size_large))
-                            .clip(RoundedCornerShape(50))
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_close),
-                            contentDescription = "Close",
-                            tint = Color.Black,
-                            modifier = Modifier.padding(8.dp).size(dimensionResource(id = R.dimen.icon_size_small))
+                IconButton(
+                    onClick = onClose,
+                    modifier = Modifier
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(Color.White.copy(alpha = 0.6f), Color.White.copy(alpha = 0.3f))
+                            ),
+                            shape = RoundedCornerShape(50)
                         )
-                    }
+                        .size(dimensionResource(id = R.dimen.icon_size_large))
+                        .clip(RoundedCornerShape(50))
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_close),
+                        contentDescription = "Close",
+                        tint = Color.Black,
+                        modifier = Modifier.padding(8.dp).size(dimensionResource(id = R.dimen.icon_size_small))
+                    )
                 }
             }
         }

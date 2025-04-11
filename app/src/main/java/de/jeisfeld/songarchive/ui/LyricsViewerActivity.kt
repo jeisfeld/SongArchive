@@ -152,7 +152,7 @@ fun LyricsViewerScreen(song: Song?, lyrics: String, lyricsShort: String, display
     val localView = LocalView.current
     var screenWidth by remember { mutableStateOf(with(density) { localView.width.toDp().value }) }
     var screenHeight by remember { mutableStateOf(with(density) { localView.height.toDp().value }) }
-    var showButtons by remember { mutableStateOf(true) }
+    var showButtons by remember { mutableStateOf(displayStyle == DisplayStyle.STANDARD) }
 
     LaunchedEffect(screenWidth, screenHeight) {
         var testFontSize = 24f
