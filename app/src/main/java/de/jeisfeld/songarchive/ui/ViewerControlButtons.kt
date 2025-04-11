@@ -5,6 +5,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -26,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
@@ -67,21 +69,7 @@ fun ViewerControlButtons(
         ) {
             Row {
                 if (PeerConnectionViewModel.peerConnectionMode == PeerConnectionMode.SERVER && PeerConnectionViewModel.connectedDevices > 0) {
-                    IconButton(
-                        onClick = {
-                            song?.let {
-                                val serviceIntent = Intent(context, PeerConnectionService::class.java).apply {
-                                    setAction(PeerConnectionAction.DISPLAY_LYRICS.toString())
-                                    putExtra("ACTION", PeerConnectionAction.DISPLAY_LYRICS)
-                                    putExtra("SONG_ID", song.id)
-                                    putExtra("STYLE", if (sendBlackScreen) DisplayStyle.REMOTE_BLACK else DisplayStyle.REMOTE_DEFAULT)
-                                    putExtra("LYRICS", song.lyrics)
-                                    putExtra("LYRICS_SHORT", song.lyricsShort)
-                                }
-                                context.startService(serviceIntent)
-                                sendBlackScreen = !sendBlackScreen
-                            }
-                        },
+                    Box(
                         modifier = Modifier
                             .background(
                                 Brush.verticalGradient(
@@ -91,13 +79,42 @@ fun ViewerControlButtons(
                             )
                             .size(dimensionResource(id = R.dimen.icon_size_large))
                             .clip(RoundedCornerShape(50))
+                            .pointerInput(Unit) {
+                                detectTapGestures(
+                                    onTap = {
+                                        song?.let {
+                                            val serviceIntent = Intent(context, PeerConnectionService::class.java).apply {
+                                                setAction(PeerConnectionAction.DISPLAY_LYRICS.toString())
+                                                putExtra("ACTION", PeerConnectionAction.DISPLAY_LYRICS)
+                                                putExtra("SONG_ID", song.id)
+                                                putExtra("STYLE", if (sendBlackScreen) DisplayStyle.REMOTE_BLACK else DisplayStyle.REMOTE_DEFAULT)
+                                                putExtra("LYRICS", song.lyrics)
+                                                putExtra("LYRICS_SHORT", song.lyricsShort)
+                                            }
+                                            context.startService(serviceIntent)
+                                        }
+                                        sendBlackScreen = !sendBlackScreen
+                                    },
+                                    onLongPress = {
+                                        song?.let {
+                                            val serviceIntent = Intent(context, PeerConnectionService::class.java).apply {
+                                                setAction(PeerConnectionAction.DISPLAY_CHORDS.toString())
+                                                putExtra("ACTION", PeerConnectionAction.DISPLAY_CHORDS)
+                                                putExtra("SONG_ID", song.id)
+                                                putExtra("STYLE", DisplayStyle.REMOTE_DEFAULT)
+                                            }
+                                            context.startService(serviceIntent)
+                                        }
+                                    }
+                                )
+                            },
+                        contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             painter = painterResource(id = if (sendBlackScreen) R.drawable.ic_send_black else R.drawable.ic_send),
                             contentDescription = "Send",
                             tint = Color.Black,
-                            modifier = Modifier
-                                .size(dimensionResource(id = R.dimen.icon_size_small))
+                            modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small))
                         )
                     }
                     Spacer(modifier = Modifier.width(dimensionResource(id = R.dimen.spacing_medium)))

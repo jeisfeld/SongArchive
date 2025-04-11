@@ -166,10 +166,11 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
 
     private fun processCommand(message: Message) {
         when (NetworkCommand.valueOf(message.command)) {
-            NetworkCommand.DISPLAY_SONG -> {
+            NetworkCommand.DISPLAY_SONG, NetworkCommand.DISPLAY_CHORDS -> {
                 val songId = message.params?.get("songId") ?: ""
                 val style = message.params?.get("style")?.let { DisplayStyle.valueOf(it) } ?: return
                 if (PeerConnectionViewModel.clientMode == ClientMode.CHORDS && style == DisplayStyle.REMOTE_BLACK) return
+                if (PeerConnectionViewModel.clientMode != ClientMode.CHORDS && NetworkCommand.valueOf(message.command) == NetworkCommand.DISPLAY_CHORDS) return
                 val lyrics = message.params.get("lyrics") ?: ""
                 val lyricsShort = message.params.get("lyricsShort") ?: ""
                 val intent = Intent().apply {
