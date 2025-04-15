@@ -15,5 +15,6 @@ object AppColors {
     val BackgroundShaded = Color(0xFFF0EC93)
     val TextColor = Color(0xFF4D4313)
     val TextColorLight = Color(0xFF877522)
+    val TextColorLink = Color(0xFF4D4393)
     val ForegroundVeryLight = Color(0xFFD4C421)
 }

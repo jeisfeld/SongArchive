@@ -18,18 +18,24 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -114,7 +120,24 @@ fun SongTable(viewModel: SongViewModel, songs: List<Song>, isWideScreen: Boolean
                         Text(text = song.id, modifier = Modifier.width(dimensionResource(id = R.dimen.width_id)), color = AppColors.TextColor)
                         Text(text = song.title, modifier = Modifier.weight(1f), color = AppColors.TextColor)
                         if (isWideScreen) {
-                            Text(text = song.author ?: "", modifier = Modifier.weight(0.6f), color = AppColors.TextColor, fontStyle = FontStyle.Italic, fontSize = MaterialTheme.typography.bodySmall.fontSize)
+                            val annotatedText = remember(song.author) { parseAuthors(song.author) }
+                            val uriHandler = LocalUriHandler.current
+
+                            ClickableText(
+                                text = annotatedText,
+                                modifier = Modifier.weight(0.6f),
+                                style = TextStyle(
+                                    fontSize = MaterialTheme.typography.bodySmall.fontSize,
+                                    fontStyle = FontStyle.Italic,
+                                    color = AppColors.TextColor
+                                ),
+                                onClick = { offset ->
+                                    annotatedText.getStringAnnotations(tag = "URL", start = offset, end = offset)
+                                        .firstOrNull()?.let { annotation ->
+                                            uriHandler.openUri(annotation.item)
+                                        }
+                                }
+                            )
                         }
                         Row(modifier = Modifier.width(dimensionResource(id = R.dimen.width_actions))) {
                             Image(
@@ -216,4 +239,33 @@ fun SongTable(viewModel: SongViewModel, songs: List<Song>, isWideScreen: Boolean
     }
 }
 
+fun parseAuthors(authors: String): AnnotatedString {
+    val parts = authors.split(",")
+    val builder = AnnotatedString.Builder()
 
+    parts.forEachIndexed { index, part ->
+        val trimmed = part.trim()
+
+        val fullRegex = Regex("(.+?)\\s*\\[(https?://)?([^]]+)]")
+
+        when {
+            fullRegex.matches(trimmed) -> {
+                val match = fullRegex.find(trimmed)!!
+                val name = match.groupValues[1].trim()
+                val urlPrefix = match.groupValues[2].ifEmpty { "https://" }
+                val url = urlPrefix + match.groupValues[3].trim()
+                val start = builder.length
+                builder.append(name)
+                builder.addStringAnnotation("URL", url, start, start + name.length)
+                builder.addStyle(SpanStyle(color = AppColors.TextColorLink), start, start + name.length)
+            }
+            else -> {
+                builder.append(trimmed)
+            }
+        }
+
+        if (index < parts.size - 1) builder.append(", ")
+    }
+
+    return builder.toAnnotatedString()
+}
