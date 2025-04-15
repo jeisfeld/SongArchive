@@ -50,7 +50,7 @@ function displayResult(songs) {
 			<tr>
 				<td>${song.id}</td>
 				<td>${song.title}</td>
-				<td class="author-col">${song.author || ""}</td>
+				<td class="author-col">${formatAuthors(song.author || "")}</td>
 				<td class="actions">
 					<div class="actions-container">
 						<img src="/img/text2.png" alt="View Lyrics" class="icon-btn" onclick="showLyrics('${song.id}', '${song.title}')">
@@ -92,6 +92,27 @@ function clearSearch() {
 	searchSongs(); // Trigger search update
 }
 
+
+function formatAuthors(authorStr) {
+	if (!authorStr.trim()) return "";
+
+	return authorStr.split(',')
+		.map(part => {
+			const trimmed = part.trim();
+
+			const urlMatch = trimmed.match(/^(.+?)\s*\[(https?:\/\/)?([^\]]+)\]$/);
+			if (urlMatch) {
+				const name = urlMatch[1].trim();
+				const url = (urlMatch[2] ? urlMatch[2] : "https://") + urlMatch[3].trim();
+				return `<a href="${url}" target="_blank" rel="noopener noreferrer">${name}</a>`;
+			}
+
+			// Just a name
+			return trimmed;
+		})
+		.join(', ');
+}
+
 // functions related to audio popup
 
 function playAudio(mp3filename1, mp3filename2 = "", id = "", title = "", author = "", imageFilename = "") {
@@ -103,7 +124,7 @@ function playAudio(mp3filename1, mp3filename2 = "", id = "", title = "", author 
             <strong>${id} ${title}</strong><br>
     `;
 	if (author) {
-		audioHTML += `<em>${author}</em>`;
+		audioHTML += `<em class="author-col">${formatAuthors(author)}</em>`;
 	}
 	audioHTML += `</div>`;
 

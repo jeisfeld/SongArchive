@@ -3,6 +3,7 @@
   --inner-color: #F9F8E1;
   --inner-color-shaded: #F2F1D6;
   --text-color: #4D4313;
+  --text-color-link: #4D4393;
   --text-color-light: #877522;
 }
 
@@ -313,6 +314,14 @@ body.no-scroll {
 .audio-icon {
 	width: 30px;
 	height: 30px;
+}
+
+.author-col a {
+	text-decoration: none;
+	color: var(--text-color-link);
+}
+.author-col a:hover {
+	color: blue;
 }
 
 /* Ensure Text Stays Large Enough on Mobile */
