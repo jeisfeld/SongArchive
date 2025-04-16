@@ -139,7 +139,7 @@ class AudioPlayerService : Service() {
 
         return NotificationCompat.Builder(this, "AUDIO_PLAYER_CHANNEL")
             .setContentTitle(song?.title ?: "Playing Audio")
-            .setContentText(song?.author ?: "")
+            .setContentText(if (song?.author == null) "" else parseAuthors(song?.author?:""))
             .setSmallIcon(R.drawable.ic_launcher_white)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOnlyAlertOnce(true)
@@ -201,4 +201,29 @@ class AudioPlayerService : Service() {
         }
     }
 
+    fun parseAuthors(authors: String): String {
+        val parts = authors.split(",")
+        val builder = StringBuilder()
+
+        parts.forEachIndexed { index, part ->
+            val trimmed = part.trim()
+
+            val fullRegex = Regex("(.+?)\\s*\\[(https?://)?([^]]+)]")
+
+            when {
+                fullRegex.matches(trimmed) -> {
+                    val match = fullRegex.find(trimmed)!!
+                    val name = match.groupValues[1].trim()
+                    builder.append(name)
+                }
+                else -> {
+                    builder.append(trimmed)
+                }
+            }
+
+            if (index < parts.size - 1) builder.append(", ")
+        }
+
+        return builder.toString()
+    }
 }
