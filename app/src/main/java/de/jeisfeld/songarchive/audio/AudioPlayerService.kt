@@ -90,6 +90,7 @@ class AudioPlayerService : Service() {
             "STOP" -> {
                 song = null
                 exoPlayer.stop()
+                sendPlaybackState()
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
             }
