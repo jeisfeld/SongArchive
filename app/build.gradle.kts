@@ -8,12 +8,12 @@ plugins {
 
 android {
     namespace = "de.jeisfeld.songarchive"
-    compileSdk = 36
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "de.jeisfeld.songarchive"
         minSdk = 26
-        targetSdk = 36
+        targetSdk = 35
         versionCode = 13
         versionName = "1.1.7"
 
