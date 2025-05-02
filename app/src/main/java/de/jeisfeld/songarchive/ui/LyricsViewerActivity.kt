@@ -152,7 +152,7 @@ fun LyricsViewerScreen(song: Song?, lyrics: String, lyricsShort: String, display
     val localView = LocalView.current
     var screenWidth by remember { mutableStateOf(with(density) { localView.width.toDp().value }) }
     var screenHeight by remember { mutableStateOf(with(density) { localView.height.toDp().value }) }
-    var showButtons by remember { mutableStateOf(displayStyle == DisplayStyle.STANDARD) }
+    var showButtons by remember { mutableStateOf(displayStyle == DisplayStyle.STANDARD || displayStyle == DisplayStyle.LOCAL_PREVIEW) }
 
     LaunchedEffect(screenWidth, screenHeight) {
         var testFontSize = 24f
@@ -184,7 +184,7 @@ fun LyricsViewerScreen(song: Song?, lyrics: String, lyricsShort: String, display
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = when (displayStyle) {
-            DisplayStyle.STANDARD -> Color.White
+            DisplayStyle.STANDARD, DisplayStyle.LOCAL_PREVIEW -> Color.White
             DisplayStyle.REMOTE_BLACK -> Color.Black
             DisplayStyle.REMOTE_DEFAULT -> when (PeerConnectionViewModel.clientMode) {
                 ClientMode.LYRICS_WB -> Color.Black
@@ -222,7 +222,7 @@ fun LyricsViewerScreen(song: Song?, lyrics: String, lyricsShort: String, display
                     }
                     .verticalScroll(if (isZooming) rememberScrollState() else scrollState) // Enable scrolling only if not zooming
                     .clickable {
-                        showButtons = if (textAlign == TextAlign.Center) !showButtons else showButtons
+                        showButtons = if (textAlign == TextAlign.Center && displayStyle != DisplayStyle.LOCAL_PREVIEW) !showButtons else showButtons
                         textAlign = if (textAlign == TextAlign.Left) TextAlign.Center else TextAlign.Left
                         startPadding = if (textAlign == TextAlign.Left) 8f else 0f
                     },
@@ -237,7 +237,7 @@ fun LyricsViewerScreen(song: Song?, lyrics: String, lyricsShort: String, display
                             lineHeight = (fontSize * lineHeight).sp,
                             fontWeight = FontWeight.Normal,
                             color = when (displayStyle) {
-                                DisplayStyle.STANDARD -> Color.Black
+                                DisplayStyle.STANDARD, DisplayStyle.LOCAL_PREVIEW -> Color.Black
                                 DisplayStyle.REMOTE_BLACK -> Color.Black
                                 DisplayStyle.REMOTE_DEFAULT -> when (PeerConnectionViewModel.clientMode) {
                                     ClientMode.LYRICS_BS -> AppColors.TextColor

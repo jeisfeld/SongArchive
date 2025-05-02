@@ -21,7 +21,8 @@ enum class NetworkCommand {
 enum class DisplayStyle {
     STANDARD,
     REMOTE_DEFAULT,
-    REMOTE_BLACK
+    REMOTE_BLACK,
+    LOCAL_PREVIEW
 }
 
 data class Message(

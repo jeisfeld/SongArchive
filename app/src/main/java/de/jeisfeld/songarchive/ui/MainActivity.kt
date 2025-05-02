@@ -410,6 +410,14 @@ fun MainScreen(viewModel: SongViewModel) {
                             putExtra("LYRICS", sharedLyricsText.trim())
                         }
                         context.startService(serviceIntent)
+
+                        // Show also locally
+                        val intent = Intent().apply {
+                            setClass(context, LyricsViewerActivity::class.java)
+                            putExtra("STYLE", DisplayStyle.LOCAL_PREVIEW)
+                            putExtra("LYRICS", sharedLyricsText.trim())
+                        }
+                        context.startActivity(intent)
                     }) {
                         Text(stringResource(id = R.string.share_lyrics))
                     }

@@ -68,7 +68,9 @@ fun ViewerControlButtons(
             exit = fadeOut()
         ) {
             Row {
-                if (PeerConnectionViewModel.peerConnectionMode == PeerConnectionMode.SERVER && PeerConnectionViewModel.connectedDevices > 0) {
+                if (PeerConnectionViewModel.peerConnectionMode == PeerConnectionMode.SERVER && PeerConnectionViewModel.connectedDevices > 0
+                    && displayStyle == DisplayStyle.STANDARD
+                ) {
                     Box(
                         modifier = Modifier
                             .background(
