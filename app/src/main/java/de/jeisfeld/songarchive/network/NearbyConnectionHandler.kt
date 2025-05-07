@@ -176,7 +176,7 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
                 val intent = Intent().apply {
                     setClass(context, when (PeerConnectionViewModel.clientMode) {
                         ClientMode.LYRICS_BS,  ClientMode.LYRICS_BW, ClientMode.LYRICS_WB -> LyricsViewerActivity::class.java
-                        ClientMode.CHORDS -> ChordsViewerActivity::class.java
+                        ClientMode.CHORDS -> if (songId.isEmpty()) LyricsViewerActivity::class.java else ChordsViewerActivity::class.java
                     })
                     putExtra("STYLE", style)
                     if (songId.isNotEmpty()) putExtra("SONG_ID", songId)

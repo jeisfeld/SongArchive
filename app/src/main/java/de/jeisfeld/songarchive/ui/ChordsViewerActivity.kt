@@ -139,11 +139,16 @@ fun ChordsViewerScreen(song: Song?, imagePath: String, displayStyle: DisplayStyl
     val configuration = LocalConfiguration.current
     val bitmap = remember(imagePath) {
         val originalBitmap = BitmapFactory.decodeFile(imagePath)
-        if (configuration.orientation == android.content.res.Configuration.ORIENTATION_PORTRAIT) {
+
+        if (originalBitmap != null && configuration.orientation == android.content.res.Configuration.ORIENTATION_PORTRAIT) {
             rotateBitmap(originalBitmap, 90f)
         } else {
             originalBitmap
         }
+    }
+
+    if (bitmap == null) {
+        return
     }
 
     var scale by remember { mutableStateOf(1f) }
