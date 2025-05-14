@@ -205,9 +205,9 @@ function showLyrics(id, title, popupid = 'popup') {
 			if (!songs || songs.length === 0 || !songs[0].lyrics) {
 				document.getElementById(popupid + "-body").innerHTML = `<h2>${title}</h2><p>No lyrics available.</p>`;
 			} else {
-				let songLyrics = songs[0].lyrics.replace(/\n/g, '<br>');
+				let songLyrics = songs[0].lyrics.replace(/\|/g, '').replace(/\n/g, '<br>');
 				if (songs[0].lyrics_short && isMobileLandscape()) {
-					songLyrics = songs[0].lyrics_short.replace(/\n/g, '<br>');
+					songLyrics = songs[0].lyrics_short.replace(/\|/g, '').replace(/\n/g, '<br>');
 				}
 
 				
