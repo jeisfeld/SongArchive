@@ -101,8 +101,8 @@ class LyricsViewerActivity : ComponentActivity() {
         }
         if (song == null) {
             val songId: String? = intent.getStringExtra("SONG_ID")
-            val lyrics: String? = intent.getStringExtra("LYRICS")
-            val lyricsShort: String? = intent.getStringExtra("LYRICS_SHORT")
+            val lyrics: String? = intent.getStringExtra("LYRICS")?.replace("|", "")
+            val lyricsShort: String? = intent.getStringExtra("LYRICS_SHORT")?.replace("|", "")
             if (songId != null) {
                 val songDao = AppDatabase.getDatabase(application).songDao()
                 lifecycleScope.launch {
@@ -119,8 +119,9 @@ class LyricsViewerActivity : ComponentActivity() {
     }
 
     private fun updateUI(song: Song?, lyrics: String?, lyricsShort: String?, displayStyle: DisplayStyle) {
-        val displayLyrics = song?.lyrics?.trim() ?: lyrics ?: " "
-        val displayLyricsShort = song?.lyricsShort?.trim() ?: lyricsShort ?: displayLyrics
+        val displayLyrics = song?.lyrics?.replace("|", "")?.trim() ?: lyrics ?: " "
+        val displayLyricsShort = song?.lyricsShort?.replace("|", "")?.trim()
+            ?: lyricsShort ?: displayLyrics
         setContent {
             MaterialTheme {
                 LyricsViewerScreen(song, displayLyrics, displayLyricsShort, displayStyle) { finish() }
