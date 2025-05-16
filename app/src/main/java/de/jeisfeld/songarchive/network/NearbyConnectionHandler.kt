@@ -111,7 +111,7 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
                         Toast.makeText(context, context.getString(R.string.toast_client_connected, connectedEndpoints.size), Toast.LENGTH_SHORT).show()
                         updateNotification(PeerConnectionAction.CLIENTS_CONNECTED)
                         PeerConnectionViewModel.connectedDevices = connectedEndpoints.size
-                        sendCommandToClient(endpointId, NetworkCommand.DISPLAY_SONG, mapOf(
+                        sendCommandToClient(endpointId, NetworkCommand.DISPLAY_TEXT, mapOf(
                             "style" to DisplayStyle.REMOTE_BLACK.toString()
                         ))
                     }
@@ -166,10 +166,11 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
 
     private fun processCommand(message: Message) {
         when (NetworkCommand.valueOf(message.command)) {
-            NetworkCommand.DISPLAY_SONG, NetworkCommand.DISPLAY_CHORDS -> {
+            NetworkCommand.DISPLAY_SONG, NetworkCommand.DISPLAY_CHORDS, NetworkCommand.DISPLAY_TEXT, NetworkCommand.DISPLAY_LYRICS -> {
                 val songId = message.params?.get("songId") ?: ""
                 val style = message.params?.get("style")?.let { DisplayStyle.valueOf(it) } ?: return
                 if (PeerConnectionViewModel.clientMode == ClientMode.CHORDS && style == DisplayStyle.REMOTE_BLACK) return
+                if (PeerConnectionViewModel.clientMode == ClientMode.CHORDS && NetworkCommand.valueOf(message.command) == NetworkCommand.DISPLAY_LYRICS) return
                 if (PeerConnectionViewModel.clientMode != ClientMode.CHORDS && NetworkCommand.valueOf(message.command) == NetworkCommand.DISPLAY_CHORDS) return
                 val lyrics = message.params.get("lyrics") ?: ""
                 val lyricsShort = message.params.get("lyricsShort") ?: ""

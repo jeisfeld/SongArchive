@@ -125,7 +125,7 @@ fun MainScreen(viewModel: SongViewModel) {
     var showSyncDialog by remember { mutableStateOf(false) }
     val isConnectedState = remember { mutableStateOf(isInternetAvailable(context)) }
 
-    var showShareLyricsDialog by remember { mutableStateOf(false) }
+    var showShareTextDialog by remember { mutableStateOf(false) }
     var sharedLyricsText by remember { mutableStateOf("") }
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -313,13 +313,13 @@ fun MainScreen(viewModel: SongViewModel) {
                                     DropdownMenuItem(
                                         text = {
                                             Text(
-                                                stringResource(id = R.string.share_lyrics),
+                                                stringResource(id = R.string.share_text),
                                                 color = AppColors.TextColor
                                             )
                                         },
                                         onClick = {
                                             showMenu = false
-                                            showShareLyricsDialog = true
+                                            showShareTextDialog = true
                                         },
                                         leadingIcon = {
                                             Icon(
@@ -385,10 +385,10 @@ fun MainScreen(viewModel: SongViewModel) {
                 }
             )
         }
-        if (showShareLyricsDialog) {
+        if (showShareTextDialog) {
             AlertDialog(
-                onDismissRequest = { showShareLyricsDialog = false },
-                title = { Text(stringResource(id = R.string.share_lyrics)) },
+                onDismissRequest = { showShareTextDialog = false },
+                title = { Text(stringResource(id = R.string.share_text)) },
                 text = {
                     OutlinedTextField(
                         value = sharedLyricsText,
@@ -396,7 +396,7 @@ fun MainScreen(viewModel: SongViewModel) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(200.dp),
-                        placeholder = { Text(stringResource(id = R.string.enter_lyrics_for_sharing)) },
+                        placeholder = { Text(stringResource(id = R.string.enter_text_for_sharing)) },
                         singleLine = false,
                         maxLines = 20
                     )
@@ -404,8 +404,8 @@ fun MainScreen(viewModel: SongViewModel) {
                 confirmButton = {
                     TextButton(onClick = {
                         val serviceIntent = Intent(context, PeerConnectionService::class.java).apply {
-                            setAction(PeerConnectionAction.DISPLAY_LYRICS.toString())
-                            putExtra("ACTION", PeerConnectionAction.DISPLAY_LYRICS)
+                            setAction(PeerConnectionAction.DISPLAY_TEXT.toString())
+                            putExtra("ACTION", PeerConnectionAction.DISPLAY_TEXT)
                             putExtra("STYLE", DisplayStyle.REMOTE_DEFAULT)
                             putExtra("LYRICS", sharedLyricsText.trim())
                         }
@@ -419,21 +419,21 @@ fun MainScreen(viewModel: SongViewModel) {
                         }
                         context.startActivity(intent)
                     }) {
-                        Text(stringResource(id = R.string.share_lyrics))
+                        Text(stringResource(id = R.string.share_text))
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = {
                         val serviceIntent = Intent(context, PeerConnectionService::class.java).apply {
-                            setAction(PeerConnectionAction.DISPLAY_LYRICS.toString())
-                            putExtra("ACTION", PeerConnectionAction.DISPLAY_LYRICS)
+                            setAction(PeerConnectionAction.DISPLAY_TEXT.toString())
+                            putExtra("ACTION", PeerConnectionAction.DISPLAY_TEXT)
                             putExtra("STYLE", DisplayStyle.REMOTE_BLACK)
                             putExtra("LYRICS", " ")
                         }
                         context.startService(serviceIntent)
-                        showShareLyricsDialog = false
+                        showShareTextDialog = false
                     }) {
-                        Text(stringResource(id = R.string.stop_share_lyrics))
+                        Text(stringResource(id = R.string.stop_share_text))
                     }
                 }
             )

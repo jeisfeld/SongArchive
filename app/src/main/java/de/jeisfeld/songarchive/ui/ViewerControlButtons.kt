@@ -56,11 +56,12 @@ fun ViewerControlButtons(
     displayStyle: DisplayStyle,
     meanings: List<Meaning> = emptyList(),
     onShowMeaningChange: (Boolean) -> Unit,
-    onDisplayLyricsPage: (String) -> Unit,
+    onDisplayLyricsPage: (String?) -> Unit,
     onClose: () -> Unit,
 ) {
     val context = LocalContext.current
     var hasSentLyrics by remember { mutableStateOf(false) }
+    var currentChunk by remember { mutableStateOf<String?>(null) }
 
     Box(
         modifier = Modifier
@@ -92,12 +93,20 @@ fun ViewerControlButtons(
                                     onTap = {
                                         song?.let {
                                             val serviceIntent = Intent(context, PeerConnectionService::class.java).apply {
-                                                setAction(PeerConnectionAction.DISPLAY_LYRICS.toString())
-                                                putExtra("ACTION", PeerConnectionAction.DISPLAY_LYRICS)
-                                                putExtra("SONG_ID", song.id)
-                                                putExtra("STYLE", if (hasSentLyrics) DisplayStyle.REMOTE_BLACK else DisplayStyle.REMOTE_DEFAULT)
-                                                putExtra("LYRICS", song.lyrics)
-                                                putExtra("LYRICS_SHORT", song.lyricsShort)
+                                                if (hasSentLyrics || currentChunk == null) {
+                                                    setAction(PeerConnectionAction.DISPLAY_SONG.toString())
+                                                    putExtra("ACTION", PeerConnectionAction.DISPLAY_SONG)
+                                                    putExtra("SONG_ID", song.id)
+                                                    putExtra("STYLE", if (hasSentLyrics) DisplayStyle.REMOTE_BLACK else DisplayStyle.REMOTE_DEFAULT)
+                                                    putExtra("LYRICS", song.lyrics)
+                                                    putExtra("LYRICS_SHORT", song.lyricsShort)
+                                                }
+                                                else {
+                                                    setAction(PeerConnectionAction.DISPLAY_LYRICS.toString())
+                                                    putExtra("ACTION", PeerConnectionAction.DISPLAY_LYRICS)
+                                                    putExtra("STYLE", DisplayStyle.REMOTE_DEFAULT)
+                                                    putExtra("LYRICS", currentChunk)
+                                                }
                                             }
                                             context.startService(serviceIntent)
                                         }
@@ -126,22 +135,26 @@ fun ViewerControlButtons(
                         )
                     }
                     Spacer(modifier = Modifier.width(dimensionResource(id = R.dimen.spacing_medium)))
+                }
 
-                    if (hasSentLyrics) {
-                        val lyrics = song?.lyricsShort?:song?.lyrics?:""
-                        val lyricsPaged = song?.lyricsPaged
-                        if (lyricsPaged != null) {
-                            val chunks = listOf(lyrics.replace("|", "").trim()) + lyricsPaged.split('|').map { it.trim() }
+                if (displayStyle == DisplayStyle.STANDARD && (hasSentLyrics || isShowingLyrics)) {
+                    val lyricsPaged = song?.lyricsPaged
+                    if (lyricsPaged != null) {
+                        val chunks = listOf(null as String?) + lyricsPaged.split('|').map { it.trim() }
 
-                            chunks.forEachIndexed { index, chunk ->
-                                val circledNumber = when (index) {
-                                    0 -> "\u24EA" // ⓪ full lyrics
-                                    in 1..20 -> (0x2460 + index - 1).toChar().toString() // ① to ⑳
-                                    else -> index.toString() // fallback
-                                }
+                        chunks.forEachIndexed { index, chunk ->
+                            val circledNumber = when (index) {
+                                0 -> "\u24EA" // ⓪ full lyrics
+                                in 1..20 -> (0x2460 + index - 1).toChar().toString() // ① to ⑳
+                                else -> index.toString() // fallback
+                            }
 
-                                IconButton(
-                                    onClick = {
+                            IconButton(
+                                onClick = {
+                                    currentChunk = chunk
+                                    onDisplayLyricsPage(chunk)
+
+                                    if (hasSentLyrics) {
                                         val serviceIntent = Intent(context, PeerConnectionService::class.java).apply {
                                             setAction(PeerConnectionAction.DISPLAY_LYRICS.toString())
                                             putExtra("ACTION", PeerConnectionAction.DISPLAY_LYRICS)
@@ -155,34 +168,34 @@ fun ViewerControlButtons(
                                             }
                                         }
                                         context.startService(serviceIntent)
-                                    },
-                                    modifier = Modifier
-                                        .background(
-                                            Brush.verticalGradient(
-                                                listOf(Color.White.copy(alpha = 0.6f), Color.White.copy(alpha = 0.3f))
-                                            ),
-                                            shape = RoundedCornerShape(50)
-                                        )
-                                        .size(dimensionResource(id = R.dimen.icon_size_large))
-                                        .clip(RoundedCornerShape(50))
-                                ) {
-                                    Box(
-                                        contentAlignment = Alignment.Center,
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .background(Color.Transparent)
-                                    ) {
-                                        Text(
-                                            text = circledNumber,
-                                            color = Color.Black,
-                                            fontSize = dimensionResource(id = R.dimen.icon_font_large).value.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
                                     }
+                                },
+                                modifier = Modifier
+                                    .background(
+                                        Brush.verticalGradient(
+                                            listOf(Color.White.copy(alpha = 0.6f), Color.White.copy(alpha = 0.3f))
+                                        ),
+                                        shape = RoundedCornerShape(50)
+                                    )
+                                    .size(dimensionResource(id = R.dimen.icon_size_large))
+                                    .clip(RoundedCornerShape(50))
+                            ) {
+                                Box(
+                                    contentAlignment = Alignment.Center,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(Color.Transparent)
+                                ) {
+                                    Text(
+                                        text = circledNumber,
+                                        color = Color.Black,
+                                        fontSize = dimensionResource(id = R.dimen.icon_font_large).value.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
                                 }
                             }
-                            Spacer(modifier = Modifier.width(dimensionResource(id = R.dimen.spacing_medium)))
                         }
+                        Spacer(modifier = Modifier.width(dimensionResource(id = R.dimen.spacing_medium)))
                     }
                 }
 

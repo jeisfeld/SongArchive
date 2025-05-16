@@ -16,9 +16,9 @@
     <string name="network_mode">Network Mode</string>
     <string name="client_type">Client Type</string>
     <string name="sync_title">Synchronization</string>
-    <string name="share_lyrics">Share lyrics</string>
-    <string name="stop_share_lyrics">Stop sharing</string>
-    <string name="enter_lyrics_for_sharing">Enter lyrics for sharing…</string>
+    <string name="share_text">Share text</string>
+    <string name="stop_share_text">Stop sharing</string>
+    <string name="enter_text_for_sharing">Enter text for sharing…</string>
     <string name="yes">Yes</string>
     <string name="no">No</string>
     <string name="sync_success">Download successful!</string>

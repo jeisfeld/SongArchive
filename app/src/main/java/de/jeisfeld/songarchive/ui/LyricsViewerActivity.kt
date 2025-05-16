@@ -119,11 +119,19 @@ class LyricsViewerActivity : ComponentActivity() {
 
     private fun updateUI(song: Song?, lyrics: String?, lyricsShort: String?, displayStyle: DisplayStyle) {
         val displayLyrics = song?.lyrics?.replace("|", "")?.trim() ?: lyrics ?: " "
-        val displayLyricsShort = song?.lyricsShort?.replace("|", "")?.trim()
-            ?: lyricsShort ?: displayLyrics
+        val displayLyricsShort = song?.lyricsShort?.replace("|", "")?.trim() ?: lyricsShort ?: displayLyrics
+        var setLyricsPaged: ((String?) -> Unit)? = null
+
         setContent {
             MaterialTheme {
-                LyricsViewerScreen(song, displayLyrics, displayLyricsShort, displayStyle) { finish() }
+                LyricsViewerScreen(
+                    song,
+                    displayLyrics,
+                    displayLyricsShort,
+                    displayStyle,
+                    onClose = { finish() },
+                    setLyricsPagedCallback = { setLyricsPaged = it }
+                )
             }
         }
     }
@@ -131,12 +139,18 @@ class LyricsViewerActivity : ComponentActivity() {
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun LyricsViewerScreen(song: Song?, lyrics: String, lyricsShort: String, displayStyle: DisplayStyle, onClose: () -> Unit) {
+fun LyricsViewerScreen(song: Song?, lyrics: String, lyricsShort: String, displayStyle: DisplayStyle, onClose: () -> Unit,
+                       setLyricsPagedCallback: ((String?) -> Unit) -> Unit = {}) {
     val configuration = LocalConfiguration.current
     val density = LocalDensity.current
     val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
-    val displayedLyrics1 = if (isLandscape) lyricsShort else lyrics
-    val displayedLyrics = displayedLyrics1.lines().joinToString("\n") { it.trimEnd() }
+
+    var lyricsPaged by remember { mutableStateOf<String?>(null) }
+    val baseLyrics = lyricsPaged ?: if (isLandscape) lyricsShort else lyrics
+    val displayedLyrics = baseLyrics.lines().joinToString("\n") { it.trimEnd() }
+    LaunchedEffect(Unit) {
+        setLyricsPagedCallback { newLyrics -> lyricsPaged = newLyrics }
+    }
 
     var textAlign by remember { mutableStateOf(if (isLandscape) TextAlign.Center else TextAlign.Left) }
     val scrollState = rememberScrollState()
@@ -144,7 +158,6 @@ fun LyricsViewerScreen(song: Song?, lyrics: String, lyricsShort: String, display
     var startPadding = if (isLandscape) 0f else 8f
 
     val textMeasurer = TextMeasurer()
-    val longestLine = displayedLyrics.lines().maxByOrNull { textMeasurer.measureWidth(it, 24f) } ?: ""
 
     var fontSize by remember { mutableStateOf(24f) }
     var lineHeight by remember { mutableStateOf(1.3f) }
@@ -154,31 +167,34 @@ fun LyricsViewerScreen(song: Song?, lyrics: String, lyricsShort: String, display
     var screenHeight by remember { mutableStateOf(with(density) { localView.height.toDp().value }) }
     var showButtons by remember { mutableStateOf(displayStyle == DisplayStyle.STANDARD || displayStyle == DisplayStyle.LOCAL_PREVIEW) }
 
-    LaunchedEffect(screenWidth, screenHeight) {
-        var testFontSize = 24f
+    LaunchedEffect(lyricsPaged, screenWidth, screenHeight) {
+        val currentLyrics = lyricsPaged ?: if (isLandscape) lyricsShort else lyrics
+        val cleanLyrics = currentLyrics.lines().joinToString("\n") { it.trimEnd() }
+        val longestLine = cleanLyrics.lines().maxByOrNull { textMeasurer.measureWidth(it, 24f) } ?: ""
 
+        var testFontSize = 24f
         for (i in 1..3) {
-            testFontSize = testFontSize * (screenWidth - 8) / textMeasurer.measureWidth(longestLine, testFontSize)
+            testFontSize *= (screenWidth - 8) / textMeasurer.measureWidth(longestLine, testFontSize)
         }
         if (screenWidth - 8 < textMeasurer.measureWidth(longestLine, testFontSize)) {
             testFontSize -= 1f
         }
 
-        fontSize = testFontSize * 0.98f
+        var adjustedFontSize = testFontSize * 0.98f
+        var adjustedLineHeight = 1.3f
 
-        val totalTextHeight = textMeasurer.measureHeight(displayedLyrics, fontSize, lineHeight)
+        val totalTextHeight = textMeasurer.measureHeight(cleanLyrics, adjustedFontSize, adjustedLineHeight)
         if (totalTextHeight > screenHeight * 0.95f) {
-            lineHeight *= (screenHeight * 0.95f / totalTextHeight)
+            adjustedLineHeight *= (screenHeight * 0.95f / totalTextHeight)
         }
 
-        if (lineHeight < 1.02) {
-            fontSize *= lineHeight / 1.02f
-            lineHeight = 1.02f
+        if (adjustedLineHeight < 1.02f) {
+            adjustedFontSize *= adjustedLineHeight / 1.02f
+            adjustedLineHeight = 1.02f
         }
 
-        if (fontSize < 14) {
-            fontSize = 14f
-        }
+        fontSize = adjustedFontSize.coerceAtLeast(14f)
+        lineHeight = adjustedLineHeight
     }
 
     Surface(
@@ -261,7 +277,7 @@ fun LyricsViewerScreen(song: Song?, lyrics: String, lyricsShort: String, display
                 displayStyle = displayStyle,
                 meanings = emptyList(),
                 onShowMeaningChange = { },
-                onDisplayLyricsPage = { lyrics -> {} },
+                onDisplayLyricsPage = { lyricsPaged = it },
                 onClose = onClose,
             )
         }
