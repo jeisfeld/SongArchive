@@ -7,6 +7,7 @@
     <dimen name="icon_size_small">28dp</dimen>
     <dimen name="icon_size_medium">36dp</dimen>
     <dimen name="icon_size_large">44dp</dimen>
+    <dimen name="icon_font_large">22sp</dimen>
     <dimen name="width_id">58dp</dimen>
     <dimen name="width_actions">100dp</dimen>
 </resources>

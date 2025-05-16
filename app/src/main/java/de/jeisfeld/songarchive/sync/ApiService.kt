@@ -6,7 +6,7 @@ import retrofit2.http.GET
 import retrofit2.http.Query
 
 interface ApiService {
-    @GET("download_data2.php")
+    @GET("download_data.php")
     suspend fun fetchAllData(@Query("user") user: String? = null): SyncResponse
 
     @GET("check_update.php")

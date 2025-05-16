@@ -9,6 +9,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -31,7 +33,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.audio.AudioPlayerService
 import de.jeisfeld.songarchive.audio.PlaybackViewModel
@@ -47,14 +51,16 @@ import de.jeisfeld.songarchive.network.PeerConnectionViewModel
 @Composable
 fun ViewerControlButtons(
     showButtons: Boolean,
+    isShowingLyrics: Boolean,
     song: Song?,
     displayStyle: DisplayStyle,
     meanings: List<Meaning> = emptyList(),
     onShowMeaningChange: (Boolean) -> Unit,
+    onDisplayLyricsPage: (String) -> Unit,
     onClose: () -> Unit,
 ) {
     val context = LocalContext.current
-    var sendBlackScreen by remember { mutableStateOf(false) }
+    var hasSentLyrics by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -89,13 +95,13 @@ fun ViewerControlButtons(
                                                 setAction(PeerConnectionAction.DISPLAY_LYRICS.toString())
                                                 putExtra("ACTION", PeerConnectionAction.DISPLAY_LYRICS)
                                                 putExtra("SONG_ID", song.id)
-                                                putExtra("STYLE", if (sendBlackScreen) DisplayStyle.REMOTE_BLACK else DisplayStyle.REMOTE_DEFAULT)
+                                                putExtra("STYLE", if (hasSentLyrics) DisplayStyle.REMOTE_BLACK else DisplayStyle.REMOTE_DEFAULT)
                                                 putExtra("LYRICS", song.lyrics)
                                                 putExtra("LYRICS_SHORT", song.lyricsShort)
                                             }
                                             context.startService(serviceIntent)
                                         }
-                                        sendBlackScreen = !sendBlackScreen
+                                        hasSentLyrics = !hasSentLyrics
                                     },
                                     onLongPress = {
                                         song?.let {
@@ -113,14 +119,73 @@ fun ViewerControlButtons(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            painter = painterResource(id = if (sendBlackScreen) R.drawable.ic_send_black else R.drawable.ic_send),
+                            painter = painterResource(id = if (hasSentLyrics) R.drawable.ic_send_black else R.drawable.ic_send),
                             contentDescription = "Send",
                             tint = Color.Black,
                             modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small))
                         )
                     }
                     Spacer(modifier = Modifier.width(dimensionResource(id = R.dimen.spacing_medium)))
+
+                    if (hasSentLyrics) {
+                        val lyrics = song?.lyricsShort?:song?.lyrics?:""
+                        val lyricsPaged = song?.lyricsPaged
+                        if (lyricsPaged != null) {
+                            val chunks = listOf(lyrics.replace("|", "").trim()) + lyricsPaged.split('|').map { it.trim() }
+
+                            chunks.forEachIndexed { index, chunk ->
+                                val circledNumber = when (index) {
+                                    0 -> "\u24EA" // ⓪ full lyrics
+                                    in 1..20 -> (0x2460 + index - 1).toChar().toString() // ① to ⑳
+                                    else -> index.toString() // fallback
+                                }
+
+                                IconButton(
+                                    onClick = {
+                                        val serviceIntent = Intent(context, PeerConnectionService::class.java).apply {
+                                            setAction(PeerConnectionAction.DISPLAY_LYRICS.toString())
+                                            putExtra("ACTION", PeerConnectionAction.DISPLAY_LYRICS)
+                                            putExtra("STYLE", DisplayStyle.REMOTE_DEFAULT)
+                                            if (index == 0) {
+                                                putExtra("SONG_ID", song.id)
+                                                putExtra("LYRICS", song.lyrics)
+                                                putExtra("LYRICS_SHORT", song.lyricsShort)                                            }
+                                            else {
+                                                putExtra("LYRICS", chunk)
+                                            }
+                                        }
+                                        context.startService(serviceIntent)
+                                    },
+                                    modifier = Modifier
+                                        .background(
+                                            Brush.verticalGradient(
+                                                listOf(Color.White.copy(alpha = 0.6f), Color.White.copy(alpha = 0.3f))
+                                            ),
+                                            shape = RoundedCornerShape(50)
+                                        )
+                                        .size(dimensionResource(id = R.dimen.icon_size_large))
+                                        .clip(RoundedCornerShape(50))
+                                ) {
+                                    Box(
+                                        contentAlignment = Alignment.Center,
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(Color.Transparent)
+                                    ) {
+                                        Text(
+                                            text = circledNumber,
+                                            color = Color.Black,
+                                            fontSize = dimensionResource(id = R.dimen.icon_font_large).value.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(dimensionResource(id = R.dimen.spacing_medium)))
+                        }
+                    }
                 }
+
                 if (displayStyle == DisplayStyle.STANDARD && isInternetAvailable(context) && song?.mp3filename != null) {
                     val isCurrentSong = PlaybackViewModel.currentlyPlayingSong.collectAsState().value?.id == song.id
                     val isPlaying = PlaybackViewModel.isPlaying.collectAsState().value

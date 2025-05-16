@@ -204,10 +204,12 @@ fun ChordsViewerScreen(song: Song?, imagePath: String, displayStyle: DisplayStyl
                 ) {
                     ViewerControlButtons(
                         showButtons = showButtons,
+                        isShowingLyrics = false,
                         song = song,
                         displayStyle = displayStyle,
                         meanings = meanings,
                         onShowMeaningChange = { showMeaningsPopup = it },
+                        onDisplayLyricsPage = { },
                         onClose = onClose,
                     )
                 }

@@ -5,6 +5,7 @@ data class SongResponse(
     val title: String,
     val lyrics: String?,
     val lyrics_short: String?,
+    val lyrics_paged: String?,
     val author: String?,
     val keywords: String?,
     val tabfilename: String?,

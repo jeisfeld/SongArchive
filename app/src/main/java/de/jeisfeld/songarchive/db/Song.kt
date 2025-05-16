@@ -13,6 +13,7 @@ data class Song(
     val title: String,
     val lyrics: String,
     val lyricsShort: String?,
+    val lyricsPaged: String?,
     val author: String,
     val keywords: String,
     val tabfilename: String?,

@@ -109,8 +109,7 @@ class LyricsViewerActivity : ComponentActivity() {
                     val fetchedSong = withContext(Dispatchers.IO) { songDao.getSongById(songId) }
                     updateUI(fetchedSong, lyrics, lyricsShort, displayStyle)
                 }
-            }
-            else {
+            } else {
                 updateUI(null, lyrics, lyricsShort, displayStyle)
             }
         } else {
@@ -257,10 +256,12 @@ fun LyricsViewerScreen(song: Song?, lyrics: String, lyricsShort: String, display
 
             ViewerControlButtons(
                 showButtons = showButtons,
+                isShowingLyrics = true,
                 song = song,
                 displayStyle = displayStyle,
                 meanings = emptyList(),
                 onShowMeaningChange = { },
+                onDisplayLyricsPage = { lyrics -> {} },
                 onClose = onClose,
             )
         }

@@ -89,6 +89,7 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
                         title = it.title.trim(),
                         lyrics = it.lyrics?.trim() ?: "",
                         lyricsShort = it.lyrics_short?.trim(),
+                        lyricsPaged = it.lyrics_paged?.trim(),
                         author = it.author?.trim() ?: "",
                         keywords = it.keywords?.trim() ?: "",
                         tabfilename = it.tabfilename,
@@ -270,7 +271,7 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
                 pluginVerified.postValue(true)
             }
         }
-        catch (e: Exception) {
+        catch (_: Exception) {
             // Ignore
         }
 
