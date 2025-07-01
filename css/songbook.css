@@ -1,10 +1,10 @@
 :root {
-  --outer-color: #F7F5C4;
-  --inner-color: #F9F8E1;
-  --inner-color-shaded: #F2F1D6;
-  --text-color: #4D4313;
-  --text-color-link: #4D4393;
-  --text-color-light: #877522;
+	--outer-color: #F7F5C4;
+	--inner-color: #F9F8E1;
+	--inner-color-shaded: #F2F1D6;
+	--text-color: #4D4313;
+	--text-color-link: #4D4393;
+	--text-color-light: #877522;
 }
 
 body {
@@ -24,16 +24,16 @@ body {
 }
 
 .page-heading {
-    display: flex;
-    align-items: center; 
-    justify-content: center; 
-    gap: 8px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
 }
 
 /* Style for icons */
 .heading-icon {
-    width: 36px;
-    height: auto;
+	width: 36px;
+	height: auto;
 }
 
 /* Search Box with Icon (Same Width as Table) */
@@ -111,6 +111,12 @@ th {
 
 td {
 	background: var(--inner-color);
+}
+
+.unformatted-link {
+	color: inherit;
+	text-decoration: none;
+	font: inherit;
 }
 
 /* Ensure Actions Stay in One Line */
@@ -320,6 +326,7 @@ body.no-scroll {
 	text-decoration: none;
 	color: var(--text-color-link);
 }
+
 .author-col a:hover {
 	color: blue;
 }
@@ -374,8 +381,8 @@ body.no-scroll {
 .androidapp {
 	position: fixed; /* Fix the element relative to the viewport */
 	top: 10px;
- 	left: 50%; /* Move to the center horizontally */
-    transform: translateX(-50%); /* Adjust position to truly center */
+	left: 50%; /* Move to the center horizontally */
+	transform: translateX(-50%); /* Adjust position to truly center */
 	font-size: 1em;
 	z-index: 500; /* Ensure it appears above other elements */
 	transition: color 0.3s;

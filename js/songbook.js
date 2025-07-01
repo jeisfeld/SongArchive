@@ -48,7 +48,7 @@ function displayResult(songs) {
 	songs.forEach(song => {
 		tableHTML += `
 			<tr>
-				<td>${song.id}</td>
+				<td><a href="?q=${song.id}" class="unformatted-link" target="_blank">${song.id}</a></td>
 				<td>${song.title}</td>
 				<td class="author-col">${formatAuthors(song.author || "")}</td>
 				<td class="actions">
