@@ -10,6 +10,7 @@ import kotlinx.coroutines.launch
 
 class FavoriteListViewModel(application: Application) : AndroidViewModel(application) {
     private val dao = AppDatabase.getDatabase(application).favoriteListDao()
+    private val songDao = AppDatabase.getDatabase(application).songDao()
 
     val lists: StateFlow<List<FavoriteList>> = dao.getAll().stateIn(
         scope = viewModelScope,
@@ -27,5 +28,17 @@ class FavoriteListViewModel(application: Application) : AndroidViewModel(applica
 
     fun delete(list: FavoriteList) {
         viewModelScope.launch { dao.delete(list) }
+    }
+
+    fun addSongToLists(songId: String, listIds: List<Int>) {
+        viewModelScope.launch {
+            listIds.forEach { id ->
+                dao.insertSong(FavoriteListSong(id, songId))
+            }
+        }
+    }
+
+    suspend fun getSongsForList(listId: Int): List<Song> {
+        return songDao.getSongsForList(listId)
     }
 }
