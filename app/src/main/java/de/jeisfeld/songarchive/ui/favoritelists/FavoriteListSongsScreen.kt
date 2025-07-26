@@ -55,10 +55,11 @@ fun FavoriteListSongsScreen(
     var songsInList by remember { mutableStateOf(initialSongs) }
     val searchResults by viewModel.songs.collectAsState()
     val query = viewModel.searchQuery.value
+    var addMode by remember { mutableStateOf(false) }
     val favoriteIds = songsInList.map { it.id }.toSet()
 
     val inListResults = if (query.isNotBlank()) searchResults.filter { favoriteIds.contains(it.id) } else songsInList
-    val otherResults = if (query.isNotBlank()) searchResults.filterNot { favoriteIds.contains(it.id) } else emptyList()
+    val otherResults = if (query.isNotBlank() || addMode) searchResults.filterNot { favoriteIds.contains(it.id) } else emptyList()
     val combinedResults = inListResults + otherResults
 
     var deleteTarget by remember { mutableStateOf<Song?>(null) }
@@ -78,6 +79,14 @@ fun FavoriteListSongsScreen(
                                 painter = painterResource(id = R.drawable.ic_close),
                                 contentDescription = stringResource(id = R.string.cancel),
                                 modifier = Modifier.padding(dimensionResource(id = R.dimen.spacing_small))
+                            )
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = { addMode = !addMode }) {
+                            Image(
+                                painter = painterResource(id = R.drawable.ic_add),
+                                contentDescription = stringResource(id = R.string.add_song_to_list)
                             )
                         }
                     }
@@ -107,7 +116,12 @@ fun FavoriteListSongsScreen(
                 onRemoveFromList = { song ->
                     deleteTarget = song
                 },
-                removableIds = favoriteIds
+                removableIds = favoriteIds,
+                onAddToList = if (addMode) { song ->
+                    favViewModel.addSongToList(listId, song.id)
+                    songsInList = songsInList + song
+                } else null,
+                addableIds = if (addMode) otherResults.map { it.id }.toSet() else emptySet()
             )
             deleteTarget?.let { song ->
                 AlertDialog(

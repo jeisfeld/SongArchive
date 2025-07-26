@@ -57,6 +57,7 @@
     <string name="remove_from_list">Remove from list</string>
     <string name="confirm_remove_from_list">Remove “%s” from list?</string>
     <string name="other_songs">Other Songs</string>
+    <string name="add_song_to_list">Add songs</string>
 
     <string-array name="network_modes">
         <item>Disabled</item>
