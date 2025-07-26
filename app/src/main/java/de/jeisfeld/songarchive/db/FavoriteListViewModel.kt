@@ -41,6 +41,12 @@ class FavoriteListViewModel(application: Application) : AndroidViewModel(applica
         }
     }
 
+    fun addSongToList(listId: Int, songId: String) {
+        viewModelScope.launch {
+            dao.insertSong(FavoriteListSong(listId, songId))
+        }
+    }
+
     fun removeSongFromList(listId: Int, songId: String) {
         viewModelScope.launch {
             dao.deleteSongFromList(listId, songId)

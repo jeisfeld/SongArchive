@@ -60,7 +60,9 @@ fun SongTable(
     isWideScreen: Boolean,
     isConnected: Boolean,
     onRemoveFromList: ((Song) -> Unit)? = null,
-    removableIds: Set<String> = emptySet()
+    removableIds: Set<String> = emptySet(),
+    onAddToList: ((Song) -> Unit)? = null,
+    addableIds: Set<String> = emptySet()
 ) {
     val context = LocalContext.current
     val currentlyPlayingSong by PlaybackViewModel.currentlyPlayingSong.collectAsState()
@@ -156,6 +158,15 @@ fun SongTable(
                                     contentDescription = stringResource(id = R.string.remove_from_list),
                                     modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small)).clickable {
                                         onRemoveFromList(song)
+                                    }
+                                )
+                                Spacer(modifier = Modifier.width(dimensionResource(id = R.dimen.spacing_medium)))
+                            } else if (onAddToList != null && addableIds.contains(song.id)) {
+                                Image(
+                                    painter = painterResource(id = R.drawable.ic_add),
+                                    contentDescription = stringResource(id = R.string.add_song_to_list),
+                                    modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small)).clickable {
+                                        onAddToList(song)
                                     }
                                 )
                                 Spacer(modifier = Modifier.width(dimensionResource(id = R.dimen.spacing_medium)))
