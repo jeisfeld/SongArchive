@@ -45,6 +45,14 @@
     <string name="notification_client_disconnected">Disconnected as client</string>
     <string name="notification_unknown">Unknown status (%d connections)</string>
 
+    <!-- Favorite Lists -->
+    <string name="favorite_lists">Favorite Lists</string>
+    <string name="add_favorite_list">Add Favorite List</string>
+    <string name="rename_favorite_list">Rename Favorite List</string>
+    <string name="delete_favorite_list">Delete Favorite List</string>
+    <string name="confirm_delete_list">Delete this list?</string>
+    <string name="list_name">List name</string>
+
     <string-array name="network_modes">
         <item>Disabled</item>
         <item>Server</item>

@@ -45,6 +45,14 @@
     <string name="notification_client_disconnected">Als Empfänger getrennt</string>
     <string name="notification_unknown">Unbekannter Status (%d Verbindungen)</string>
 
+    <!-- Favorite Lists -->
+    <string name="favorite_lists">Favoritenlisten</string>
+    <string name="add_favorite_list">Favoritenliste hinzufügen</string>
+    <string name="rename_favorite_list">Favoritenliste umbenennen</string>
+    <string name="delete_favorite_list">Favoritenliste löschen</string>
+    <string name="confirm_delete_list">Favoritenliste wirklich löschen?</string>
+    <string name="list_name">Listenname</string>
+
     <string-array name="network_modes">
         <item>Deaktiviert</item>
         <item>Sender</item>

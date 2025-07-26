@@ -47,6 +47,7 @@
             android:theme="@android:style/Theme.Light.NoTitleBar.Fullscreen"/>
         <activity android:name=".ui.LyricsViewerActivity"
             android:theme="@android:style/Theme.Light.NoTitleBar.Fullscreen"/>
+        <activity android:name=".ui.FavoriteListsActivity" />
         <service
             android:name=".audio.AudioPlayerService"
             android:foregroundServiceType="mediaPlayback"
