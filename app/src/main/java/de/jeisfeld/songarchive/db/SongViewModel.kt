@@ -13,6 +13,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import de.jeisfeld.songarchive.sync.CheckUpdateResponse
 import de.jeisfeld.songarchive.sync.RetrofitClient
+import de.jeisfeld.songarchive.db.FavoriteListSong
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,6 +32,7 @@ import java.util.zip.ZipInputStream
 class SongViewModel(application: Application) : AndroidViewModel(application) {
     val TAG = "SongViewModel"
     private val songDao = AppDatabase.getDatabase(application).songDao()
+    private val favoriteDao = AppDatabase.getDatabase(application).favoriteListDao()
     private val _songs = MutableStateFlow<List<Song>>(emptyList())
     val songs: StateFlow<List<Song>> = _songs
     private val client = OkHttpClient()
@@ -78,6 +80,8 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 // Synchronize private songs only in server mode
                 val queryUser = if (pluginVerified.value ?: false) "private" else null
+
+                val existingFavorites = favoriteDao.getAllEntries()
 
                 // Fetch all data in one API call
                 val response = RetrofitClient.api.fetchAllData(user = queryUser)
@@ -129,6 +133,9 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
 
                 songDao.insertMeanings(fetchedMeanings)
                 songDao.insertSongMeanings(fetchedSongMeanings)
+
+                val validSongIds = fetchedSongs.map { it.id }.toSet()
+                favoriteDao.insertSongs(existingFavorites.filter { validSongIds.contains(it.songId) })
 
                 // Step 2: Download and Extract Images
                 val success = downloadAndExtractZip(getApplication(), "https://heilsame-lieder.de/download_chords.php")
