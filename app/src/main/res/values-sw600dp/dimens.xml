@@ -9,5 +9,5 @@
     <dimen name="icon_size_large">50dp</dimen>
     <dimen name="icon_font_large">25sp</dimen>
     <dimen name="width_id">66dp</dimen>
-    <dimen name="width_actions">126dp</dimen>
+    <dimen name="width_actions">172dp</dimen>
 </resources>

@@ -36,10 +36,13 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelStoreOwner
 import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.audio.AudioPlayerService
 import de.jeisfeld.songarchive.audio.PlaybackViewModel
 import de.jeisfeld.songarchive.audio.isInternetAvailable
+import de.jeisfeld.songarchive.db.FavoriteListViewModel
 import de.jeisfeld.songarchive.db.Meaning
 import de.jeisfeld.songarchive.db.Song
 import de.jeisfeld.songarchive.network.DisplayStyle
@@ -47,6 +50,7 @@ import de.jeisfeld.songarchive.network.PeerConnectionAction
 import de.jeisfeld.songarchive.network.PeerConnectionMode
 import de.jeisfeld.songarchive.network.PeerConnectionService
 import de.jeisfeld.songarchive.network.PeerConnectionViewModel
+import de.jeisfeld.songarchive.ui.AddToFavoriteListDialog
 
 @Composable
 fun ViewerControlButtons(
@@ -60,6 +64,9 @@ fun ViewerControlButtons(
     onClose: () -> Unit,
 ) {
     val context = LocalContext.current
+    val favoriteViewModel = ViewModelProvider(context as ViewModelStoreOwner)[FavoriteListViewModel::class.java]
+    val favoriteLists by favoriteViewModel.lists.collectAsState()
+    var showAddDialog by remember { mutableStateOf(false) }
     var hasSentLyrics by remember { mutableStateOf(false) }
     var currentChunk by remember { mutableStateOf<String?>(null) }
 
@@ -267,6 +274,29 @@ fun ViewerControlButtons(
                     }
                     Spacer(modifier = Modifier.width(dimensionResource(id = R.dimen.spacing_medium)))
                 }
+                if (favoriteLists.isNotEmpty() && song != null) {
+                    IconButton(
+                        onClick = { showAddDialog = true },
+                        modifier = Modifier
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(Color.White.copy(alpha = 0.6f), Color.White.copy(alpha = 0.3f))
+                                ),
+                                shape = RoundedCornerShape(50)
+                            )
+                            .size(dimensionResource(id = R.dimen.icon_size_large))
+                            .clip(RoundedCornerShape(50))
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_list),
+                            contentDescription = "Favorites",
+                            tint = Color.Black,
+                            modifier = Modifier
+                                .size(dimensionResource(id = R.dimen.icon_size_small))
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(dimensionResource(id = R.dimen.spacing_medium)))
+                }
                 if (!meanings.isEmpty()) {
                     IconButton(
                         onClick = { onShowMeaningChange(true) },
@@ -312,5 +342,13 @@ fun ViewerControlButtons(
                 }
             }
         }
+    }
+
+    if (showAddDialog && song != null) {
+        AddToFavoriteListDialog(
+            lists = favoriteLists,
+            onAdd = { favoriteViewModel.addSongToLists(song.id, it) },
+            onDismiss = { showAddDialog = false }
+        )
     }
 }
