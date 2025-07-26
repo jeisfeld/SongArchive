@@ -1,5 +1,6 @@
-package de.jeisfeld.songarchive.ui
+package de.jeisfeld.songarchive.ui.favoritelists
 
+import android.content.Intent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -89,7 +90,7 @@ fun FavoriteListsScreen(viewModel: FavoriteListViewModel, onClose: () -> Unit) {
                             .fillMaxWidth()
                             .padding(vertical = dimensionResource(id = R.dimen.spacing_small))
                             .clickable {
-                                val intent = android.content.Intent(context, FavoriteListSongsActivity::class.java).apply {
+                                val intent = Intent(context, FavoriteListSongsActivity::class.java).apply {
                                     putExtra("LIST_ID", list.id)
                                     putExtra("LIST_NAME", list.name)
                                 }

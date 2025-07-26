@@ -1,4 +1,4 @@
-package de.jeisfeld.songarchive.ui
+package de.jeisfeld.songarchive.ui.favoritelists
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity

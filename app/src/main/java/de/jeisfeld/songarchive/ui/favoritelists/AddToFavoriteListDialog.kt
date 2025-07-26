@@ -1,4 +1,4 @@
-package de.jeisfeld.songarchive.ui
+package de.jeisfeld.songarchive.ui.favoritelists
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -21,7 +21,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.times
 import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.db.FavoriteList
 import de.jeisfeld.songarchive.ui.theme.AppColors

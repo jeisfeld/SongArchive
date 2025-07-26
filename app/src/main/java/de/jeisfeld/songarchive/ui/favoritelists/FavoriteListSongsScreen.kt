@@ -1,5 +1,6 @@
-package de.jeisfeld.songarchive.ui
+package de.jeisfeld.songarchive.ui.favoritelists
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -7,10 +8,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.offset
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -31,6 +34,8 @@ import de.jeisfeld.songarchive.audio.isInternetAvailable
 import de.jeisfeld.songarchive.db.FavoriteListViewModel
 import de.jeisfeld.songarchive.db.Song
 import de.jeisfeld.songarchive.db.SongViewModel
+import de.jeisfeld.songarchive.ui.SearchBar
+import de.jeisfeld.songarchive.ui.SongTable
 import de.jeisfeld.songarchive.ui.theme.AppColors
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -69,7 +74,7 @@ fun FavoriteListSongsScreen(
                     ),
                     navigationIcon = {
                         IconButton(onClick = onClose) {
-                            androidx.compose.foundation.Image(
+                            Image(
                                 painter = painterResource(id = R.drawable.ic_close),
                                 contentDescription = stringResource(id = R.string.cancel),
                                 modifier = Modifier.padding(dimensionResource(id = R.dimen.spacing_small))
@@ -105,12 +110,12 @@ fun FavoriteListSongsScreen(
                 removableIds = favoriteIds
             )
             deleteTarget?.let { song ->
-                androidx.compose.material3.AlertDialog(
+                AlertDialog(
                     onDismissRequest = { deleteTarget = null },
                     title = { Text(stringResource(id = R.string.remove_from_list)) },
                     text = { Text(stringResource(id = R.string.confirm_remove_from_list, song.title)) },
                     confirmButton = {
-                        androidx.compose.material3.TextButton(onClick = {
+                        TextButton(onClick = {
                             favViewModel.removeSongFromList(listId, song.id)
                             songsInList = songsInList.filterNot { it.id == song.id }
                             deleteTarget = null
@@ -119,7 +124,7 @@ fun FavoriteListSongsScreen(
                         }
                     },
                     dismissButton = {
-                        androidx.compose.material3.TextButton(onClick = { deleteTarget = null }) {
+                        TextButton(onClick = { deleteTarget = null }) {
                             Text(stringResource(id = R.string.cancel))
                         }
                     }

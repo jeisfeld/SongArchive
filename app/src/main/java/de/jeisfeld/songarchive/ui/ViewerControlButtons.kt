@@ -50,7 +50,7 @@ import de.jeisfeld.songarchive.network.PeerConnectionAction
 import de.jeisfeld.songarchive.network.PeerConnectionMode
 import de.jeisfeld.songarchive.network.PeerConnectionService
 import de.jeisfeld.songarchive.network.PeerConnectionViewModel
-import de.jeisfeld.songarchive.ui.AddToFavoriteListDialog
+import de.jeisfeld.songarchive.ui.favoritelists.AddToFavoriteListDialog
 
 @Composable
 fun ViewerControlButtons(

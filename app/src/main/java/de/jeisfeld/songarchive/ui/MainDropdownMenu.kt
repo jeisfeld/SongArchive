@@ -2,7 +2,6 @@ package de.jeisfeld.songarchive.ui
 
 import android.Manifest
 import android.content.Context
-import android.content.Intent
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.size
@@ -25,7 +24,7 @@ import de.jeisfeld.songarchive.network.PeerConnectionMode
 import de.jeisfeld.songarchive.network.PeerConnectionViewModel
 import de.jeisfeld.songarchive.network.isNearbyConnectionPossible
 import de.jeisfeld.songarchive.ui.theme.AppColors
-import de.jeisfeld.songarchive.ui.FavoriteListsActivity
+import de.jeisfeld.songarchive.ui.favoritelists.FavoriteListsActivity
 
 @Composable
 fun MainDropdownMenu(
