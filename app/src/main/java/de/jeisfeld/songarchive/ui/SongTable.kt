@@ -54,7 +54,14 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 @Composable
-fun SongTable(viewModel: SongViewModel, songs: List<Song>, isWideScreen: Boolean, isConnected: Boolean) {
+fun SongTable(
+    viewModel: SongViewModel,
+    songs: List<Song>,
+    isWideScreen: Boolean,
+    isConnected: Boolean,
+    onRemoveFromList: ((Song) -> Unit)? = null,
+    removableIds: Set<String> = emptySet()
+) {
     val context = LocalContext.current
     val currentlyPlayingSong by PlaybackViewModel.currentlyPlayingSong.collectAsState()
     val isPlaying by PlaybackViewModel.isPlaying.collectAsState()
@@ -140,6 +147,16 @@ fun SongTable(viewModel: SongViewModel, songs: List<Song>, isWideScreen: Boolean
                             )
                         }
                         Row(modifier = Modifier.width(dimensionResource(id = R.dimen.width_actions))) {
+                            if (onRemoveFromList != null && removableIds.contains(song.id)) {
+                                Image(
+                                    painter = painterResource(id = R.drawable.ic_delete),
+                                    contentDescription = stringResource(id = R.string.remove_from_list),
+                                    modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small)).clickable {
+                                        onRemoveFromList(song)
+                                    }
+                                )
+                                Spacer(modifier = Modifier.width(dimensionResource(id = R.dimen.spacing_medium)))
+                            }
                             Image(
                                 painter = painterResource(id = R.drawable.text2),
                                 contentDescription = stringResource(id = R.string.view_lyrics),

@@ -52,6 +52,10 @@
     <string name="delete_favorite_list">Favoritenliste löschen</string>
     <string name="confirm_delete_list">Liste „%s“ wirklich löschen?</string>
     <string name="list_name">Listenname</string>
+    <string name="add_to_favorite_list">Zur Favoritenliste hinzufügen</string>
+    <string name="add_to_lists">Zur Liste(n) hinzufügen</string>
+    <string name="remove_from_list">Aus Liste entfernen</string>
+    <string name="other_songs">Weitere Lieder</string>
 
     <string-array name="network_modes">
         <item>Deaktiviert</item>
