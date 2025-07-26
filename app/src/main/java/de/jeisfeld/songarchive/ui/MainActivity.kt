@@ -1,9 +1,7 @@
 package de.jeisfeld.songarchive.ui
 
-import android.Manifest
 import android.content.Intent
 import android.content.IntentFilter
-import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -25,8 +23,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -55,7 +51,6 @@ import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.ViewModelProvider
@@ -66,10 +61,8 @@ import de.jeisfeld.songarchive.db.Song
 import de.jeisfeld.songarchive.db.SongViewModel
 import de.jeisfeld.songarchive.network.DisplayStyle
 import de.jeisfeld.songarchive.network.PeerConnectionAction
-import de.jeisfeld.songarchive.network.PeerConnectionMode
 import de.jeisfeld.songarchive.network.PeerConnectionService
 import de.jeisfeld.songarchive.network.PeerConnectionViewModel
-import de.jeisfeld.songarchive.network.isNearbyConnectionPossible
 import de.jeisfeld.songarchive.ui.theme.AppColors
 import de.jeisfeld.songarchive.ui.theme.AppTheme
 
@@ -121,7 +114,6 @@ fun MainScreen(viewModel: SongViewModel) {
     var isSyncing by remember { mutableStateOf(false) }
 
     var showMenu by remember { mutableStateOf(false) }
-    var showNetworkDialog by remember { mutableStateOf(false) }
     var showSyncDialog by remember { mutableStateOf(false) }
     val isConnectedState = remember { mutableStateOf(isInternetAvailable(context)) }
 
@@ -210,127 +202,20 @@ fun MainScreen(viewModel: SongViewModel) {
                                 )
                             }
 
-                            DropdownMenu(
-                                expanded = showMenu,
+                            MainDropdownMenu(
+                                showMenu = showMenu,
                                 onDismissRequest = { showMenu = false },
-                                modifier = Modifier.background(AppColors.BackgroundShaded) // Set menu background color
-                            ) {
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            stringResource(id = R.string.sync),
-                                            color = AppColors.TextColor // Ensure text is colored
-                                        )
-                                    },
-                                    onClick = {
-                                        showMenu = false
-                                        isSyncing = true
-                                        viewModel.synchronizeDatabaseAndImages(true) { success ->
-                                            isSyncing = false
-                                            viewModel.searchSongs(viewModel.searchQuery.value)
-                                        }
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            painter = painterResource(id = R.drawable.ic_sync),
-                                            contentDescription = "Sync",
-                                            modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small))
-                                        )
+                                context = context,
+                                permissionLauncher = permissionLauncher,
+                                onShareText = { showShareTextDialog = true },
+                                onSync = {
+                                    isSyncing = true
+                                    viewModel.synchronizeDatabaseAndImages(true) { _ ->
+                                        isSyncing = false
+                                        viewModel.searchSongs(viewModel.searchQuery.value)
                                     }
-                                )
-                                if (isNearbyConnectionPossible(context)) {
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(
-                                                stringResource(id = R.string.network_connection),
-                                                color = AppColors.TextColor // Ensure text is colored
-                                            )
-                                        },
-                                        onClick = {
-                                            showNetworkDialog = true
-                                        },
-                                        leadingIcon = {
-                                            Icon(
-                                                painter = painterResource(id = R.drawable.ic_wifi),
-                                                contentDescription = "Wi-Fi Transfer",
-                                                modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small))
-                                            )
-                                        }
-                                    )
                                 }
-                                if (showNetworkDialog) {
-                                    NetworkModeDialog(
-                                        context = context,
-                                        selectedNetworkMode = PeerConnectionViewModel.peerConnectionMode,
-                                        selectedClientMode = PeerConnectionViewModel.clientMode,
-                                        onModeSelected = { networkMode, clientMode ->
-                                            val isPeerConnectionModeChanged = networkMode != PeerConnectionViewModel.peerConnectionMode
-                                            PeerConnectionViewModel.peerConnectionMode = networkMode
-                                            PeerConnectionViewModel.clientMode = clientMode
-                                            showMenu = false
-                                            showNetworkDialog = false
-                                            val requiredPermissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                                arrayOf(
-                                                    Manifest.permission.NEARBY_WIFI_DEVICES,
-                                                    Manifest.permission.ACCESS_FINE_LOCATION,
-                                                    Manifest.permission.BLUETOOTH,
-                                                    Manifest.permission.BLUETOOTH_SCAN,
-                                                    Manifest.permission.BLUETOOTH_ADMIN,
-                                                    Manifest.permission.BLUETOOTH_CONNECT,
-                                                    Manifest.permission.BLUETOOTH_ADVERTISE
-                                                )
-                                            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                                                arrayOf(
-                                                    Manifest.permission.ACCESS_FINE_LOCATION,
-                                                    Manifest.permission.BLUETOOTH,
-                                                    Manifest.permission.BLUETOOTH_SCAN,
-                                                    Manifest.permission.BLUETOOTH_ADMIN,
-                                                    Manifest.permission.BLUETOOTH_CONNECT,
-                                                    Manifest.permission.BLUETOOTH_ADVERTISE
-                                                )
-                                            } else {
-                                                arrayOf(
-                                                    Manifest.permission.ACCESS_FINE_LOCATION,
-                                                    Manifest.permission.BLUETOOTH,
-                                                    Manifest.permission.BLUETOOTH_ADMIN,
-                                                )
-                                            }
-                                            val missingPermissions = requiredPermissions.filter {
-                                                ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
-                                            }
-                                            if (isPeerConnectionModeChanged) {
-                                                if (missingPermissions.isNotEmpty()) {
-                                                    permissionLauncher.launch(missingPermissions.toTypedArray())
-                                                } else {
-                                                    PeerConnectionViewModel.startPeerConnectionService(context)
-                                                }
-                                            }
-                                        },
-                                        onDismiss = { showNetworkDialog = false }
-                                    )
-                                }
-                                if (PeerConnectionViewModel.peerConnectionMode == PeerConnectionMode.SERVER && PeerConnectionViewModel.connectedDevices > 0) {
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(
-                                                stringResource(id = R.string.share_text),
-                                                color = AppColors.TextColor
-                                            )
-                                        },
-                                        onClick = {
-                                            showMenu = false
-                                            showShareTextDialog = true
-                                        },
-                                        leadingIcon = {
-                                            Icon(
-                                                painter = painterResource(id = R.drawable.ic_send),
-                                                contentDescription = "Send Lyrics",
-                                                modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small))
-                                            )
-                                        }
-                                    )
-                                }
-                            }
+                            )
                         }
                     )
                     Box(
