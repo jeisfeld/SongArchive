@@ -19,6 +19,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -51,6 +52,8 @@ import de.jeisfeld.songarchive.network.PeerConnectionMode
 import de.jeisfeld.songarchive.network.PeerConnectionService
 import de.jeisfeld.songarchive.network.PeerConnectionViewModel
 import de.jeisfeld.songarchive.ui.favoritelists.AddToFavoriteListDialog
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 fun ViewerControlButtons(
@@ -67,8 +70,17 @@ fun ViewerControlButtons(
     val favoriteViewModel = ViewModelProvider(context as ViewModelStoreOwner)[FavoriteListViewModel::class.java]
     val favoriteLists by favoriteViewModel.lists.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
+    var initialListIds by remember { mutableStateOf(setOf<Int>()) }
     var hasSentLyrics by remember { mutableStateOf(false) }
     var currentChunk by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(showAddDialog, song) {
+        if (showAddDialog && song != null) {
+            initialListIds = withContext(Dispatchers.IO) { favoriteViewModel.getListsForSong(song.id).toSet() }
+        } else {
+            initialListIds = emptySet()
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -347,7 +359,10 @@ fun ViewerControlButtons(
     if (showAddDialog && song != null) {
         AddToFavoriteListDialog(
             lists = favoriteLists,
-            onAdd = { favoriteViewModel.addSongToLists(song.id, it) },
+            initiallyChecked = initialListIds,
+            onConfirm = { addIds, removeIds ->
+                favoriteViewModel.updateSongLists(song.id, addIds, removeIds)
+            },
             onDismiss = { showAddDialog = false }
         )
     }

@@ -29,10 +29,11 @@ import de.jeisfeld.songarchive.ui.theme.AppColors
 @Composable
 fun AddToFavoriteListDialog(
     lists: List<FavoriteList>,
-    onAdd: (List<Int>) -> Unit,
+    initiallyChecked: Set<Int>,
+    onConfirm: (addIds: List<Int>, removeIds: List<Int>) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var selected by remember { mutableStateOf(setOf<Int>()) }
+    var selected by remember(initiallyChecked) { mutableStateOf(initiallyChecked) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(id = R.string.add_to_favorite_list)) },
@@ -59,7 +60,12 @@ fun AddToFavoriteListDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onAdd(selected.toList()); onDismiss() }) {
+            TextButton(onClick = {
+                val toAdd = selected - initiallyChecked
+                val toRemove = initiallyChecked - selected
+                onConfirm(toAdd.toList(), toRemove.toList())
+                onDismiss()
+            }) {
                 Text(stringResource(id = R.string.add_to_lists))
             }
         },
