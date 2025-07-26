@@ -30,9 +30,12 @@ class FavoriteListViewModel(application: Application) : AndroidViewModel(applica
         viewModelScope.launch { dao.delete(list) }
     }
 
-    fun addSongToLists(songId: String, listIds: List<Int>) {
+    fun updateSongLists(songId: String, addIds: List<Int>, removeIds: List<Int>) {
         viewModelScope.launch {
-            listIds.forEach { id ->
+            removeIds.forEach { id ->
+                dao.deleteSongFromList(id, songId)
+            }
+            addIds.forEach { id ->
                 dao.insertSong(FavoriteListSong(id, songId))
             }
         }
@@ -46,5 +49,9 @@ class FavoriteListViewModel(application: Application) : AndroidViewModel(applica
 
     suspend fun getSongsForList(listId: Int): List<Song> {
         return songDao.getSongsForList(listId)
+    }
+
+    suspend fun getListsForSong(songId: String): List<Int> {
+        return dao.getListsForSong(songId)
     }
 }
