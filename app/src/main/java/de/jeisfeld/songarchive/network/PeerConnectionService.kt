@@ -89,6 +89,16 @@ class PeerConnectionService : Service() {
                     ))
                 }
             }
+            PeerConnectionAction.SHARE_FAVORITE_LIST -> {
+                val listName = intent.getStringExtra("LIST_NAME")
+                val songIds = intent.getStringExtra("SONG_IDS")
+                if (listName != null && songIds != null) {
+                    peerConnectionHandler.sendCommandToClients(NetworkCommand.SHARE_FAVORITE_LIST, mapOf(
+                        "name" to listName,
+                        "songIds" to songIds
+                    ))
+                }
+            }
             PeerConnectionAction.CLIENT_CONNECTED, PeerConnectionAction.CLIENT_DISCONNECTED,
             PeerConnectionAction.CLIENTS_CONNECTED -> {
                 startNotification(intent, action)

@@ -201,6 +201,16 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
                     context.startActivity(intent)
                 }
             }
+            NetworkCommand.SHARE_FAVORITE_LIST -> {
+                val name = message.params?.get("name") ?: return
+                val ids = message.params?.get("songIds") ?: return
+                val intent = Intent(context, de.jeisfeld.songarchive.ui.favoritelists.FavoriteListImportActivity::class.java).apply {
+                    putExtra("LIST_NAME", name)
+                    putExtra("SONG_IDS", ids)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(intent)
+            }
             NetworkCommand.CLIENT_DISCONNECT -> {
                 PeerConnectionViewModel.peerConnectionMode = PeerConnectionMode.DISABLED
                 updateNotification(PeerConnectionAction.CONNECTION_DISABLE)
