@@ -58,6 +58,10 @@
     <string name="confirm_remove_from_list">Remove “%s” from list?</string>
     <string name="other_songs">Other Songs</string>
     <string name="add_song_to_list">Add songs</string>
+    <string name="share_favorite_list">Share list</string>
+    <string name="import_favorite_list">Import Favorite List</string>
+    <string name="confirm_import_list">Import list “%s”?</string>
+    <string name="missing_songs">Songs not found: %s</string>
 
     <string-array name="network_modes">
         <item>Disabled</item>

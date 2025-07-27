@@ -36,7 +36,15 @@ import androidx.compose.ui.res.stringResource
 import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.db.FavoriteList
 import de.jeisfeld.songarchive.db.FavoriteListViewModel
+import de.jeisfeld.songarchive.network.PeerConnectionAction
+import de.jeisfeld.songarchive.network.PeerConnectionMode
+import de.jeisfeld.songarchive.network.PeerConnectionService
+import de.jeisfeld.songarchive.network.PeerConnectionViewModel
 import de.jeisfeld.songarchive.ui.theme.AppColors
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -85,6 +93,7 @@ fun FavoriteListsScreen(viewModel: FavoriteListViewModel, onClose: () -> Unit) {
         ) {
             LazyColumn(modifier = Modifier.fillMaxSize()) {
                 items(lists) { list ->
+                    val scope = rememberCoroutineScope()
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -100,6 +109,24 @@ fun FavoriteListsScreen(viewModel: FavoriteListViewModel, onClose: () -> Unit) {
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(text = list.name, color = AppColors.TextColor, modifier = Modifier.weight(1f))
+                        if (PeerConnectionViewModel.peerConnectionMode == PeerConnectionMode.SERVER &&
+                            PeerConnectionViewModel.connectedDevices > 0) {
+                            IconButton(onClick = {
+                                scope.launch {
+                                    val songs = withContext(Dispatchers.IO) { viewModel.getSongsForList(list.id) }
+                                    val ids = songs.joinToString(",") { it.id }
+                                    val intent = Intent(context, PeerConnectionService::class.java).apply {
+                                        setAction(PeerConnectionAction.SHARE_FAVORITE_LIST.toString())
+                                        putExtra("ACTION", PeerConnectionAction.SHARE_FAVORITE_LIST)
+                                        putExtra("LIST_NAME", list.name)
+                                        putExtra("SONG_IDS", ids)
+                                    }
+                                    context.startService(intent)
+                                }
+                            }) {
+                                Image(painter = painterResource(id = R.drawable.ic_send), contentDescription = stringResource(id = R.string.share_favorite_list))
+                            }
+                        }
                         IconButton(onClick = { renameTarget = list }) {
                             Image(painter = painterResource(id = R.drawable.ic_edit), contentDescription = stringResource(id = R.string.rename_favorite_list))
                         }

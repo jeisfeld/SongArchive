@@ -17,6 +17,7 @@ enum class NetworkCommand {
     DISPLAY_CHORDS,
     DISPLAY_TEXT,
     DISPLAY_LYRICS,
+    SHARE_FAVORITE_LIST,
     CLIENT_DISCONNECT
 }
 
