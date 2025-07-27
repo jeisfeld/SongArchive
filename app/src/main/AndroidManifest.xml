@@ -49,6 +49,7 @@
             android:theme="@android:style/Theme.Light.NoTitleBar.Fullscreen"/>
         <activity android:name=".ui.favoritelists.FavoriteListsActivity" />
         <activity android:name=".ui.favoritelists.FavoriteListSongsActivity" />
+        <activity android:name=".ui.favoritelists.FavoriteListImportActivity" />
         <service
             android:name=".audio.AudioPlayerService"
             android:foregroundServiceType="mediaPlayback"

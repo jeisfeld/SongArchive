@@ -58,6 +58,10 @@
     <string name="confirm_remove_from_list">Lied „%s“ aus Liste entfernen?</string>
     <string name="other_songs">Weitere Lieder</string>
     <string name="add_song_to_list">Lieder hinzufügen</string>
+    <string name="share_favorite_list">Liste teilen</string>
+    <string name="import_favorite_list">Favoritenliste importieren</string>
+    <string name="confirm_import_list">Liste „%s“ importieren?</string>
+    <string name="missing_songs">Folgende Lieder wurden nicht importiert: %s</string>
 
     <string-array name="network_modes">
         <item>Deaktiviert</item>

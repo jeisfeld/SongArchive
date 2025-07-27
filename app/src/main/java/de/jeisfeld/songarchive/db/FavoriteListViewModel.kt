@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import de.jeisfeld.songarchive.db.FavoriteListSong
 
 class FavoriteListViewModel(application: Application) : AndroidViewModel(application) {
     private val dao = AppDatabase.getDatabase(application).favoriteListDao()
@@ -20,6 +21,22 @@ class FavoriteListViewModel(application: Application) : AndroidViewModel(applica
 
     fun addList(name: String) {
         viewModelScope.launch { dao.insert(FavoriteList(name = name)) }
+    }
+
+    suspend fun addListWithSongs(name: String, songIds: List<String>): List<String> {
+        val missing = mutableListOf<String>()
+        val valid = mutableListOf<String>()
+        songIds.forEach { id ->
+            val exists = songDao.getSongById(id) != null
+            if (exists) {
+                valid.add(id)
+            } else {
+                missing.add(id)
+            }
+        }
+        val listId = dao.insert(FavoriteList(name = name)).toInt()
+        dao.insertSongs(valid.map { FavoriteListSong(listId, it) })
+        return missing
     }
 
     fun rename(list: FavoriteList, newName: String) {
