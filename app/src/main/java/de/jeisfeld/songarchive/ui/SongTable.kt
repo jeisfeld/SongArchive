@@ -159,7 +159,10 @@ fun SongTable(
                         }
                         Row(
                             modifier = Modifier.width(actionsWidth),
-                            horizontalArrangement = Arrangement.End
+                            horizontalArrangement = Arrangement.spacedBy(
+                                dimensionResource(id = R.dimen.spacing_medium),
+                                Alignment.End
+                            )
                         ) {
                             if (onRemoveFromList != null && removableIds.contains(song.id)) {
                                 Image(
@@ -169,7 +172,6 @@ fun SongTable(
                                         onRemoveFromList(song)
                                     }
                                 )
-                                Spacer(modifier = Modifier.width(dimensionResource(id = R.dimen.spacing_medium)))
                             } else if (onAddToList != null && addableIds.contains(song.id)) {
                                 Image(
                                     painter = painterResource(id = R.drawable.ic_add),
@@ -178,7 +180,6 @@ fun SongTable(
                                         onAddToList(song)
                                     }
                                 )
-                                Spacer(modifier = Modifier.width(dimensionResource(id = R.dimen.spacing_medium)))
                             }
                             Image(
                                 painter = painterResource(id = R.drawable.text2),
@@ -189,7 +190,6 @@ fun SongTable(
                                     context.startActivity(intent)
                                 }
                             )
-                            Spacer(modifier = Modifier.width(dimensionResource(id = R.dimen.spacing_medium)))
 
                             song.tabfilename?.takeIf { it.isNotBlank() }?.let {
                                 Image(
@@ -211,7 +211,6 @@ fun SongTable(
                                         }
                                     }
                                 )
-                                Spacer(modifier = Modifier.width(dimensionResource(id = R.dimen.spacing_medium)))
                             }
 
                             song.mp3filename?.takeIf { it.isNotBlank() && isConnected }?.let { filename ->
