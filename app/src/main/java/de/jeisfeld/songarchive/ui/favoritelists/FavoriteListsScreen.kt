@@ -97,7 +97,7 @@ fun FavoriteListsScreen(viewModel: FavoriteListViewModel, onClose: () -> Unit) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = dimensionResource(id = R.dimen.spacing_small))
+                            .padding(vertical = dimensionResource(id = R.dimen.spacing_medium))
                             .clickable {
                                 val intent = Intent(context, FavoriteListSongsActivity::class.java).apply {
                                     putExtra("LIST_ID", list.id)
@@ -106,12 +106,16 @@ fun FavoriteListsScreen(viewModel: FavoriteListViewModel, onClose: () -> Unit) {
                                 context.startActivity(intent)
                             },
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.spacedBy(
+                            dimensionResource(id = R.dimen.spacing_medium),
+                            Alignment.End
+                        )
                     ) {
                         Text(text = list.name, color = AppColors.TextColor, modifier = Modifier.weight(1f))
                         if (PeerConnectionViewModel.peerConnectionMode == PeerConnectionMode.SERVER &&
                             PeerConnectionViewModel.connectedDevices > 0) {
-                            IconButton(onClick = {
+                            IconButton(
+                                onClick = {
                                 scope.launch {
                                     val songs = withContext(Dispatchers.IO) { viewModel.getSongsForList(list.id) }
                                     val ids = songs.joinToString(",") { it.id }
@@ -123,14 +127,22 @@ fun FavoriteListsScreen(viewModel: FavoriteListViewModel, onClose: () -> Unit) {
                                     }
                                     context.startService(intent)
                                 }
-                            }) {
+                            },
+                                modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small))
+                            ) {
                                 Image(painter = painterResource(id = R.drawable.ic_send), contentDescription = stringResource(id = R.string.share_favorite_list))
                             }
                         }
-                        IconButton(onClick = { renameTarget = list }) {
+                        IconButton(
+                            onClick = { renameTarget = list },
+                            modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small))
+                        ) {
                             Image(painter = painterResource(id = R.drawable.ic_edit), contentDescription = stringResource(id = R.string.rename_favorite_list))
                         }
-                        IconButton(onClick = { deleteTarget = list }) {
+                        IconButton(
+                            onClick = { deleteTarget = list },
+                            modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small))
+                        ) {
                             Image(painter = painterResource(id = R.drawable.ic_delete), contentDescription = stringResource(id = R.string.delete_favorite_list))
                         }
                     }
