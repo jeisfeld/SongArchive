@@ -10,7 +10,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -86,12 +85,8 @@ fun SongTable(
     Column(modifier = Modifier.fillMaxSize().padding(horizontal = dimensionResource(id = R.dimen.spacing_medium))) {
         val iconSize = dimensionResource(id = R.dimen.icon_size_small)
         val spacing = dimensionResource(id = R.dimen.spacing_medium)
-        val baseActionsWidth = dimensionResource(id = R.dimen.width_actions)
-        val actionsWidth = if (onRemoveFromList != null || onAddToList != null) {
-            baseActionsWidth
-        } else {
-            baseActionsWidth - iconSize - spacing
-        }
+        val iconsInRow = if (onRemoveFromList != null || onAddToList != null) 4 else 3
+        val actionsWidth = iconSize * iconsInRow + spacing * (iconsInRow - 1)
         // Fixed Table Header (Outside LazyColumn)
         Row(modifier = Modifier.fillMaxWidth().padding(bottom = dimensionResource(id = R.dimen.spacing_small))) {
             Text(
@@ -159,7 +154,7 @@ fun SongTable(
                         }
                         Row(
                             modifier = Modifier.width(actionsWidth),
-                            horizontalArrangement = Arrangement.End
+                            horizontalArrangement = Arrangement.spacedBy(spacing, Alignment.End)
                         ) {
                             if (onRemoveFromList != null && removableIds.contains(song.id)) {
                                 Image(
@@ -169,7 +164,6 @@ fun SongTable(
                                         onRemoveFromList(song)
                                     }
                                 )
-                                Spacer(modifier = Modifier.width(dimensionResource(id = R.dimen.spacing_medium)))
                             } else if (onAddToList != null && addableIds.contains(song.id)) {
                                 Image(
                                     painter = painterResource(id = R.drawable.ic_add),
@@ -178,7 +172,6 @@ fun SongTable(
                                         onAddToList(song)
                                     }
                                 )
-                                Spacer(modifier = Modifier.width(dimensionResource(id = R.dimen.spacing_medium)))
                             }
                             Image(
                                 painter = painterResource(id = R.drawable.text2),
@@ -189,7 +182,6 @@ fun SongTable(
                                     context.startActivity(intent)
                                 }
                             )
-                            Spacer(modifier = Modifier.width(dimensionResource(id = R.dimen.spacing_medium)))
 
                             song.tabfilename?.takeIf { it.isNotBlank() }?.let {
                                 Image(
@@ -211,7 +203,6 @@ fun SongTable(
                                         }
                                     }
                                 )
-                                Spacer(modifier = Modifier.width(dimensionResource(id = R.dimen.spacing_medium)))
                             }
 
                             song.mp3filename?.takeIf { it.isNotBlank() && isConnected }?.let { filename ->
