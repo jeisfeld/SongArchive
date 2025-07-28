@@ -106,9 +106,19 @@ fun SongTable(
                     color = AppColors.TextColor
                 )
             }
+            val iconSize = dimensionResource(id = R.dimen.icon_size_small)
+            val spacing = dimensionResource(id = R.dimen.spacing_medium)
+            val actionsWidth = dimensionResource(id = R.dimen.width_actions)
+            val paddingStart = if (onRemoveFromList != null || onAddToList != null) {
+                0.dp
+            } else {
+                actionsWidth - iconSize * 3 - spacing * 2
+            }
             Text(
                 text = stringResource(id = R.string.column_actions),
-                modifier = Modifier.width(dimensionResource(id = R.dimen.width_actions)),
+                modifier = Modifier
+                    .width(actionsWidth)
+                    .padding(start = paddingStart),
                 fontWeight = FontWeight.Bold,
                 color = AppColors.TextColor
             )
