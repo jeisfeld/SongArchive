@@ -14,8 +14,8 @@ android {
         applicationId = "de.jeisfeld.songarchive"
         minSdk = 26
         targetSdk = 35
-        versionCode = 15
-        versionName = "1.1.9"
+        versionCode = 16
+        versionName = "1.1.10"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
