@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -83,10 +85,19 @@ fun FavoriteListSongsScreen(
                         }
                     },
                     actions = {
-                        IconButton(onClick = { addMode = !addMode }) {
-                            Image(
+                        IconButton(
+                            onClick = { addMode = !addMode },
+                            colors = if (addMode) {
+                                IconButtonDefaults.iconButtonColors(
+                                    containerColor = AppColors.TextColor,
+                                    contentColor = AppColors.Background
+                                )
+                            } else IconButtonDefaults.iconButtonColors()
+                        ) {
+                            Icon(
                                 painter = painterResource(id = R.drawable.ic_add),
-                                contentDescription = stringResource(id = R.string.add_song_to_list)
+                                contentDescription = stringResource(id = R.string.add_song_to_list),
+                                tint = if (addMode) AppColors.Background else AppColors.TextColor
                             )
                         }
                     }
