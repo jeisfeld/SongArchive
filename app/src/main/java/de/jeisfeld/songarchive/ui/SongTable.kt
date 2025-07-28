@@ -38,7 +38,6 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -107,11 +106,19 @@ fun SongTable(
                     color = AppColors.TextColor
                 )
             }
+            val iconSize = dimensionResource(id = R.dimen.icon_size_small)
+            val spacing = dimensionResource(id = R.dimen.spacing_medium)
+            val actionsWidth = dimensionResource(id = R.dimen.width_actions)
+            val paddingStart = if (onRemoveFromList != null || onAddToList != null) {
+                0.dp
+            } else {
+                actionsWidth - iconSize * 3 - spacing * 2
+            }
             Text(
                 text = stringResource(id = R.string.column_actions),
                 modifier = Modifier
-                    .width(dimensionResource(id = R.dimen.width_actions)),
-                textAlign = TextAlign.End,
+                    .width(actionsWidth)
+                    .padding(start = paddingStart),
                 fontWeight = FontWeight.Bold,
                 color = AppColors.TextColor
             )
