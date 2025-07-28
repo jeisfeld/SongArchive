@@ -84,6 +84,14 @@ fun SongTable(
     }
 
     Column(modifier = Modifier.fillMaxSize().padding(horizontal = dimensionResource(id = R.dimen.spacing_medium))) {
+        val iconSize = dimensionResource(id = R.dimen.icon_size_small)
+        val spacing = dimensionResource(id = R.dimen.spacing_medium)
+        val baseActionsWidth = dimensionResource(id = R.dimen.width_actions)
+        val actionsWidth = if (onRemoveFromList != null || onAddToList != null) {
+            baseActionsWidth
+        } else {
+            baseActionsWidth - iconSize - spacing
+        }
         // Fixed Table Header (Outside LazyColumn)
         Row(modifier = Modifier.fillMaxWidth().padding(bottom = dimensionResource(id = R.dimen.spacing_small))) {
             Text(
@@ -106,19 +114,10 @@ fun SongTable(
                     color = AppColors.TextColor
                 )
             }
-            val iconSize = dimensionResource(id = R.dimen.icon_size_small)
-            val spacing = dimensionResource(id = R.dimen.spacing_medium)
-            val actionsWidth = dimensionResource(id = R.dimen.width_actions)
-            val paddingStart = if (onRemoveFromList != null || onAddToList != null) {
-                0.dp
-            } else {
-                actionsWidth - iconSize * 3 - spacing * 2
-            }
             Text(
                 text = stringResource(id = R.string.column_actions),
                 modifier = Modifier
-                    .width(actionsWidth)
-                    .padding(start = paddingStart),
+                    .width(actionsWidth),
                 fontWeight = FontWeight.Bold,
                 color = AppColors.TextColor
             )
@@ -159,7 +158,7 @@ fun SongTable(
                             )
                         }
                         Row(
-                            modifier = Modifier.width(dimensionResource(id = R.dimen.width_actions)),
+                            modifier = Modifier.width(actionsWidth),
                             horizontalArrangement = Arrangement.End
                         ) {
                             if (onRemoveFromList != null && removableIds.contains(song.id)) {
