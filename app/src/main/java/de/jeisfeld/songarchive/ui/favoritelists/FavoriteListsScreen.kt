@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
@@ -97,7 +98,7 @@ fun FavoriteListsScreen(viewModel: FavoriteListViewModel, onClose: () -> Unit) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = dimensionResource(id = R.dimen.spacing_small))
+                            .padding(vertical = dimensionResource(id = R.dimen.spacing_medium))
                             .clickable {
                                 val intent = Intent(context, FavoriteListSongsActivity::class.java).apply {
                                     putExtra("LIST_ID", list.id)
@@ -106,12 +107,16 @@ fun FavoriteListsScreen(viewModel: FavoriteListViewModel, onClose: () -> Unit) {
                                 context.startActivity(intent)
                             },
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.spacedBy(
+                            dimensionResource(id = R.dimen.spacing_medium),
+                            Alignment.End
+                        )
                     ) {
                         Text(text = list.name, color = AppColors.TextColor, modifier = Modifier.weight(1f))
                         if (PeerConnectionViewModel.peerConnectionMode == PeerConnectionMode.SERVER &&
                             PeerConnectionViewModel.connectedDevices > 0) {
-                            IconButton(onClick = {
+                            IconButton(
+                                onClick = {
                                 scope.launch {
                                     val songs = withContext(Dispatchers.IO) { viewModel.getSongsForList(list.id) }
                                     val ids = songs.joinToString(",") { it.id }
@@ -123,14 +128,22 @@ fun FavoriteListsScreen(viewModel: FavoriteListViewModel, onClose: () -> Unit) {
                                     }
                                     context.startService(intent)
                                 }
-                            }) {
+                            },
+                                modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small))
+                            ) {
                                 Image(painter = painterResource(id = R.drawable.ic_send), contentDescription = stringResource(id = R.string.share_favorite_list))
                             }
                         }
-                        IconButton(onClick = { renameTarget = list }) {
+                        IconButton(
+                            onClick = { renameTarget = list },
+                            modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small))
+                        ) {
                             Image(painter = painterResource(id = R.drawable.ic_edit), contentDescription = stringResource(id = R.string.rename_favorite_list))
                         }
-                        IconButton(onClick = { deleteTarget = list }) {
+                        IconButton(
+                            onClick = { deleteTarget = list },
+                            modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small))
+                        ) {
                             Image(painter = painterResource(id = R.drawable.ic_delete), contentDescription = stringResource(id = R.string.delete_favorite_list))
                         }
                     }
@@ -147,7 +160,7 @@ fun FavoriteListsScreen(viewModel: FavoriteListViewModel, onClose: () -> Unit) {
             text = { OutlinedTextField(value = name, onValueChange = { name = it }, placeholder = { Text(stringResource(id = R.string.list_name)) }) },
             confirmButton = {
                 TextButton(onClick = {
-                    if (name.isNotBlank()) viewModel.addList(name)
+                    if (name.isNotBlank()) viewModel.addList(name.trim())
                     showAdd = false
                 }) { Text(stringResource(id = R.string.ok)) }
             },
@@ -163,7 +176,7 @@ fun FavoriteListsScreen(viewModel: FavoriteListViewModel, onClose: () -> Unit) {
             text = { OutlinedTextField(value = name, onValueChange = { name = it }) },
             confirmButton = {
                 TextButton(onClick = {
-                    if (name.isNotBlank()) viewModel.rename(list, name)
+                    if (name.isNotBlank()) viewModel.rename(list, name.trim())
                     renameTarget = null
                 }) { Text(stringResource(id = R.string.ok)) }
             },
