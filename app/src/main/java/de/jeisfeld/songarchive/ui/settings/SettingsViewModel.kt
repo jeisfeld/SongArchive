@@ -8,6 +8,7 @@ import de.jeisfeld.songarchive.db.AppMetadata
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import de.jeisfeld.songarchive.network.DefaultNetworkConnection
 
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
     private val dao = AppDatabase.getDatabase(application).appMetadataDao()
@@ -15,17 +16,31 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     private val _language = MutableStateFlow("system")
     val language: StateFlow<String> = _language
 
+    private val _defaultNetworkConnection = MutableStateFlow(DefaultNetworkConnection.NONE.id)
+    val defaultNetworkConnection: StateFlow<Int> = _defaultNetworkConnection
+
     init {
         viewModelScope.launch {
-            _language.value = dao.get()?.language ?: "system"
+            dao.get()?.let { meta ->
+                _language.value = meta.language
+                _defaultNetworkConnection.value = meta.defaultNetworkConnection
+            }
         }
     }
 
     fun setLanguage(lang: String) {
         _language.value = lang
         viewModelScope.launch {
-            val current = dao.get() ?: AppMetadata(numberOfTabs = 0, chordsZipSize = 0, language = lang)
+            val current = dao.get() ?: AppMetadata(numberOfTabs = 0, chordsZipSize = 0, language = lang, defaultNetworkConnection = _defaultNetworkConnection.value)
             dao.insert(current.copy(language = lang))
+        }
+    }
+
+    fun setDefaultNetworkConnection(value: Int) {
+        _defaultNetworkConnection.value = value
+        viewModelScope.launch {
+            val current = dao.get() ?: AppMetadata(numberOfTabs = 0, chordsZipSize = 0, language = _language.value, defaultNetworkConnection = value)
+            dao.insert(current.copy(defaultNetworkConnection = value))
         }
     }
 }

@@ -80,4 +80,13 @@
         <item>English</item>
         <item>German</item>
     </string-array>
+    <string name="default_network_connection">Default Network Connection</string>
+    <string-array name="default_connection_options">
+        <item>None</item>
+        <item>Server</item>
+        <item>Lyrics (black/sepia)</item>
+        <item>Lyrics (black/white)</item>
+        <item>Lyrics (white/black)</item>
+        <item>Chords</item>
+    </string-array>
 </resources>
