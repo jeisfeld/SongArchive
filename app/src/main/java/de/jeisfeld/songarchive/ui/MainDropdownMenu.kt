@@ -5,7 +5,16 @@ import android.content.Context
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.ripple.rememberRipple
+import androidx.compose.runtime.remember
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.Alignment
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -33,7 +42,6 @@ import de.jeisfeld.songarchive.ui.favoritelists.FavoriteListsActivity
 import de.jeisfeld.songarchive.ui.settings.SettingsActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
 import de.jeisfeld.songarchive.ui.settings.SettingsViewModel
-import androidx.compose.ui.input.pointer.pointerInput
 
 @Composable
 fun MainDropdownMenu(
@@ -111,13 +119,8 @@ fun MainDropdownMenu(
             }
         )
         if (isNearbyConnectionPossible(context)) {
-            DropdownMenuItem(
-                text = {
-                    Text(
-                        stringResource(id = R.string.network_connection),
-                        color = AppColors.TextColor
-                    )
-                },
+            LongPressDropdownMenuItem(
+                text = stringResource(id = R.string.network_connection),
                 onClick = {
                     if (DefaultNetworkConnection.fromId(defaultConnection) == DefaultNetworkConnection.NONE) {
                         showNetworkMenu = true
@@ -152,9 +155,7 @@ fun MainDropdownMenu(
                         PeerConnectionViewModel.startPeerConnectionService(context)
                     }
                 },
-                modifier = Modifier.pointerInput(Unit) {
-                    detectTapGestures(onLongPress = { showNetworkMenu = true })
-                },
+                onLongPress = { showNetworkMenu = true },
                 leadingIcon = {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_wifi),
@@ -237,5 +238,37 @@ fun MainDropdownMenu(
                 }
             )
         }
+    }
+}
+
+@Composable
+private fun LongPressDropdownMenuItem(
+    text: String,
+    onClick: () -> Unit,
+    onLongPress: () -> Unit,
+    leadingIcon: @Composable (() -> Unit)? = null,
+    modifier: Modifier = Modifier
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .combinedClickable(
+                interactionSource = interactionSource,
+                indication = rememberRipple(),
+                onClick = onClick,
+                onLongClick = onLongPress
+            )
+            .padding(
+                horizontal = dimensionResource(id = R.dimen.spacing_medium),
+                vertical = dimensionResource(id = R.dimen.spacing_vertical_small)
+            ),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        leadingIcon?.let {
+            it()
+            Spacer(modifier = Modifier.width(dimensionResource(id = R.dimen.spacing_medium)))
+        }
+        Text(text, color = AppColors.TextColor)
     }
 }
