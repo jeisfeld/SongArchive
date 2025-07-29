@@ -23,6 +23,7 @@ import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.network.PeerConnectionMode
 import de.jeisfeld.songarchive.network.PeerConnectionViewModel
 import de.jeisfeld.songarchive.network.isNearbyConnectionPossible
+import de.jeisfeld.songarchive.ui.NetworkModeMenu
 import de.jeisfeld.songarchive.ui.theme.AppColors
 import de.jeisfeld.songarchive.ui.favoritelists.FavoriteListsActivity
 import de.jeisfeld.songarchive.ui.settings.SettingsActivity
@@ -36,7 +37,7 @@ fun MainDropdownMenu(
     onShareText: () -> Unit,
     onSync: () -> Unit,
 ) {
-    var showNetworkDialog by remember { mutableStateOf(false) }
+    var showNetworkMenu by remember { mutableStateOf(false) }
 
     DropdownMenu(
         expanded = showMenu,
@@ -109,7 +110,7 @@ fun MainDropdownMenu(
                     )
                 },
                 onClick = {
-                    showNetworkDialog = true
+                    showNetworkMenu = true
                 },
                 leadingIcon = {
                     Icon(
@@ -120,8 +121,9 @@ fun MainDropdownMenu(
                 }
             )
         }
-        if (showNetworkDialog) {
-            NetworkModeDialog(
+        if (showNetworkMenu) {
+            NetworkModeMenu(
+                expanded = true,
                 context = context,
                 selectedNetworkMode = PeerConnectionViewModel.peerConnectionMode,
                 selectedClientMode = PeerConnectionViewModel.clientMode,
@@ -130,7 +132,7 @@ fun MainDropdownMenu(
                     PeerConnectionViewModel.peerConnectionMode = networkMode
                     PeerConnectionViewModel.clientMode = clientMode
                     onDismissRequest()
-                    showNetworkDialog = false
+                    showNetworkMenu = false
                     val requiredPermissions = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
                         arrayOf(
                             Manifest.permission.NEARBY_WIFI_DEVICES,
@@ -168,7 +170,7 @@ fun MainDropdownMenu(
                         }
                     }
                 },
-                onDismiss = { showNetworkDialog = false }
+                onDismiss = { showNetworkMenu = false }
             )
         }
         if (PeerConnectionViewModel.peerConnectionMode == PeerConnectionMode.SERVER && PeerConnectionViewModel.connectedDevices > 0) {
