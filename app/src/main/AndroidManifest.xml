@@ -23,6 +23,7 @@
     <uses-permission android:name="de.jeisfeld.songarchive.PERMISSION_COMMUNICATE" />
 
     <application
+        android:name="de.jeisfeld.songarchive.SongArchiveApp"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -44,9 +45,9 @@
         </activity>
         <activity android:name=".ui.ChordsViewerActivity"
             android:screenOrientation="userLandscape"
-            android:theme="@android:style/Theme.Light.NoTitleBar.Fullscreen"/>
+            android:theme="@style/Theme.CircleSongArchive"/>
         <activity android:name=".ui.LyricsViewerActivity"
-            android:theme="@android:style/Theme.Light.NoTitleBar.Fullscreen"/>
+            android:theme="@style/Theme.CircleSongArchive"/>
         <activity android:name=".ui.favoritelists.FavoriteListsActivity" />
         <activity android:name=".ui.favoritelists.FavoriteListSongsActivity" />
         <activity android:name=".ui.favoritelists.FavoriteListImportActivity" />

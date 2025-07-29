@@ -217,7 +217,8 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
                 Log.d(TAG, "Remote Metadata: " + checkUpdateResponse)
 
                 val localMetadata =
-                    AppDatabase.getDatabase(getApplication()).appMetadataDao().get() ?: AppMetadata(numberOfTabs = 0, chordsZipSize = 0)
+                    AppDatabase.getDatabase(getApplication()).appMetadataDao().get()
+                        ?: AppMetadata(numberOfTabs = 0, chordsZipSize = 0, language = "system")
                 Log.d(TAG, "Local Metadata: " + localMetadata)
 
                 val tabsChanged = checkUpdateResponse?.tab_count != null && checkUpdateResponse?.tab_count != localMetadata.numberOfTabs
@@ -235,8 +236,10 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
         CoroutineScope(Dispatchers.IO).launch {
             checkUpdateResponse?.tab_count?.let { tabCount ->
                 checkUpdateResponse?.chords_zip_size?.let { zipSize ->
-                    AppDatabase.getDatabase(getApplication()).appMetadataDao().insert(
-                        AppMetadata(numberOfTabs = tabCount, chordsZipSize = zipSize)
+                    val dao = AppDatabase.getDatabase(getApplication()).appMetadataDao()
+                    val existing = dao.get() ?: AppMetadata(numberOfTabs = tabCount, chordsZipSize = zipSize, language = "system")
+                    dao.insert(
+                        existing.copy(numberOfTabs = tabCount, chordsZipSize = zipSize)
                     )
                 }
             }
