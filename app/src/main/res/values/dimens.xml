@@ -11,4 +11,5 @@
     <dimen name="icon_font_large">20sp</dimen>
     <dimen name="width_id">50dp</dimen>
     <dimen name="width_actions">128dp</dimen>
+    <dimen name="network_menu_min_height">300dp</dimen>
 </resources>
