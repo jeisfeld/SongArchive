@@ -25,6 +25,7 @@ import de.jeisfeld.songarchive.network.PeerConnectionViewModel
 import de.jeisfeld.songarchive.network.isNearbyConnectionPossible
 import de.jeisfeld.songarchive.ui.theme.AppColors
 import de.jeisfeld.songarchive.ui.favoritelists.FavoriteListsActivity
+import de.jeisfeld.songarchive.ui.settings.SettingsActivity
 
 @Composable
 fun MainDropdownMenu(
@@ -76,6 +77,25 @@ fun MainDropdownMenu(
                 Icon(
                     painter = painterResource(id = R.drawable.ic_list),
                     contentDescription = stringResource(id = R.string.favorite_lists),
+                    modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small))
+                )
+            }
+        )
+        DropdownMenuItem(
+            text = {
+                Text(
+                    stringResource(id = R.string.settings),
+                    color = AppColors.TextColor
+                )
+            },
+            onClick = {
+                onDismissRequest()
+                context.startActivity(android.content.Intent(context, de.jeisfeld.songarchive.ui.settings.SettingsActivity::class.java))
+            },
+            leadingIcon = {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_settings),
+                    contentDescription = stringResource(id = R.string.settings),
                     modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small))
                 )
             }

@@ -25,7 +25,6 @@
     <string name="sync_success">Download erfolgreich!</string>
     <string name="sync_failed">Download fehlgeschlagen!</string>
     <string name="syncing">Lade die Liedinformationen…</string>
-    <string name="further_options">Weitere Optionen</string>
     <string name="configure_battery_optimizations">Batterieoptimierung konfigurieren</string>
     <string name="update_available_title">Aktualisierung verfügbar</string>
     <string name="update_available_text">Es gibt eine Aktualisierung der Liedinformationen? Willst Du sie jetzt herunterladen?</string>
@@ -47,6 +46,7 @@
 
     <!-- Favorite Lists -->
     <string name="favorite_lists">Favoritenlisten</string>
+    <string name="settings">Einstellungen</string>
     <string name="add_favorite_list">Favoritenliste hinzufügen</string>
     <string name="rename_favorite_list">Favoritenliste umbenennen</string>
     <string name="delete_favorite_list">Favoritenliste löschen</string>
