@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -166,7 +167,8 @@ fun MainDropdownMenu(
                 Spacer(modifier = Modifier.width(dimensionResource(id = R.dimen.spacing_medium)))
                 Text(
                     stringResource(id = R.string.network_connection),
-                    color = AppColors.TextColor
+                    color = AppColors.TextColor,
+                    style = MaterialTheme.typography.labelLarge
                 )
             }
         }
