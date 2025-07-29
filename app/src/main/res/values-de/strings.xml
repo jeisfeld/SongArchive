@@ -80,4 +80,13 @@
         <item>Englisch</item>
         <item>Deutsch</item>
     </string-array>
+    <string name="default_network_connection">Standard-Netzwerkverbindung</string>
+    <string-array name="default_connection_options">
+        <item>Keine</item>
+        <item>Sender</item>
+        <item>Texte (schwarz/sepia)</item>
+        <item>Texte (schwarz/weiß)</item>
+        <item>Texte (weiß/schwarz)</item>
+        <item>Akkorde</item>
+    </string-array>
 </resources>
