@@ -61,6 +61,25 @@ fun MainDropdownMenu(
                 )
             }
         )
+        DropdownMenuItem(
+            text = {
+                Text(
+                    stringResource(id = R.string.favorite_lists),
+                    color = AppColors.TextColor
+                )
+            },
+            onClick = {
+                onDismissRequest()
+                context.startActivity(android.content.Intent(context, FavoriteListsActivity::class.java))
+            },
+            leadingIcon = {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_list),
+                    contentDescription = stringResource(id = R.string.favorite_lists),
+                    modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small))
+                )
+            }
+        )
         if (isNearbyConnectionPossible(context)) {
             DropdownMenuItem(
                 text = {
@@ -81,25 +100,6 @@ fun MainDropdownMenu(
                 }
             )
         }
-        DropdownMenuItem(
-            text = {
-                Text(
-                    stringResource(id = R.string.favorite_lists),
-                    color = AppColors.TextColor
-                )
-            },
-            onClick = {
-                onDismissRequest()
-                context.startActivity(android.content.Intent(context, FavoriteListsActivity::class.java))
-            },
-            leadingIcon = {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_list),
-                    contentDescription = stringResource(id = R.string.favorite_lists),
-                    modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small))
-                )
-            }
-        )
         if (showNetworkDialog) {
             NetworkModeDialog(
                 context = context,
