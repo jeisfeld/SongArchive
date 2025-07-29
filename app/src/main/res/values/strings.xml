@@ -74,4 +74,10 @@
         <item>Lyrics (white/black)</item>
         <item>Chords</item>
     </string-array>
+    <string name="app_language">App Language</string>
+    <string-array name="app_language_options">
+        <item>System</item>
+        <item>English</item>
+        <item>German</item>
+    </string-array>
 </resources>

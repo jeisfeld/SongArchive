@@ -1,13 +1,15 @@
 package de.jeisfeld.songarchive.ui.settings
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.compose.setContent
+import androidx.lifecycle.ViewModelProvider
 import de.jeisfeld.songarchive.ui.theme.AppTheme
 
-class SettingsActivity : ComponentActivity() {
+class SettingsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { AppTheme { SettingsScreen { finish() } } }
+        val viewModel = ViewModelProvider(this)[SettingsViewModel::class.java]
+        setContent { AppTheme { SettingsScreen(viewModel) { finish() } } }
     }
 }
