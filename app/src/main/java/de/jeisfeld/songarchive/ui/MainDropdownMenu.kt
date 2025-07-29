@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -23,6 +24,7 @@ import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.network.PeerConnectionMode
 import de.jeisfeld.songarchive.network.PeerConnectionViewModel
 import de.jeisfeld.songarchive.network.isNearbyConnectionPossible
+import de.jeisfeld.songarchive.ui.NetworkModeMenu
 import de.jeisfeld.songarchive.ui.theme.AppColors
 import de.jeisfeld.songarchive.ui.favoritelists.FavoriteListsActivity
 import de.jeisfeld.songarchive.ui.settings.SettingsActivity
@@ -36,7 +38,7 @@ fun MainDropdownMenu(
     onShareText: () -> Unit,
     onSync: () -> Unit,
 ) {
-    var showNetworkDialog by remember { mutableStateOf(false) }
+    var showNetworkMenu by remember { mutableStateOf(false) }
 
     DropdownMenu(
         expanded = showMenu,
@@ -101,36 +103,35 @@ fun MainDropdownMenu(
             }
         )
         if (isNearbyConnectionPossible(context)) {
-            DropdownMenuItem(
-                text = {
-                    Text(
-                        stringResource(id = R.string.network_connection),
-                        color = AppColors.TextColor
-                    )
-                },
-                onClick = {
-                    showNetworkDialog = true
-                },
-                leadingIcon = {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_wifi),
-                        contentDescription = "Wi-Fi Transfer",
-                        modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small))
-                    )
-                }
-            )
-        }
-        if (showNetworkDialog) {
-            NetworkModeDialog(
-                context = context,
-                selectedNetworkMode = PeerConnectionViewModel.peerConnectionMode,
-                selectedClientMode = PeerConnectionViewModel.clientMode,
-                onModeSelected = { networkMode, clientMode ->
-                    val isPeerConnectionModeChanged = networkMode != PeerConnectionViewModel.peerConnectionMode
-                    PeerConnectionViewModel.peerConnectionMode = networkMode
-                    PeerConnectionViewModel.clientMode = clientMode
-                    onDismissRequest()
-                    showNetworkDialog = false
+            Box {
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            stringResource(id = R.string.network_connection),
+                            color = AppColors.TextColor
+                        )
+                    },
+                    onClick = { showNetworkMenu = true },
+                    leadingIcon = {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_wifi),
+                            contentDescription = "Wi-Fi Transfer",
+                            modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small))
+                        )
+                    }
+                )
+                if (showNetworkMenu) {
+                    NetworkModeMenu(
+                        expanded = true,
+                        context = context,
+                        selectedNetworkMode = PeerConnectionViewModel.peerConnectionMode,
+                        selectedClientMode = PeerConnectionViewModel.clientMode,
+                        onModeSelected = { networkMode, clientMode ->
+                            val isPeerConnectionModeChanged = networkMode != PeerConnectionViewModel.peerConnectionMode
+                            PeerConnectionViewModel.peerConnectionMode = networkMode
+                            PeerConnectionViewModel.clientMode = clientMode
+                            onDismissRequest()
+                            showNetworkMenu = false
                     val requiredPermissions = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
                         arrayOf(
                             Manifest.permission.NEARBY_WIFI_DEVICES,
@@ -168,8 +169,10 @@ fun MainDropdownMenu(
                         }
                     }
                 },
-                onDismiss = { showNetworkDialog = false }
-            )
+                        onDismiss = { showNetworkMenu = false }
+                    )
+                }
+            }
         }
         if (PeerConnectionViewModel.peerConnectionMode == PeerConnectionMode.SERVER && PeerConnectionViewModel.connectedDevices > 0) {
             DropdownMenuItem(
