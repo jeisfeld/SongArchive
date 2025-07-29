@@ -47,6 +47,7 @@
 
     <!-- Favorite Lists -->
     <string name="favorite_lists">Favorite Lists</string>
+    <string name="settings">Settings</string>
     <string name="add_favorite_list">Add Favorite List</string>
     <string name="rename_favorite_list">Rename Favorite List</string>
     <string name="delete_favorite_list">Delete Favorite List</string>

@@ -125,20 +125,6 @@ fun NetworkModeDialog(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(dimensionResource(R.dimen.spacing_heading_vertical)))
-                HorizontalDivider()
-                Spacer(modifier = Modifier.height(dimensionResource(R.dimen.spacing_heading_vertical)))
-                Text(
-                    text = context.getString(R.string.further_options),
-                    style = MaterialTheme.typography.headlineSmall
-                )
-                Spacer(modifier = Modifier.height(dimensionResource(R.dimen.spacing_small)))
-                TextButton(onClick = {
-                    val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
-                    context.startActivity(intent)
-                }) {
-                    Text(context.getString(R.string.configure_battery_optimizations))
-                }
             }
         }
     }
