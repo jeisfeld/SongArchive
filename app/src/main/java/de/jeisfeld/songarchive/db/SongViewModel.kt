@@ -218,7 +218,7 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
 
                 val localMetadata =
                     AppDatabase.getDatabase(getApplication()).appMetadataDao().get()
-                        ?: AppMetadata(numberOfTabs = 0, chordsZipSize = 0, language = "system")
+                        ?: AppMetadata(numberOfTabs = 0, chordsZipSize = 0, language = "system", defaultConnectionType = 0)
                 Log.d(TAG, "Local Metadata: " + localMetadata)
 
                 val tabsChanged = checkUpdateResponse?.tab_count != null && checkUpdateResponse?.tab_count != localMetadata.numberOfTabs
@@ -237,7 +237,7 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
             checkUpdateResponse?.tab_count?.let { tabCount ->
                 checkUpdateResponse?.chords_zip_size?.let { zipSize ->
                     val dao = AppDatabase.getDatabase(getApplication()).appMetadataDao()
-                    val existing = dao.get() ?: AppMetadata(numberOfTabs = tabCount, chordsZipSize = zipSize, language = "system")
+                    val existing = dao.get() ?: AppMetadata(numberOfTabs = tabCount, chordsZipSize = zipSize, language = "system", defaultConnectionType = 0)
                     dao.insert(
                         existing.copy(numberOfTabs = tabCount, chordsZipSize = zipSize)
                     )

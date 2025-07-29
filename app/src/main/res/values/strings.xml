@@ -74,6 +74,15 @@
         <item>Lyrics (white/black)</item>
         <item>Chords</item>
     </string-array>
+    <string name="default_network_connection_type">Default Network Connection Type</string>
+    <string-array name="default_network_connection_type_options">
+        <item>None</item>
+        <item>Server</item>
+        <item>Client Lyrics (black/sepia)</item>
+        <item>Client Lyrics (black/white)</item>
+        <item>Client Lyrics (white/black)</item>
+        <item>Client Chords</item>
+    </string-array>
     <string name="app_language">App Language</string>
     <string-array name="app_language_options">
         <item>System</item>

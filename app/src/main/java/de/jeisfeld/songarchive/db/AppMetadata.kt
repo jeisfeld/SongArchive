@@ -8,5 +8,6 @@ data class AppMetadata(
     @PrimaryKey val id: Int = 1,  // Always only one row
     val numberOfTabs: Int,
     val chordsZipSize: Long,
-    val language: String = "system"
+    val language: String = "system",
+    val defaultConnectionType: Int = 0
 )

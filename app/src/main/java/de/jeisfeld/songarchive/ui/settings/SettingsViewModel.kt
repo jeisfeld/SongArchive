@@ -14,18 +14,30 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     private val _language = MutableStateFlow("system")
     val language: StateFlow<String> = _language
+    private val _defaultConnectionType = MutableStateFlow(0)
+    val defaultConnectionType: StateFlow<Int> = _defaultConnectionType
 
     init {
         viewModelScope.launch {
-            _language.value = dao.get()?.language ?: "system"
+            val metadata = dao.get()
+            _language.value = metadata?.language ?: "system"
+            _defaultConnectionType.value = metadata?.defaultConnectionType ?: 0
         }
     }
 
     fun setLanguage(lang: String) {
         _language.value = lang
         viewModelScope.launch {
-            val current = dao.get() ?: AppMetadata(numberOfTabs = 0, chordsZipSize = 0, language = lang)
+            val current = dao.get() ?: AppMetadata(numberOfTabs = 0, chordsZipSize = 0, language = lang, defaultConnectionType = _defaultConnectionType.value)
             dao.insert(current.copy(language = lang))
+        }
+    }
+
+    fun setDefaultConnectionType(type: Int) {
+        _defaultConnectionType.value = type
+        viewModelScope.launch {
+            val current = dao.get() ?: AppMetadata(numberOfTabs = 0, chordsZipSize = 0, language = _language.value, defaultConnectionType = type)
+            dao.insert(current.copy(defaultConnectionType = type))
         }
     }
 }

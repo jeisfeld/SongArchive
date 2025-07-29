@@ -11,7 +11,7 @@ class SongArchiveApp : Application() {
         super.onCreate()
         val dao = AppDatabase.getDatabase(this).appMetadataDao()
         runBlocking {
-            val metadata = dao.get() ?: AppMetadata(numberOfTabs = 0, chordsZipSize = 0, language = "system")
+            val metadata = dao.get() ?: AppMetadata(numberOfTabs = 0, chordsZipSize = 0, language = "system", defaultConnectionType = 0)
             LanguageUtil.applyAppLanguage(metadata.language)
         }
     }

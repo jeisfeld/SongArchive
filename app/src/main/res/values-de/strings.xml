@@ -74,6 +74,15 @@
         <item>Texte (weiß/schwarz)</item>
         <item>Akkorde</item>
     </string-array>
+    <string name="default_network_connection_type">Standard-Netzwerkverbindung</string>
+    <string-array name="default_network_connection_type_options">
+        <item>Keine</item>
+        <item>Sender</item>
+        <item>Empfänger Texte (schwarz/sepia)</item>
+        <item>Empfänger Texte (schwarz/weiß)</item>
+        <item>Empfänger Texte (weiß/schwarz)</item>
+        <item>Empfänger Akkorde</item>
+    </string-array>
     <string name="app_language">App-Sprache</string>
     <string-array name="app_language_options">
         <item>System</item>
