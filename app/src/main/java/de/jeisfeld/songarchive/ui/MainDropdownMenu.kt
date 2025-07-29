@@ -4,36 +4,39 @@ import android.Manifest
 import android.content.Context
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
 import de.jeisfeld.songarchive.R
+import de.jeisfeld.songarchive.network.ClientMode
+import de.jeisfeld.songarchive.network.DefaultNetworkConnection
 import de.jeisfeld.songarchive.network.PeerConnectionMode
 import de.jeisfeld.songarchive.network.PeerConnectionViewModel
 import de.jeisfeld.songarchive.network.isNearbyConnectionPossible
-import de.jeisfeld.songarchive.network.DefaultNetworkConnection
-import de.jeisfeld.songarchive.network.ClientMode
-import de.jeisfeld.songarchive.ui.NetworkModeMenu
-import de.jeisfeld.songarchive.ui.theme.AppColors
 import de.jeisfeld.songarchive.ui.favoritelists.FavoriteListsActivity
-import de.jeisfeld.songarchive.ui.settings.SettingsActivity
-import androidx.lifecycle.viewmodel.compose.viewModel
 import de.jeisfeld.songarchive.ui.settings.SettingsViewModel
-import androidx.compose.ui.input.pointer.pointerInput
+import de.jeisfeld.songarchive.ui.theme.AppColors
 
 @Composable
 fun MainDropdownMenu(
@@ -111,58 +114,61 @@ fun MainDropdownMenu(
             }
         )
         if (isNearbyConnectionPossible(context)) {
-            DropdownMenuItem(
-                text = {
-                    Text(
-                        stringResource(id = R.string.network_connection),
-                        color = AppColors.TextColor
-                    )
-                },
-                onClick = {
-                    if (DefaultNetworkConnection.fromId(defaultConnection) == DefaultNetworkConnection.NONE) {
-                        showNetworkMenu = true
-                    } else {
-                        onDismissRequest()
-                        if (PeerConnectionViewModel.peerConnectionMode == PeerConnectionMode.DISABLED) {
-                            when (DefaultNetworkConnection.fromId(defaultConnection)) {
-                                DefaultNetworkConnection.SERVER -> {
-                                    PeerConnectionViewModel.peerConnectionMode = PeerConnectionMode.SERVER
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .combinedClickable(
+                        onClick = {
+                            if (DefaultNetworkConnection.fromId(defaultConnection) == DefaultNetworkConnection.NONE) {
+                                showNetworkMenu = true
+                            } else {
+                                onDismissRequest()
+                                if (PeerConnectionViewModel.peerConnectionMode == PeerConnectionMode.DISABLED) {
+                                    when (DefaultNetworkConnection.fromId(defaultConnection)) {
+                                        DefaultNetworkConnection.SERVER -> {
+                                            PeerConnectionViewModel.peerConnectionMode = PeerConnectionMode.SERVER
+                                        }
+                                        DefaultNetworkConnection.CLIENT_LYRICS_BS -> {
+                                            PeerConnectionViewModel.peerConnectionMode = PeerConnectionMode.CLIENT
+                                            PeerConnectionViewModel.clientMode = ClientMode.LYRICS_BS
+                                        }
+                                        DefaultNetworkConnection.CLIENT_LYRICS_BW -> {
+                                            PeerConnectionViewModel.peerConnectionMode = PeerConnectionMode.CLIENT
+                                            PeerConnectionViewModel.clientMode = ClientMode.LYRICS_BW
+                                        }
+                                        DefaultNetworkConnection.CLIENT_LYRICS_WB -> {
+                                            PeerConnectionViewModel.peerConnectionMode = PeerConnectionMode.CLIENT
+                                            PeerConnectionViewModel.clientMode = ClientMode.LYRICS_WB
+                                        }
+                                        DefaultNetworkConnection.CLIENT_CHORDS -> {
+                                            PeerConnectionViewModel.peerConnectionMode = PeerConnectionMode.CLIENT
+                                            PeerConnectionViewModel.clientMode = ClientMode.CHORDS
+                                        }
+                                        else -> {}
+                                    }
+                                } else {
+                                    PeerConnectionViewModel.peerConnectionMode = PeerConnectionMode.DISABLED
                                 }
-                                DefaultNetworkConnection.CLIENT_LYRICS_BS -> {
-                                    PeerConnectionViewModel.peerConnectionMode = PeerConnectionMode.CLIENT
-                                    PeerConnectionViewModel.clientMode = ClientMode.LYRICS_BS
-                                }
-                                DefaultNetworkConnection.CLIENT_LYRICS_BW -> {
-                                    PeerConnectionViewModel.peerConnectionMode = PeerConnectionMode.CLIENT
-                                    PeerConnectionViewModel.clientMode = ClientMode.LYRICS_BW
-                                }
-                                DefaultNetworkConnection.CLIENT_LYRICS_WB -> {
-                                    PeerConnectionViewModel.peerConnectionMode = PeerConnectionMode.CLIENT
-                                    PeerConnectionViewModel.clientMode = ClientMode.LYRICS_WB
-                                }
-                                DefaultNetworkConnection.CLIENT_CHORDS -> {
-                                    PeerConnectionViewModel.peerConnectionMode = PeerConnectionMode.CLIENT
-                                    PeerConnectionViewModel.clientMode = ClientMode.CHORDS
-                                }
-                                else -> {}
+                                PeerConnectionViewModel.startPeerConnectionService(context)
                             }
-                        } else {
-                            PeerConnectionViewModel.peerConnectionMode = PeerConnectionMode.DISABLED
-                        }
-                        PeerConnectionViewModel.startPeerConnectionService(context)
-                    }
-                },
-                modifier = Modifier.pointerInput(Unit) {
-                    detectTapGestures(onLongPress = { showNetworkMenu = true })
-                },
-                leadingIcon = {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_wifi),
-                        contentDescription = "Wi-Fi Transfer",
-                        modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small))
+                        },
+                        onLongClick = { showNetworkMenu = true }
                     )
-                }
-            )
+                    .padding(vertical = dimensionResource(id = R.dimen.spacing_vertical_medium),
+                        horizontal = dimensionResource(id = R.dimen.spacing_medium))
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_wifi),
+                    contentDescription = "Wi-Fi Transfer",
+                    modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small))
+                )
+                Spacer(modifier = Modifier.width(dimensionResource(id = R.dimen.spacing_medium)))
+                Text(
+                    stringResource(id = R.string.network_connection),
+                    color = AppColors.TextColor
+                )
+            }
         }
         if (showNetworkMenu) {
             NetworkModeMenu(
