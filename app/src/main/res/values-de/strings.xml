@@ -74,4 +74,8 @@
         <item>Texte (weiß/schwarz)</item>
         <item>Akkorde</item>
     </string-array>
+    <string name="app_language">App-Sprache</string>
+    <string name="language_system">System</string>
+    <string name="language_english">Englisch</string>
+    <string name="language_german">Deutsch</string>
 </resources>

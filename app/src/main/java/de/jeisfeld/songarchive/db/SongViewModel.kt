@@ -8,6 +8,8 @@ import android.content.Intent
 import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.core.net.toUri
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
@@ -39,10 +41,15 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
     var searchQuery = mutableStateOf("")
     var initState = MutableLiveData<Int>(0)
     var checkUpdateResponse: CheckUpdateResponse? = null
+    var appLanguage = mutableStateOf("system")
 
     init {
         viewModelScope.launch {
             _songs.value = songDao.getAllSongs()
+            val metadata = AppDatabase.getDatabase(getApplication()).appMetadataDao().get()
+            val lang = metadata?.appLanguage ?: "system"
+            appLanguage.value = lang
+            applyAppLanguage(lang)
             initState.postValue(1)
         }
     }
@@ -217,7 +224,8 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
                 Log.d(TAG, "Remote Metadata: " + checkUpdateResponse)
 
                 val localMetadata =
-                    AppDatabase.getDatabase(getApplication()).appMetadataDao().get() ?: AppMetadata(numberOfTabs = 0, chordsZipSize = 0)
+                    AppDatabase.getDatabase(getApplication()).appMetadataDao().get()
+                        ?: AppMetadata(numberOfTabs = 0, chordsZipSize = 0, appLanguage = "system")
                 Log.d(TAG, "Local Metadata: " + localMetadata)
 
                 val tabsChanged = checkUpdateResponse?.tab_count != null && checkUpdateResponse?.tab_count != localMetadata.numberOfTabs
@@ -235,13 +243,35 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
         CoroutineScope(Dispatchers.IO).launch {
             checkUpdateResponse?.tab_count?.let { tabCount ->
                 checkUpdateResponse?.chords_zip_size?.let { zipSize ->
+                    val current = AppDatabase.getDatabase(getApplication()).appMetadataDao().get()
+                    val lang = current?.appLanguage ?: appLanguage.value
                     AppDatabase.getDatabase(getApplication()).appMetadataDao().insert(
-                        AppMetadata(numberOfTabs = tabCount, chordsZipSize = zipSize)
+                        AppMetadata(numberOfTabs = tabCount, chordsZipSize = zipSize, appLanguage = lang)
                     )
                 }
             }
             checkUpdateResponse = null
         }
+    }
+
+    fun setAppLanguage(language: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val current = AppDatabase.getDatabase(getApplication()).appMetadataDao().get()
+            val metadata = current?.copy(appLanguage = language)
+                ?: AppMetadata(numberOfTabs = 0, chordsZipSize = 0, appLanguage = language)
+            AppDatabase.getDatabase(getApplication()).appMetadataDao().insert(metadata)
+        }
+        appLanguage.value = language
+        applyAppLanguage(language)
+    }
+
+    private fun applyAppLanguage(language: String) {
+        val locales = when (language) {
+            "en" -> LocaleListCompat.forLanguageTags("en")
+            "de" -> LocaleListCompat.forLanguageTags("de")
+            else -> LocaleListCompat.getEmptyLocaleList()
+        }
+        AppCompatDelegate.setApplicationLocales(locales)
     }
 
     val pluginVerified = MutableLiveData<Boolean>(false)
