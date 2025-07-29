@@ -98,7 +98,7 @@ fun FavoriteListsScreen(viewModel: FavoriteListViewModel, onClose: () -> Unit) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = dimensionResource(id = R.dimen.spacing_medium))
+                            .padding(vertical = dimensionResource(id = R.dimen.spacing_vertical_medium))
                             .clickable {
                                 val intent = Intent(context, FavoriteListSongsActivity::class.java).apply {
                                     putExtra("LIST_ID", list.id)

@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <dimen name="spacing_medium">24dp</dimen>
+    <!-- Vertical spacing reduced in landscape -->
+    <dimen name="spacing_vertical_medium">8dp</dimen>
     <dimen name="spacing_search_vertical">4dp</dimen>
     <dimen name="spacing_heading_vertical">16dp</dimen>
     <dimen name="width_actions">232dp</dimen>
