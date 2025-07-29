@@ -1,7 +1,7 @@
 package de.jeisfeld.songarchive.ui.favoritelists
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.compose.setContent
 import androidx.lifecycle.ViewModelProvider
 import de.jeisfeld.songarchive.db.FavoriteListViewModel
@@ -19,7 +19,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.res.stringResource
 import de.jeisfeld.songarchive.R
 
-class FavoriteListImportActivity: ComponentActivity() {
+class FavoriteListImportActivity: AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val listName = intent.getStringExtra("LIST_NAME") ?: ""

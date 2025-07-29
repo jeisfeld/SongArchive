@@ -7,5 +7,6 @@ import androidx.room.PrimaryKey
 data class AppMetadata(
     @PrimaryKey val id: Int = 1,  // Always only one row
     val numberOfTabs: Int,
-    val chordsZipSize: Long
+    val chordsZipSize: Long,
+    val language: String = "system"
 )
