@@ -44,6 +44,7 @@ import de.jeisfeld.songarchive.utils.LanguageUtil
 fun SettingsScreen(viewModel: SettingsViewModel, onClose: () -> Unit) {
     val context = LocalContext.current
     val selectedLanguage by viewModel.language.collectAsState()
+    val selectedDefaultConnection by viewModel.defaultNetworkConnection.collectAsState()
     Scaffold(
         topBar = {
             TopAppBar(
@@ -126,6 +127,59 @@ fun SettingsScreen(viewModel: SettingsViewModel, onClose: () -> Unit) {
                     },
                     confirmButton = {
                         TextButton(onClick = { showDialog = false }) { Text(stringResource(id = R.string.cancel)) }
+                    }
+                )
+            }
+
+            Spacer(modifier = Modifier.padding(dimensionResource(id = R.dimen.spacing_small)))
+
+            val connectionOptions = listOf(0, 1, 2, 3, 4, 5)
+            val connectionTexts = stringArrayResource(id = R.array.default_connection_options)
+            var showConnectionDialog by remember { mutableStateOf(false) }
+            val selectedConnectionText = connectionTexts[selectedDefaultConnection]
+
+            TextButton(onClick = { showConnectionDialog = true }) {
+                Text(stringResource(id = R.string.default_network_connection) + ": " + selectedConnectionText)
+            }
+
+            if (showConnectionDialog) {
+                AlertDialog(
+                    onDismissRequest = { showConnectionDialog = false },
+                    title = { Text(stringResource(id = R.string.default_network_connection)) },
+                    text = {
+                        Column {
+                            connectionOptions.forEach { option ->
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            viewModel.setDefaultNetworkConnection(option)
+                                            showConnectionDialog = false
+                                        }
+                                ) {
+                                    RadioButton(
+                                        selected = selectedDefaultConnection == option,
+                                        onClick = {
+                                            viewModel.setDefaultNetworkConnection(option)
+                                            showConnectionDialog = false
+                                        },
+                                        colors = RadioButtonDefaults.colors(
+                                            selectedColor = AppColors.TextColor,
+                                            unselectedColor = AppColors.TextColorLight
+                                        )
+                                    )
+                                    Text(
+                                        text = connectionTexts[option],
+                                        modifier = Modifier.padding(start = dimensionResource(id = R.dimen.spacing_medium)),
+                                        color = AppColors.TextColor
+                                    )
+                                }
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = { showConnectionDialog = false }) { Text(stringResource(id = R.string.cancel)) }
                     }
                 )
             }

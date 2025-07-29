@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -14,6 +15,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
@@ -23,10 +25,14 @@ import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.network.PeerConnectionMode
 import de.jeisfeld.songarchive.network.PeerConnectionViewModel
 import de.jeisfeld.songarchive.network.isNearbyConnectionPossible
+import de.jeisfeld.songarchive.network.DefaultNetworkConnection
+import de.jeisfeld.songarchive.network.ClientMode
 import de.jeisfeld.songarchive.ui.NetworkModeMenu
 import de.jeisfeld.songarchive.ui.theme.AppColors
 import de.jeisfeld.songarchive.ui.favoritelists.FavoriteListsActivity
 import de.jeisfeld.songarchive.ui.settings.SettingsActivity
+import androidx.lifecycle.viewmodel.compose.viewModel
+import de.jeisfeld.songarchive.ui.settings.SettingsViewModel
 
 @Composable
 fun MainDropdownMenu(
@@ -38,6 +44,8 @@ fun MainDropdownMenu(
     onSync: () -> Unit,
 ) {
     var showNetworkMenu by remember { mutableStateOf(false) }
+    val settingsViewModel: SettingsViewModel = viewModel()
+    val defaultConnection by settingsViewModel.defaultNetworkConnection.collectAsState()
 
     DropdownMenu(
         expanded = showMenu,
@@ -109,9 +117,44 @@ fun MainDropdownMenu(
                         color = AppColors.TextColor
                     )
                 },
-                onClick = {
-                    showNetworkMenu = true
-                },
+                onClick = {},
+                modifier = Modifier.combinedClickable(
+                    onClick = {
+                        if (DefaultNetworkConnection.fromId(defaultConnection) == DefaultNetworkConnection.NONE) {
+                            showNetworkMenu = true
+                        } else {
+                            onDismissRequest()
+                            if (PeerConnectionViewModel.peerConnectionMode == PeerConnectionMode.DISABLED) {
+                                when (DefaultNetworkConnection.fromId(defaultConnection)) {
+                                    DefaultNetworkConnection.SERVER -> {
+                                        PeerConnectionViewModel.peerConnectionMode = PeerConnectionMode.SERVER
+                                    }
+                                    DefaultNetworkConnection.CLIENT_LYRICS_BS -> {
+                                        PeerConnectionViewModel.peerConnectionMode = PeerConnectionMode.CLIENT
+                                        PeerConnectionViewModel.clientMode = ClientMode.LYRICS_BS
+                                    }
+                                    DefaultNetworkConnection.CLIENT_LYRICS_BW -> {
+                                        PeerConnectionViewModel.peerConnectionMode = PeerConnectionMode.CLIENT
+                                        PeerConnectionViewModel.clientMode = ClientMode.LYRICS_BW
+                                    }
+                                    DefaultNetworkConnection.CLIENT_LYRICS_WB -> {
+                                        PeerConnectionViewModel.peerConnectionMode = PeerConnectionMode.CLIENT
+                                        PeerConnectionViewModel.clientMode = ClientMode.LYRICS_WB
+                                    }
+                                    DefaultNetworkConnection.CLIENT_CHORDS -> {
+                                        PeerConnectionViewModel.peerConnectionMode = PeerConnectionMode.CLIENT
+                                        PeerConnectionViewModel.clientMode = ClientMode.CHORDS
+                                    }
+                                    else -> {}
+                                }
+                            } else {
+                                PeerConnectionViewModel.peerConnectionMode = PeerConnectionMode.DISABLED
+                            }
+                            PeerConnectionViewModel.startPeerConnectionService(context)
+                        }
+                    },
+                    onLongClick = { showNetworkMenu = true }
+                ),
                 leadingIcon = {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_wifi),
