@@ -1,11 +1,11 @@
 package de.jeisfeld.songarchive.ui
 
 import android.content.Context
-import android.content.Intent
-import android.provider.Settings
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,9 +13,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -29,14 +31,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.network.ClientMode
 import de.jeisfeld.songarchive.network.PeerConnectionMode
+import de.jeisfeld.songarchive.ui.theme.AppColors
 
 @Composable
-fun NetworkModeDialog(
+fun NetworkModeMenu(
+    expanded: Boolean,
     context: Context,
     selectedNetworkMode: PeerConnectionMode,
     selectedClientMode: ClientMode,
@@ -48,15 +52,30 @@ fun NetworkModeDialog(
     val clientOptions = listOf(ClientMode.LYRICS_BS, ClientMode.LYRICS_BW, ClientMode.LYRICS_WB, ClientMode.CHORDS)
     var selectedClientOption by remember { mutableStateOf(selectedClientMode) }
 
-    Dialog(onDismissRequest = onDismiss) {
+    val widthActions = dimensionResource(R.dimen.width_actions)
+    val menuHeight = dimensionResource(R.dimen.height_network_menu)
+
+    DropdownMenu(
+        expanded = expanded,
+        onDismissRequest = onDismiss,
+        offset = DpOffset(widthActions, 0.dp),
+        modifier = Modifier.background(AppColors.BackgroundShaded)
+    ) {
         Surface(
             shape = RoundedCornerShape(8.dp),
-            tonalElevation = 4.dp
+            tonalElevation = 4.dp,
+            color = AppColors.BackgroundShaded
         ) {
-            Column(modifier = Modifier.padding(24.dp)) {
+            Column(
+                modifier = Modifier
+                    .padding(24.dp)
+                    .height(menuHeight)
+                    .verticalScroll(rememberScrollState())
+            ) {
                 Text(
                     text = stringResource(R.string.network_mode),
-                    style = MaterialTheme.typography.headlineSmall
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = AppColors.TextColor
                 )
 
                 Spacer(modifier = Modifier.height(dimensionResource(R.dimen.spacing_small)))
@@ -71,11 +90,16 @@ fun NetworkModeDialog(
                     ) {
                         RadioButton(
                             selected = (selectedNetworkOption == option),
-                            onClick = { selectedNetworkOption = option }
+                            onClick = { selectedNetworkOption = option },
+                            colors = RadioButtonDefaults.colors(
+                                selectedColor = AppColors.TextColor,
+                                unselectedColor = AppColors.TextColorLight
+                            )
                         )
                         Text(
                             text = stringArrayResource(R.array.network_modes)[index],
-                            modifier = Modifier.padding(start = dimensionResource(R.dimen.spacing_medium))
+                            modifier = Modifier.padding(start = dimensionResource(R.dimen.spacing_medium)),
+                            color = AppColors.TextColor
                         )
                     }
                 }
@@ -85,7 +109,8 @@ fun NetworkModeDialog(
                     Spacer(modifier = Modifier.height(dimensionResource(R.dimen.spacing_medium)))
                     Text(
                         text = stringResource(R.string.client_type),
-                        style = MaterialTheme.typography.titleMedium
+                        style = MaterialTheme.typography.titleMedium,
+                        color = AppColors.TextColor
                     )
                     Spacer(modifier = Modifier.height(dimensionResource(R.dimen.spacing_small)))
 
@@ -98,11 +123,16 @@ fun NetworkModeDialog(
                         ) {
                             RadioButton(
                                 selected = (selectedClientOption == option),
-                                onClick = { selectedClientOption = option }
+                                onClick = { selectedClientOption = option },
+                                colors = RadioButtonDefaults.colors(
+                                    selectedColor = AppColors.TextColor,
+                                    unselectedColor = AppColors.TextColorLight
+                                )
                             )
                             Text(
                                 text = stringArrayResource(R.array.client_modes)[index],
-                                modifier = Modifier.padding(start = dimensionResource(R.dimen.spacing_medium))
+                                modifier = Modifier.padding(start = dimensionResource(R.dimen.spacing_medium)),
+                                color = AppColors.TextColor
                             )
                         }
                     }

@@ -4,4 +4,5 @@
     <dimen name="spacing_vertical_medium">6dp</dimen>
     <dimen name="spacing_heading_vertical">8dp</dimen>
     <dimen name="width_actions">136dp</dimen>
+    <dimen name="height_network_menu">320dp</dimen>
 </resources>
