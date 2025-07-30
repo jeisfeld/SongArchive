@@ -8,6 +8,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -161,59 +163,81 @@ fun ViewerControlButtons(
                     if (lyricsPaged != null) {
                         val chunks = listOf(null as String?) + lyricsPaged.split('|').map { it.trim() }
 
-                        chunks.forEachIndexed { index, chunk ->
-                            val circledNumber = when (index) {
-                                0 -> "\u24EA" // ⓪ full lyrics
-                                in 1..20 -> (0x2460 + index - 1).toChar().toString() // ① to ⑳
-                                else -> index.toString() // fallback
-                            }
+                        val chunkButtonSize = if (chunks.size > 4) {
+                            dimensionResource(id = R.dimen.icon_size_medium)
+                        } else {
+                            dimensionResource(id = R.dimen.icon_size_large)
+                        }
 
-                            IconButton(
-                                onClick = {
-                                    currentChunk = chunk
-                                    onDisplayLyricsPage(chunk)
+                        val chunkButtons: @Composable () -> Unit = {
+                            chunks.forEachIndexed { index, chunk ->
+                                val circledNumber = when (index) {
+                                    0 -> "\u24EA" // ⓪ full lyrics
+                                    in 1..20 -> (0x2460 + index - 1).toChar().toString() // ① to ⑳
+                                    else -> index.toString() // fallback
+                                }
 
-                                    if (hasSentLyrics) {
-                                        val serviceIntent = Intent(context, PeerConnectionService::class.java).apply {
-                                            setAction(PeerConnectionAction.DISPLAY_LYRICS.toString())
-                                            putExtra("ACTION", PeerConnectionAction.DISPLAY_LYRICS)
-                                            putExtra("STYLE", DisplayStyle.REMOTE_DEFAULT)
-                                            if (index == 0) {
-                                                putExtra("SONG_ID", song.id)
-                                                putExtra("LYRICS", song.lyrics)
-                                                putExtra("LYRICS_SHORT", song.lyricsShort)                                            }
-                                            else {
-                                                putExtra("LYRICS", chunk)
+                                IconButton(
+                                    onClick = {
+                                        currentChunk = chunk
+                                        onDisplayLyricsPage(chunk)
+
+                                        if (hasSentLyrics) {
+                                            val serviceIntent = Intent(context, PeerConnectionService::class.java).apply {
+                                                setAction(PeerConnectionAction.DISPLAY_LYRICS.toString())
+                                                putExtra("ACTION", PeerConnectionAction.DISPLAY_LYRICS)
+                                                putExtra("STYLE", DisplayStyle.REMOTE_DEFAULT)
+                                                if (index == 0) {
+                                                    putExtra("SONG_ID", song.id)
+                                                    putExtra("LYRICS", song.lyrics)
+                                                    putExtra("LYRICS_SHORT", song.lyricsShort)                                            }
+                                                else {
+                                                    putExtra("LYRICS", chunk)
+                                                }
                                             }
+                                            context.startService(serviceIntent)
                                         }
-                                        context.startService(serviceIntent)
-                                    }
-                                },
-                                modifier = Modifier
-                                    .background(
-                                        Brush.verticalGradient(
-                                            listOf(Color.White.copy(alpha = 0.6f), Color.White.copy(alpha = 0.3f))
-                                        ),
-                                        shape = RoundedCornerShape(50)
-                                    )
-                                    .size(dimensionResource(id = R.dimen.icon_size_large))
-                                    .clip(RoundedCornerShape(50))
-                            ) {
-                                Box(
-                                    contentAlignment = Alignment.Center,
+                                    },
                                     modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(Color.Transparent)
+                                        .background(
+                                            Brush.verticalGradient(
+                                                listOf(Color.White.copy(alpha = 0.6f), Color.White.copy(alpha = 0.3f))
+                                            ),
+                                            shape = RoundedCornerShape(50)
+                                        )
+                                        .size(chunkButtonSize)
+                                        .clip(RoundedCornerShape(50))
                                 ) {
-                                    Text(
-                                        text = circledNumber,
-                                        color = Color.Black,
-                                        fontSize = dimensionResource(id = R.dimen.icon_font_large).value.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
+                                    Box(
+                                        contentAlignment = Alignment.Center,
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(Color.Transparent)
+                                    ) {
+                                        Text(
+                                            text = circledNumber,
+                                            color = Color.Black,
+                                            fontSize = dimensionResource(id = R.dimen.icon_font_large).value.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
                                 }
                             }
                         }
+
+                        if (chunks.size > 4) {
+                            FlowRow(
+                                mainAxisSpacing = dimensionResource(id = R.dimen.spacing_small),
+                                crossAxisSpacing = dimensionResource(id = R.dimen.spacing_small)
+                            ) {
+                                chunkButtons()
+                            }
+                        } else {
+                            Row(horizontalArrangement = Arrangement.spacedBy(dimensionResource(id = R.dimen.spacing_small))) {
+                                chunkButtons()
+                            }
+                        }
+
                         Spacer(modifier = Modifier.width(dimensionResource(id = R.dimen.spacing_medium)))
                     }
                 }
