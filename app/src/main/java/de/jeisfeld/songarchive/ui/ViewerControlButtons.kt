@@ -7,8 +7,12 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -93,7 +97,71 @@ fun ViewerControlButtons(
             enter = fadeIn(),
             exit = fadeOut()
         ) {
-            Row {
+            val lyricsPaged = song?.lyricsPaged
+            val chunks = if (displayStyle == DisplayStyle.STANDARD && (hasSentLyrics || isShowingLyrics) && lyricsPaged != null) {
+                listOf(null as String?) + lyricsPaged.split('|').map { it.trim() }
+            } else emptyList()
+            val useSeparateRow = chunks.size > 4
+            val chunkIconSize = if (useSeparateRow) dimensionResource(id = R.dimen.icon_size_medium) else dimensionResource(id = R.dimen.icon_size_large)
+
+            val drawChunkButtons: @Composable () -> Unit = {
+                chunks.forEachIndexed { index, chunk ->
+                    val circledNumber = when (index) {
+                        0 -> "\u24EA" // ⓪ full lyrics
+                        in 1..20 -> (0x2460 + index - 1).toChar().toString() // ① to ⑳
+                        else -> index.toString() // fallback
+                    }
+
+                    IconButton(
+                        onClick = {
+                            currentChunk = chunk
+                            onDisplayLyricsPage(chunk)
+
+                            if (hasSentLyrics) {
+                                val serviceIntent = Intent(context, PeerConnectionService::class.java).apply {
+                                    setAction(PeerConnectionAction.DISPLAY_LYRICS.toString())
+                                    putExtra("ACTION", PeerConnectionAction.DISPLAY_LYRICS)
+                                    putExtra("STYLE", DisplayStyle.REMOTE_DEFAULT)
+                                    if (index == 0) {
+                                        putExtra("SONG_ID", song?.id)
+                                        putExtra("LYRICS", song?.lyrics)
+                                        putExtra("LYRICS_SHORT", song?.lyricsShort)
+                                    } else {
+                                        putExtra("LYRICS", chunk)
+                                    }
+                                }
+                                context.startService(serviceIntent)
+                            }
+                        },
+                        modifier = Modifier
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(Color.White.copy(alpha = 0.6f), Color.White.copy(alpha = 0.3f))
+                                ),
+                                shape = RoundedCornerShape(50)
+                            )
+                            .size(chunkIconSize)
+                            .clip(RoundedCornerShape(50))
+                    ) {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.Transparent)
+                        ) {
+                            Text(
+                                text = circledNumber,
+                                color = Color.Black,
+                                fontSize = dimensionResource(id = R.dimen.icon_font_large).value.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            }
+
+            Column(horizontalAlignment = Alignment.End) {
+                Row {
                 if (PeerConnectionViewModel.peerConnectionMode == PeerConnectionMode.SERVER && PeerConnectionViewModel.connectedDevices > 0
                     && displayStyle == DisplayStyle.STANDARD
                 ) {
@@ -156,66 +224,9 @@ fun ViewerControlButtons(
                     Spacer(modifier = Modifier.width(dimensionResource(id = R.dimen.spacing_medium)))
                 }
 
-                if (displayStyle == DisplayStyle.STANDARD && (hasSentLyrics || isShowingLyrics)) {
-                    val lyricsPaged = song?.lyricsPaged
-                    if (lyricsPaged != null) {
-                        val chunks = listOf(null as String?) + lyricsPaged.split('|').map { it.trim() }
-
-                        chunks.forEachIndexed { index, chunk ->
-                            val circledNumber = when (index) {
-                                0 -> "\u24EA" // ⓪ full lyrics
-                                in 1..20 -> (0x2460 + index - 1).toChar().toString() // ① to ⑳
-                                else -> index.toString() // fallback
-                            }
-
-                            IconButton(
-                                onClick = {
-                                    currentChunk = chunk
-                                    onDisplayLyricsPage(chunk)
-
-                                    if (hasSentLyrics) {
-                                        val serviceIntent = Intent(context, PeerConnectionService::class.java).apply {
-                                            setAction(PeerConnectionAction.DISPLAY_LYRICS.toString())
-                                            putExtra("ACTION", PeerConnectionAction.DISPLAY_LYRICS)
-                                            putExtra("STYLE", DisplayStyle.REMOTE_DEFAULT)
-                                            if (index == 0) {
-                                                putExtra("SONG_ID", song.id)
-                                                putExtra("LYRICS", song.lyrics)
-                                                putExtra("LYRICS_SHORT", song.lyricsShort)                                            }
-                                            else {
-                                                putExtra("LYRICS", chunk)
-                                            }
-                                        }
-                                        context.startService(serviceIntent)
-                                    }
-                                },
-                                modifier = Modifier
-                                    .background(
-                                        Brush.verticalGradient(
-                                            listOf(Color.White.copy(alpha = 0.6f), Color.White.copy(alpha = 0.3f))
-                                        ),
-                                        shape = RoundedCornerShape(50)
-                                    )
-                                    .size(dimensionResource(id = R.dimen.icon_size_large))
-                                    .clip(RoundedCornerShape(50))
-                            ) {
-                                Box(
-                                    contentAlignment = Alignment.Center,
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(Color.Transparent)
-                                ) {
-                                    Text(
-                                        text = circledNumber,
-                                        color = Color.Black,
-                                        fontSize = dimensionResource(id = R.dimen.icon_font_large).value.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
-                        }
-                        Spacer(modifier = Modifier.width(dimensionResource(id = R.dimen.spacing_medium)))
-                    }
+                if (!useSeparateRow && chunks.isNotEmpty()) {
+                    drawChunkButtons()
+                    Spacer(modifier = Modifier.width(dimensionResource(id = R.dimen.spacing_medium)))
                 }
 
                 if (displayStyle == DisplayStyle.STANDARD && isInternetAvailable(context) && song?.mp3filename != null) {
@@ -352,6 +363,17 @@ fun ViewerControlButtons(
                         modifier = Modifier.padding(8.dp).size(dimensionResource(id = R.dimen.icon_size_small))
                     )
                 }
+            }
+
+            if (useSeparateRow && chunks.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(dimensionResource(id = R.dimen.spacing_small)))
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(dimensionResource(id = R.dimen.spacing_small)),
+                    modifier = Modifier.align(Alignment.End)
+                ) {
+                    drawChunkButtons()
+                }
+                Spacer(modifier = Modifier.height(dimensionResource(id = R.dimen.spacing_medium)))
             }
         }
     }
