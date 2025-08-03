@@ -51,6 +51,7 @@ import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.ViewModelProvider
@@ -375,6 +376,12 @@ fun SearchBar(viewModel: SongViewModel) {
                         tint = Color.Gray,
                         modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small))
                     )
+                }
+            } else {
+                IconButton(onClick = {
+                    viewModel.shuffleSongs()
+                }) {
+                    Text("\uD83D\uDD00", fontSize = 18.sp, color = Color.Gray)
                 }
             }
         }

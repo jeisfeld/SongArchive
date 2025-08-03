@@ -141,6 +141,9 @@ interface SongDao {
     @Query("SELECT * FROM songs")
     suspend fun getAllSongs(): List<Song>
 
+    @Query("SELECT * FROM songs ORDER BY RANDOM()")
+    suspend fun getAllSongsRandom(): List<Song>
+
     @Query("SELECT count(*) FROM songs")
     suspend fun getSongCount(): Int
 
