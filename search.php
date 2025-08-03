@@ -80,6 +80,9 @@ if ($is_valid_id) {
 if ($query === "*" || $query === "") {
 	$sql = "SELECT id, title, tabfilename, mp3filename, mp3filename2, author FROM songs where id not like 'X%' order by id";
 }
+else if ($query === "@@shuffle@@") {
+	$sql = "SELECT id, title, tabfilename, mp3filename, mp3filename2, author FROM songs where id not like 'X%' order by RAND()";
+}
 else if ($isSingleLetter) {
 	$sql = "SELECT id, title, author, tabfilename, mp3filename, mp3filename2, author FROM songs
             WHERE (title REGEXP CONCAT('(^| )', ?, '.*')

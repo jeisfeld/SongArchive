@@ -3,19 +3,19 @@ let searchTimeout = null;
 
 // functions related to song search
 function searchSongs(inputquery = null) {
-    clearTimeout(searchTimeout); // Reset timeout on every keypress
-	
+	clearTimeout(searchTimeout); // Reset timeout on every keypress
+
 	let query = inputquery == null ? document.getElementById("searchBox").value.trim() : inputquery;
 	if (query === "") {
 		query = "*";
 	}
-	
+
 	if (query === "*") {
 		performSearch(query);
 	}
 	else {
 		searchTimeout = setTimeout(() => {
-		    performSearch(query); // Call the async function inside setTimeout
+			performSearch(query); // Call the async function inside setTimeout
 		}, 200); // Trigger search 100ms after typing stops
 	}
 }
@@ -32,7 +32,7 @@ async function performSearch(query) {
 		let response = await fetch("search.php?q=" + encodeURIComponent(query), { signal });
 		let songs = await response.json();
 		displayResult(songs);
-	} 
+	}
 	catch (err) {
 		if (err.name === "AbortError") {
 			console.log("Previous request aborted");
@@ -77,19 +77,27 @@ function toggleClearButton() {
 	let searchBox = document.getElementById("searchBox");
 	let clearButton = document.getElementById("clearButton");
 
+	clearButton.classList.add("visible"); // Button always visible
 	if (searchBox.value.length > 0) {
-		clearButton.classList.add("visible"); // Show "X" button
+		clearButton.textContent = "✕";
+		clearButton.onclick = clearSearch;
 	} else {
-		clearButton.classList.remove("visible"); // Hide "X" button
+		clearButton.textContent = "\uD83D\uDD00"; // Shuffle icon
+		clearButton.onclick = shuffleSongs;
 	}
 }
 
 function clearSearch() {
 	let searchBox = document.getElementById("searchBox");
 	searchBox.value = ""; // Clear input field
-	toggleClearButton(); // Hide "X" button
+	toggleClearButton();
 	document.getElementById("searchBox").focus();
 	searchSongs(); // Trigger search update
+}
+
+function shuffleSongs() {
+	clearTimeout(searchTimeout);
+	performSearch("@@shuffle@@");
 }
 
 
@@ -210,10 +218,10 @@ function showLyrics(id, title, popupid = 'popup') {
 					songLyrics = songs[0].lyrics_short.replace(/\|/g, '').replace(/\n/g, '<br>');
 				}
 
-				
+
 				let meaningsButton = '';
 				if (songs[0].meanings.length > 0) {
-				    meaningsButton = `
+					meaningsButton = `
 						<div class="control-btn-grp">
 					        <button class="control-btn" id="show-meanings-btn" onclick='showMeanings(${JSON.stringify(songs[0].meanings)})'>
 					            <svg width="24" height="24" viewBox="0 0 50 50" fill="black" xmlns="http://www.w3.org/2000/svg">
@@ -223,7 +231,7 @@ function showLyrics(id, title, popupid = 'popup') {
 						</div>
 				    `;
 				}
-				
+
 				document.getElementById(popupid + "-body").innerHTML = `
                     <div class="lyrics-popup-content">
                         <div class="font-controls" id="font-controls">
@@ -272,15 +280,15 @@ function showLyrics(id, title, popupid = 'popup') {
 
 function showMeanings(meanings) {
 	console.log(meanings);
-    let content = '';
+	let content = '';
 
-    meanings.forEach(meaning => {
-        content += `<h3>${meaning.title}</h3>`;
-        content += `<p>${meaning.meaning.replace(/\n/g, '<br>')}</p>`;
-    });
+	meanings.forEach(meaning => {
+		content += `<h3>${meaning.title}</h3>`;
+		content += `<p>${meaning.meaning.replace(/\n/g, '<br>')}</p>`;
+	});
 
-    document.getElementById('modal-content').innerHTML = content;
-    document.getElementById('modal-main').style.display = 'block';
+	document.getElementById('modal-content').innerHTML = content;
+	document.getElementById('modal-main').style.display = 'block';
 }
 
 function setupFontControls(popupid) {
@@ -486,7 +494,7 @@ function enterFullscreen() {
 function closePopup(id) {
 	document.getElementById(id).style.display = "none";
 	document.getElementById(id + "-body").innerHTML = "";
-	
+
 	if (id == "popup") {
 		document.body.classList.remove("no-scroll"); // Re-enable main page scrolling after closing last popup
 	}
@@ -510,13 +518,13 @@ function exitFullscreen() {
 }
 
 function isMobileLandscape() {
-    // Check if the device is mobile
-    const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+	// Check if the device is mobile
+	const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-    // Check if the orientation is landscape
-    const isLandscape = window.matchMedia("(orientation: landscape)").matches;
+	// Check if the orientation is landscape
+	const isLandscape = window.matchMedia("(orientation: landscape)").matches;
 
-    return isMobile && isLandscape;
+	return isMobile && isLandscape;
 }
 
 // Close pop-up when pressing Escape key
@@ -528,18 +536,19 @@ document.addEventListener("keydown", function(event) {
 
 // Function to get URL parameters
 function getQueryParam(param) {
-    let urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get(param) || "";
+	let urlParams = new URLSearchParams(window.location.search);
+	return urlParams.get(param) || "";
 }
 
 document.addEventListener("DOMContentLoaded", function() {
 	let query = getQueryParam("q"); // Get search term from URL
 	if (query) {
-	    document.getElementById("searchBox").value = query; // Set search box value
+		document.getElementById("searchBox").value = query; // Set search box value
 		toggleClearButton();
-	    performSearch(query); // Run search with parameter
+		performSearch(query); // Run search with parameter
 	} else {
-	    performSearch("*"); // Default: Load full list
+		toggleClearButton();
+		performSearch("*"); // Default: Load full list
 	}
 });
 
@@ -624,9 +633,9 @@ let userAgent = navigator.userAgent || navigator.vendor || window.opera;
 let linkElement = document.getElementById("androidapp-link");
 
 if (/Android/i.test(userAgent)) {
-    linkElement.style.display = "block"; // Show link
+	linkElement.style.display = "block"; // Show link
 } else {
-    linkElement.style.display = "none"; // Hide link
+	linkElement.style.display = "none"; // Hide link
 }
 
 
