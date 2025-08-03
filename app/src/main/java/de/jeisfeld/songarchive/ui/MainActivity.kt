@@ -4,10 +4,10 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
 import android.os.Bundle
-import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -224,7 +224,7 @@ fun MainScreen(viewModel: SongViewModel) {
                             .padding(horizontal = dimensionResource(id = R.dimen.spacing_medium))
                             .offset(y = -12.dp) // Move up slightly to overlap
                     ) {
-                        SearchBar(viewModel)
+                        SearchBar(viewModel, onShuffle = {viewModel.shuffleSongs()})
                     }
                 }
             }
@@ -343,7 +343,7 @@ fun ProgressOverlay() {
 }
 
 @Composable
-fun SearchBar(viewModel: SongViewModel) {
+fun SearchBar(viewModel: SongViewModel, onShuffle: (() -> Unit)) {
     OutlinedTextField(
         value = viewModel.searchQuery.value,
         onValueChange = {
@@ -372,6 +372,17 @@ fun SearchBar(viewModel: SongViewModel) {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_close),
                         contentDescription = "Clear",
+                        tint = Color.Gray,
+                        modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small))
+                    )
+                }
+            } else {
+                IconButton(onClick = {
+                    onShuffle.invoke()
+                }) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_shuffle),
+                        contentDescription = "Shuffle",
                         tint = Color.Gray,
                         modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small))
                     )
