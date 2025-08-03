@@ -49,6 +49,7 @@ dependencies {
 
     // Jetpack Compose UI
     implementation(libs.ui)
+    implementation(libs.androidx.material.icons.extended)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
 
     // Room für SQLite-Datenbank

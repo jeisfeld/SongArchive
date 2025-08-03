@@ -34,6 +34,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -372,6 +374,15 @@ fun SearchBar(viewModel: SongViewModel) {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_close),
                         contentDescription = "Clear",
+                        tint = Color.Gray,
+                        modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small))
+                    )
+                }
+            } else {
+                IconButton(onClick = { viewModel.shuffleSongs() }) {
+                    Icon(
+                        imageVector = Icons.Default.Shuffle,
+                        contentDescription = "Shuffle",
                         tint = Color.Gray,
                         modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small))
                     )

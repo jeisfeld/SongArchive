@@ -123,6 +123,9 @@ interface SongDao {
         word5a: String
     ): Flow<List<Song>>
 
+    @Query("SELECT * FROM songs ORDER BY RANDOM()")
+    fun getSongsShuffled(): Flow<List<Song>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSongs(songs: List<Song>)
 

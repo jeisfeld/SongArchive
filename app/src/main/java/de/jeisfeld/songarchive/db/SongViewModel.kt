@@ -75,6 +75,14 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun shuffleSongs() {
+        viewModelScope.launch {
+            songDao.getSongsShuffled().collectLatest { results ->
+                _songs.value = results
+            }
+        }
+    }
+
     fun synchronizeDatabaseAndImages(recheckUpdate: Boolean, onComplete: (Boolean) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
