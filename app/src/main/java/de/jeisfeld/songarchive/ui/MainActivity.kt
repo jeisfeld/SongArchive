@@ -344,7 +344,7 @@ fun ProgressOverlay() {
 }
 
 @Composable
-fun SearchBar(viewModel: SongViewModel) {
+fun SearchBar(viewModel: SongViewModel, onShuffle: (() -> Unit)? = null) {
     OutlinedTextField(
         value = viewModel.searchQuery.value,
         onValueChange = {
@@ -379,9 +379,14 @@ fun SearchBar(viewModel: SongViewModel) {
                 }
             } else {
                 IconButton(onClick = {
-                    viewModel.shuffleSongs()
+                    onShuffle?.invoke() ?: viewModel.shuffleSongs()
                 }) {
-                    Text("\uD83D\uDD00", fontSize = 18.sp, color = Color.Gray)
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_shuffle),
+                        contentDescription = "Shuffle",
+                        tint = Color.Gray,
+                        modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small))
+                    )
                 }
             }
         }

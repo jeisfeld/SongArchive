@@ -108,7 +108,7 @@ fun FavoriteListSongsScreen(
                         .padding(horizontal = dimensionResource(id = R.dimen.spacing_medium))
                         .offset(y = -12.dp)
                 ) {
-                    SearchBar(viewModel)
+                    SearchBar(viewModel, onShuffle = { songsInList = songsInList.shuffled() })
                 }
             }
         }
