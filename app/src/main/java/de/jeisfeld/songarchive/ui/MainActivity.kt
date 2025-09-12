@@ -119,6 +119,7 @@ fun MainScreen(viewModel: SongViewModel) {
 
     var showShareTextDialog by remember { mutableStateOf(false) }
     var sharedLyricsText by remember { mutableStateOf("") }
+    var showLocalSongDialog by remember { mutableStateOf(false) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
@@ -214,7 +215,8 @@ fun MainScreen(viewModel: SongViewModel) {
                                         isSyncing = false
                                         viewModel.searchSongs(viewModel.searchQuery.value)
                                     }
-                                }
+                                },
+                                onAddSong = { showLocalSongDialog = true }
                             )
                         }
                     )
@@ -320,6 +322,16 @@ fun MainScreen(viewModel: SongViewModel) {
                     }) {
                         Text(stringResource(id = R.string.stop_share_text))
                     }
+                }
+            )
+        }
+        if (showLocalSongDialog) {
+            LocalSongDialog(
+                isEditing = false,
+                onDismiss = { showLocalSongDialog = false },
+                onConfirm = { title, lyrics, lyricsPaged ->
+                    viewModel.addLocalSong(title, lyrics, lyricsPaged)
+                    showLocalSongDialog = false
                 }
             )
         }

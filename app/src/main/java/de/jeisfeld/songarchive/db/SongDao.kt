@@ -126,8 +126,14 @@ interface SongDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSongs(songs: List<Song>)
 
-    @Query("DELETE FROM songs")
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertSong(song: Song)
+
+    @Query("DELETE FROM songs WHERE id NOT LIKE 'Y%'")
     suspend fun clearSongs()
+
+    @Query("DELETE FROM songs WHERE id = :id")
+    suspend fun deleteSongById(id: String)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertMeanings(songs: List<Meaning>)
@@ -140,6 +146,12 @@ interface SongDao {
 
     @Query("SELECT * FROM songs")
     suspend fun getAllSongs(): List<Song>
+
+    @Query("SELECT id FROM songs WHERE id LIKE 'Y%' ORDER BY id")
+    suspend fun getLocalSongIds(): List<String>
+
+    @Query("SELECT * FROM songs WHERE id LIKE 'Y%'")
+    suspend fun getLocalSongs(): List<Song>
 
     @Query("SELECT * FROM songs ORDER BY RANDOM()")
     suspend fun getAllSongsRandom(): List<Song>

@@ -37,6 +37,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -68,6 +69,7 @@ fun ViewerControlButtons(
     onShowMeaningChange: (Boolean) -> Unit,
     onDisplayLyricsPage: (String?) -> Unit,
     onClose: () -> Unit,
+    onEditLocalSong: ((Song) -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
@@ -285,6 +287,30 @@ fun ViewerControlButtons(
                             Icon(
                                 painter = painterResource(id = R.drawable.ic_info),
                                 contentDescription = "Info",
+                                tint = Color.Black,
+                                modifier = Modifier
+                                    .size(dimensionResource(id = R.dimen.icon_size_small))
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(dimensionResource(id = R.dimen.spacing_medium)))
+                    }
+
+                    if (onEditLocalSong != null && song?.id?.startsWith("Y") == true) {
+                        IconButton(
+                            onClick = { onEditLocalSong.invoke(song) },
+                            modifier = Modifier
+                                .background(
+                                    Brush.verticalGradient(
+                                        listOf(Color.White.copy(alpha = 0.6f), Color.White.copy(alpha = 0.3f))
+                                    ),
+                                    shape = RoundedCornerShape(50)
+                                )
+                                .size(dimensionResource(id = R.dimen.icon_size_large))
+                                .clip(RoundedCornerShape(50))
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_edit),
+                                contentDescription = stringResource(id = R.string.edit_song),
                                 tint = Color.Black,
                                 modifier = Modifier
                                     .size(dimensionResource(id = R.dimen.icon_size_small))

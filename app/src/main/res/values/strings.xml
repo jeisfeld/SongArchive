@@ -10,6 +10,15 @@
     <string name="search">Search</string>
     <string name="ok">OK</string>
     <string name="cancel">Cancel</string>
+    <string name="save">Save</string>
+    <string name="delete">Delete</string>
+    <string name="add_song">Add song</string>
+    <string name="edit_song">Edit song</string>
+    <string name="song_title">Title</string>
+    <string name="song_lyrics">Lyrics</string>
+    <string name="song_lyrics_paged">Lyrics (paged)</string>
+    <string name="delete_song">Delete song</string>
+    <string name="confirm_delete_song">Delete this song?</string>
 
     <string name="sync">Sync</string>
     <string name="network_connection">Network Connection</string>

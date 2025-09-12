@@ -13,13 +13,14 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import de.jeisfeld.songarchive.sync.CheckUpdateResponse
 import de.jeisfeld.songarchive.sync.RetrofitClient
-import de.jeisfeld.songarchive.db.FavoriteListSong
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
@@ -39,12 +40,14 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
     var searchQuery = mutableStateOf("")
     var initState = MutableLiveData<Int>(0)
     var checkUpdateResponse: CheckUpdateResponse? = null
+    private var searchJob: Job? = null
+    private var hasEmittedInitialSongs = false
 
     init {
         viewModelScope.launch {
             _songs.value = songDao.getAllSongs()
-            initState.postValue(1)
         }
+        searchSongs(searchQuery.value)
     }
 
     fun isDatabaseEmpty(callback: (Boolean) -> Unit) {
@@ -59,18 +62,15 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun searchSongs(input: String) {
-        viewModelScope.launch {
-            val normalizedQuery = removeAccents(input) // Normalize accents & quotes
-            val words = normalizedQuery.split(" ").filter { it.isNotBlank() }
-            val wordList = words.map { "%$it%" }.take(5) + List(5) { "%%" } // Ensure 5 words are always passed
-            val wordList2 = words.map { "% $it%" }.take(5) + List(5) { "%%" }
-
-            songDao.searchSongs(
-                "%$normalizedQuery%",
-                "% $normalizedQuery%",
-                wordList[0], wordList2[0], wordList[1], wordList2[1], wordList[2], wordList2[2], wordList[3], wordList2[3], wordList[4], wordList2[4]
-            ).collectLatest { results ->
+        searchJob?.cancel()
+        searchJob = viewModelScope.launch {
+            val searchArgs = buildSearchArguments(input)
+            songDao.searchSongsForArgs(searchArgs).collectLatest { results ->
                 _songs.value = results
+                if (!hasEmittedInitialSongs) {
+                    hasEmittedInitialSongs = true
+                    initState.postValue(1)
+                }
             }
         }
     }
@@ -78,6 +78,60 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
     fun shuffleSongs() {
         viewModelScope.launch {
             _songs.value = songDao.getAllSongsRandom()
+        }
+    }
+
+    fun addLocalSong(title: String, lyrics: String, lyricsPaged: String?, onResult: (Song) -> Unit = {}) {
+        viewModelScope.launch {
+            val newSong = withContext(Dispatchers.IO) {
+                val newId = generateNextLocalSongId()
+                val song = buildLocalSong(newId, title, lyrics, lyricsPaged)
+                songDao.insertSong(song)
+                song
+            }
+            refreshSongsList()
+            onResult(newSong)
+        }
+    }
+
+    fun updateLocalSong(songId: String, title: String, lyrics: String, lyricsPaged: String?, onResult: (Song) -> Unit = {}) {
+        if (!songId.startsWith("Y")) {
+            return
+        }
+        viewModelScope.launch {
+            val updatedSong = withContext(Dispatchers.IO) {
+                val sanitizedSong = buildLocalSong(songId, title, lyrics, lyricsPaged)
+                val existingSong = songDao.getSongById(songId)
+                val mergedSong = existingSong?.copy(
+                    title = sanitizedSong.title,
+                    lyrics = sanitizedSong.lyrics,
+                    lyricsShort = sanitizedSong.lyricsShort,
+                    lyricsPaged = sanitizedSong.lyricsPaged,
+                    author = sanitizedSong.author,
+                    keywords = sanitizedSong.keywords,
+                    title_normalized = sanitizedSong.title_normalized,
+                    lyrics_normalized = sanitizedSong.lyrics_normalized,
+                    author_normalized = sanitizedSong.author_normalized,
+                    keywords_normalized = sanitizedSong.keywords_normalized
+                ) ?: sanitizedSong
+                songDao.insertSong(mergedSong)
+                mergedSong
+            }
+            refreshSongsList()
+            onResult(updatedSong)
+        }
+    }
+
+    fun deleteLocalSong(songId: String, onComplete: () -> Unit = {}) {
+        if (!songId.startsWith("Y")) {
+            return
+        }
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                songDao.deleteSongById(songId)
+            }
+            refreshSongsList()
+            onComplete()
         }
     }
 
@@ -135,12 +189,13 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
                 songDao.clearMeanings()
                 songDao.clearSongs()
                 songDao.insertSongs(fetchedSongs)
-                _songs.value = fetchedSongs
+                refreshSongsList()
 
                 songDao.insertMeanings(fetchedMeanings)
                 songDao.insertSongMeanings(fetchedSongMeanings)
 
-                val validSongIds = fetchedSongs.map { it.id }.toSet()
+                val localSongIds = songDao.getLocalSongIds()
+                val validSongIds = (fetchedSongs.map { it.id } + localSongIds).toSet()
                 favoriteDao.insertSongs(existingFavorites.filter { validSongIds.contains(it.songId) })
 
                 // Step 2: Download and Extract Images
@@ -160,6 +215,91 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
                 onComplete(false)
             }
         }
+    }
+
+    private suspend fun refreshSongsList() {
+        val currentQuery = withContext(Dispatchers.Main) { searchQuery.value }
+        val updatedSongs = if (currentQuery.isBlank()) {
+            withContext(Dispatchers.IO) { songDao.getAllSongs() }
+        } else {
+            val searchArgs = buildSearchArguments(currentQuery)
+            withContext(Dispatchers.IO) {
+                songDao.searchSongsForArgs(searchArgs).first()
+            }
+        }
+        _songs.value = updatedSongs
+    }
+
+    private data class SearchArguments(
+        val query: String,
+        val fullQuery: String,
+        val words: List<String>,
+        val spacedWords: List<String>
+    )
+
+    private fun buildSearchArguments(rawInput: String): SearchArguments {
+        val normalizedQuery = removeAccents(rawInput)
+        val words = normalizedQuery.split(" ").filter { it.isNotBlank() }
+        val wordList = (words.map { "%$it%" }.take(5) + List(5) { "%%" }).take(5)
+        val spacedWordList = (words.map { "% $it%" }.take(5) + List(5) { "%%" }).take(5)
+        return SearchArguments(
+            query = "%$normalizedQuery%",
+            fullQuery = "% $normalizedQuery%",
+            words = wordList,
+            spacedWords = spacedWordList
+        )
+    }
+
+    private fun SongDao.searchSongsForArgs(args: SearchArguments) = searchSongs(
+        args.query,
+        args.fullQuery,
+        args.words[0], args.spacedWords[0],
+        args.words[1], args.spacedWords[1],
+        args.words[2], args.spacedWords[2],
+        args.words[3], args.spacedWords[3],
+        args.words[4], args.spacedWords[4]
+    )
+
+    private suspend fun generateNextLocalSongId(): String {
+        val existingIds = songDao.getLocalSongIds()
+        val usedNumbers = existingIds.mapNotNull { id ->
+            id.removePrefix("Y").toIntOrNull()
+        }.toSet()
+        var candidate = 1
+        while (usedNumbers.contains(candidate)) {
+            candidate++
+        }
+        return "Y%03d".format(candidate)
+    }
+
+    private fun buildLocalSong(id: String, title: String, lyrics: String, lyricsPaged: String?): Song {
+        val trimmedTitle = title.trim()
+        val trimmedLyrics = lyrics.trim()
+        val sanitizedLyricsPaged = sanitizeLyricsPaged(lyricsPaged)
+        return Song(
+            id = id,
+            title = trimmedTitle,
+            lyrics = trimmedLyrics,
+            lyricsShort = null,
+            lyricsPaged = sanitizedLyricsPaged,
+            author = "",
+            keywords = "",
+            tabfilename = null,
+            mp3filename = null,
+            mp3filename2 = null,
+            title_normalized = normalizeForSearch(trimmedTitle),
+            lyrics_normalized = normalizeForSearch(trimmedLyrics),
+            author_normalized = normalizeForSearch(""),
+            keywords_normalized = normalizeForSearch("")
+        )
+    }
+
+    private fun sanitizeLyricsPaged(input: String?): String? {
+        return input?.replace("\r\n", "\n")?.trim()?.takeIf { it.isNotEmpty() }
+    }
+
+    private fun normalizeForSearch(value: String): String {
+        return " " + removeAccents(value).trim()
     }
 
     fun removeAccents(input: String): String {
@@ -239,7 +379,7 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun storeLastAppMetadata() {
-        CoroutineScope(Dispatchers.IO).launch {
+        viewModelScope.launch(Dispatchers.IO) {
             checkUpdateResponse?.tab_count?.let { tabCount ->
                 checkUpdateResponse?.chords_zip_size?.let { zipSize ->
                     val dao = AppDatabase.getDatabase(getApplication()).appMetadataDao()
