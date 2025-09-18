@@ -1,6 +1,7 @@
 let searchAbortController = new AbortController(); // Create a controller
 let searchTimeout = null;
 const isAdminView = document.body.classList.contains("admin-view");
+const pageOrigin = window.location.origin || `${window.location.protocol}//${window.location.host}`;
 
 // functions related to song search
 function searchSongs(inputquery = null) {
@@ -45,11 +46,11 @@ async function performSearch(query) {
 }
 
 function displayResult(songs) {
-	let tableHTML = "";
-	songs.forEach(song => {
-		const editButtonHTML = isAdminView
-			? `<img src="/img/edit.svg" alt="Edit Song" class="icon-btn edit-btn" data-song-id="${song.id}" title="Edit (coming soon)">`
-			: "";
+        let tableHTML = "";
+        songs.forEach(song => {
+                const editButtonHTML = isAdminView
+                        ? `<img src="/img/edit.svg" alt="Edit Song" class="icon-btn edit-btn" data-song-id="${song.id}" title="Edit song" onclick="openEditModal(this.getAttribute('data-song-id'))">`
+                        : "";
 
 		tableHTML += `
                         <tr>
@@ -76,7 +77,37 @@ function displayResult(songs) {
 		`;
 	});
 
-	document.getElementById("results").innerHTML = tableHTML;
+        document.getElementById("results").innerHTML = tableHTML;
+}
+
+function openEditModal(songId) {
+        if (!songId) {
+                return;
+        }
+
+        const editUrl = `/admin/editsong.php?id=${encodeURIComponent(songId)}`;
+
+        if (!modal || !impressumContent) {
+                window.location.href = editUrl;
+                return;
+        }
+
+        modal.dataset.mode = "edit";
+        impressumContent.innerHTML = '<div class="modal-loading">Loading...</div>';
+
+        const iframe = document.createElement("iframe");
+        iframe.src = editUrl;
+        iframe.className = "modal-iframe";
+        iframe.setAttribute("title", `Edit song ${songId}`);
+        iframe.onload = () => {
+                const loader = impressumContent.querySelector(".modal-loading");
+                if (loader) {
+                        loader.remove();
+                }
+        };
+
+        impressumContent.appendChild(iframe);
+        modal.style.display = "block";
 }
 
 function toggleClearButton() {
@@ -599,40 +630,84 @@ const openImpressumLink = document.getElementById('impressum-link');
 const closeModalBtn = document.getElementById('close-modal');
 const impressumContent = document.getElementById('modal-content');
 
+function hideModal() {
+        if (!modal) {
+                return;
+        }
+
+        modal.style.display = 'none';
+
+        if (impressumContent) {
+                impressumContent.innerHTML = '';
+        }
+
+        if (modal.dataset) {
+                delete modal.dataset.mode;
+        }
+}
+
 // When the link is clicked, load the impressum.html file and display the modal
-openImpressumLink.addEventListener('click', function(event) {
-	event.preventDefault();
-	// Fetch the external impressum.html content
-	fetch('/impressum.html')
-		.then(response => {
-			if (!response.ok) {
-				throw new Error('Network response was not ok');
-			}
-			return response.text();
-		})
-		.then(data => {
-			// Insert the fetched content into the modal
-			impressumContent.innerHTML = data;
-			// Display the modal
-			modal.style.display = 'block';
-		})
-		.catch(error => {
-			impressumContent.innerHTML = '<p>Error loading content.</p>';
-			modal.style.display = 'block';
-			console.error('Error fetching Impressum:', error);
-		});
-});
+if (openImpressumLink) {
+        openImpressumLink.addEventListener('click', function(event) {
+                event.preventDefault();
+                // Fetch the external impressum.html content
+                fetch('/impressum.html')
+                        .then(response => {
+                                if (!response.ok) {
+                                        throw new Error('Network response was not ok');
+                                }
+                                return response.text();
+                        })
+                        .then(data => {
+                                if (!impressumContent || !modal) {
+                                        return;
+                                }
+                                // Insert the fetched content into the modal
+                                impressumContent.innerHTML = data;
+                                modal.dataset.mode = 'impressum';
+                                // Display the modal
+                                modal.style.display = 'block';
+                        })
+                        .catch(error => {
+                                if (impressumContent && modal) {
+                                        impressumContent.innerHTML = '<p>Error loading content.</p>';
+                                        modal.dataset.mode = 'impressum';
+                                        modal.style.display = 'block';
+                                }
+                                console.error('Error fetching Impressum:', error);
+                        });
+        });
+}
 
 // When the close button is clicked, hide the modal
-closeModalBtn.addEventListener('click', function() {
-	modal.style.display = 'none';
-});
+if (closeModalBtn) {
+        closeModalBtn.addEventListener('click', hideModal);
+}
 
 // Also hide the modal if the user clicks outside of the modal content
 window.addEventListener('click', function(event) {
-	if (event.target === modal) {
-		modal.style.display = 'none';
-	}
+        if (modal && event.target === modal) {
+                hideModal();
+        }
+});
+
+window.addEventListener('message', event => {
+        const originMatches = !event.origin || event.origin === pageOrigin || (pageOrigin === 'null' && event.origin === 'null');
+
+        if (!originMatches || !event.data || typeof event.data !== 'object') {
+                return;
+        }
+
+        const { type } = event.data;
+
+        if (type === 'closeEditModal') {
+                hideModal();
+        } else if (type === 'songUpdated') {
+                hideModal();
+                if (isAdminView) {
+                        searchSongs();
+                }
+        }
 });
 
 let userAgent = navigator.userAgent || navigator.vendor || window.opera;
