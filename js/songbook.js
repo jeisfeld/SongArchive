@@ -1,5 +1,6 @@
 let searchAbortController = new AbortController(); // Create a controller
 let searchTimeout = null;
+const isAdminView = document.body.classList.contains("admin-view");
 
 // functions related to song search
 function searchSongs(inputquery = null) {
@@ -29,7 +30,7 @@ async function performSearch(query) {
 	const signal = searchAbortController.signal;
 
 	try {
-		let response = await fetch("search.php?q=" + encodeURIComponent(query), { signal });
+		let response = await fetch("/search.php?q=" + encodeURIComponent(query), { signal });
 		let songs = await response.json();
 		displayResult(songs);
 	}
@@ -46,14 +47,19 @@ async function performSearch(query) {
 function displayResult(songs) {
 	let tableHTML = "";
 	songs.forEach(song => {
+		const editButtonHTML = isAdminView
+			? `<img src="/img/edit.svg" alt="Edit Song" class="icon-btn edit-btn" data-song-id="${song.id}" title="Edit (coming soon)">`
+			: "";
+
 		tableHTML += `
-			<tr>
-				<td><a href="?q=${song.id}" class="unformatted-link" target="_blank">${song.id}</a></td>
-				<td>${song.title}</td>
-				<td class="author-col">${formatAuthors(song.author || "")}</td>
-				<td class="actions">
-					<div class="actions-container">
-						<img src="/img/text2.png" alt="View Lyrics" class="icon-btn" onclick="showLyrics('${song.id}', '${song.title}')">
+                        <tr>
+                                <td><a href="?q=${song.id}" class="unformatted-link" target="_blank">${song.id}</a></td>
+                                <td>${song.title}</td>
+                                <td class="author-col">${formatAuthors(song.author || "")}</td>
+                                <td class="actions">
+                                        <div class="actions-container">
+                                                ${editButtonHTML}
+                                                <img src="/img/text2.png" alt="View Lyrics" class="icon-btn" onclick="showLyrics('${song.id}', '${song.title}')">
 						${song.tabfilename ? `<img src="/img/chords2.png" alt="View Image" class="icon-btn" onclick="showImage('${song.tabfilename}')">` : ""}
 						${song.mp3filename ? `
 							<img src="/img/play2.png" alt="Play Audio" class="icon-btn"
@@ -207,7 +213,7 @@ function playAudio(mp3filename1, mp3filename2 = "", id = "", title = "", author 
 let hideControlsTimeout; // Store timeout globally
 
 function showLyrics(id, title, popupid = 'popup') {
-	fetch("search.php?q=" + encodeURIComponent(id))
+	fetch("/search.php?q=" + encodeURIComponent(id))
 		.then(response => response.json())
 		.then(songs => {
 			if (!songs || songs.length === 0 || !songs[0].lyrics) {
