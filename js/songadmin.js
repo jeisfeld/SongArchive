@@ -146,6 +146,16 @@
                         return;
                 }
 
+                if (type === 'songDeleted') {
+                        if (typeof hideModal === 'function') {
+                                hideModal();
+                        }
+                        if (typeof searchSongs === 'function') {
+                                searchSongs();
+                        }
+                        return;
+                }
+
                 if (type === 'songInserted') {
                         if (typeof hideModal === 'function') {
                                 hideModal();

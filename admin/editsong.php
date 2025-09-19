@@ -276,13 +276,20 @@ $mp3FilenameOptions = $mp3Suggestions['options'];
 $matchingMp3Filenames = $mp3Suggestions['matching'];
 $mp3DirectoryExists = $mp3Suggestions['directoryExists'];
 
+$songIdValue = '';
+if (is_array($songData) && array_key_exists('id', $songData)) {
+    $songIdValue = (string) $songData['id'];
+} else {
+    $songIdValue = (string) $id;
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edit Song <?php echo escapeHtml($songData['id'] ?? $id); ?></title>
+    <title>Edit Song <?php echo escapeHtml($songIdValue); ?></title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -347,6 +354,14 @@ $mp3DirectoryExists = $mp3Suggestions['directoryExists'];
             border: 1px solid transparent;
             cursor: pointer;
         }
+        .button-row .delete-btn {
+            background-color: #d9534f;
+            border-color: #d43f3a;
+            color: #fff;
+        }
+        .button-row .delete-btn:hover {
+            background-color: #c9302c;
+        }
         .button-row .save-btn {
             background-color: #4CAF50;
             border-color: #4CAF50;
@@ -383,7 +398,7 @@ $mp3DirectoryExists = $mp3Suggestions['directoryExists'];
 </head>
 <body>
     <div class="edit-song-container">
-        <h1>Edit Song <?php echo escapeHtml($songData['id'] ?? $id); ?></h1>
+        <h1>Edit Song <?php echo escapeHtml($songIdValue); ?></h1>
 
         <?php if ($successMessage): ?>
             <div class="alert alert-success"><?php echo escapeHtml($successMessage); ?></div>
@@ -395,11 +410,11 @@ $mp3DirectoryExists = $mp3Suggestions['directoryExists'];
 
         <?php if ($songData): ?>
             <form method="post" id="edit-song-form">
-                <input type="hidden" name="id" value="<?php echo escapeHtml($songData['id'] ?? $id); ?>">
+                <input type="hidden" name="id" value="<?php echo escapeHtml($songIdValue); ?>">
 
                 <div class="form-group">
                     <label for="song-id">ID</label>
-                    <input type="text" id="song-id" class="readonly-input" value="<?php echo escapeHtml($songData['id'] ?? $id); ?>" readonly>
+                    <input type="text" id="song-id" class="readonly-input" value="<?php echo escapeHtml($songIdValue); ?>" readonly>
                 </div>
 
                 <div class="form-group">
@@ -464,6 +479,9 @@ $mp3DirectoryExists = $mp3Suggestions['directoryExists'];
 
                 <div class="button-row">
                     <button type="button" class="cancel-btn" id="cancel-edit">Cancel</button>
+                    <?php if ($songData && $songIdValue !== ''): ?>
+                        <button type="button" class="delete-btn" id="delete-song">Delete</button>
+                    <?php endif; ?>
                     <button type="submit" class="save-btn">Save</button>
                 </div>
             </form>
@@ -485,6 +503,14 @@ $mp3DirectoryExists = $mp3Suggestions['directoryExists'];
                     } else {
                         window.location.href = 'index.html';
                     }
+                });
+            }
+
+            var deleteButton = document.getElementById('delete-song');
+            if (deleteButton) {
+                var deleteUrl = <?php echo json_encode('deletesong.php?id=' . rawurlencode($songIdValue)); ?>;
+                deleteButton.addEventListener('click', function() {
+                    window.location.href = deleteUrl;
                 });
             }
         })();
