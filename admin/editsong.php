@@ -40,6 +40,93 @@ function escapeHtml($value) {
     return htmlspecialchars((string) ($value ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
+function buildFilenameSuggestions($directory, array $priorityPrefixes = []) {
+    $suggestions = [
+        'options' => [],
+        'matching' => [],
+        'directoryExists' => is_dir($directory),
+    ];
+
+    if (! $suggestions['directoryExists']) {
+        return $suggestions;
+    }
+
+    $files = scandir($directory);
+    if ($files === false) {
+        return $suggestions;
+    }
+
+    $options = [];
+    foreach ($files as $file) {
+        if ($file === '.' || $file === '..') {
+            continue;
+        }
+
+        $fullPath = $directory . DIRECTORY_SEPARATOR . $file;
+        if (is_file($fullPath)) {
+            $options[] = $file;
+        }
+    }
+
+    if (empty($options)) {
+        return $suggestions;
+    }
+
+    natcasesort($options);
+    $options = array_values($options);
+
+    $prefixes = [];
+    foreach ($priorityPrefixes as $prefix) {
+        $prefix = (string) $prefix;
+        if ($prefix === '') {
+            continue;
+        }
+
+        $prefixes[] = $prefix;
+    }
+
+    $prefixes = array_values(array_unique($prefixes));
+
+    $matching = [];
+    if (! empty($prefixes)) {
+        foreach ($options as $filename) {
+            foreach ($prefixes as $prefix) {
+                if (stripos($filename, $prefix) === 0) {
+                    $matching[] = $filename;
+                    break;
+                }
+            }
+        }
+
+        $matching = array_values(array_unique($matching));
+
+        if (! empty($matching)) {
+            $options = array_merge($matching, array_values(array_diff($options, $matching)));
+        }
+    }
+
+    $suggestions['options'] = $options;
+    $suggestions['matching'] = $matching;
+
+    return $suggestions;
+}
+
+function renderFilenameNote(array $matching, array $options, $prefix, $directoryExists, $folderPath) {
+    if (! $directoryExists) {
+        echo "<div class=\"form-note\">Folder " . escapeHtml($folderPath) . " is not available.</div>";
+        return;
+    }
+
+    if (empty($options)) {
+        echo "<div class=\"form-note\">No files found in " . escapeHtml($folderPath) . ".</div>";
+        return;
+    }
+
+    if ($prefix !== '' && empty($matching)) {
+        echo "<div class=\"form-note\">No files found in " . escapeHtml($folderPath) . " starting with " . escapeHtml($prefix) . ".</div>";
+    }
+}
+
 $id = isset($_GET['id']) ? trim($_GET['id']) : '';
 $successMessage = '';
 $errorMessage = '';
@@ -136,6 +223,59 @@ if ($updateSuccess && $songFromDatabase) {
 
 $conn->close();
 
+$songImagesDirectory = __DIR__ . '/../img/songs';
+$audioSongsDirectory = __DIR__ . '/../audio/songs';
+$songIdForSuggestions = isset($songData['id']) ? (string) $songData['id'] : (string) $id;
+
+$tabFilenamePrefix = '';
+$tabFilenamePrefixes = [];
+if ($songIdForSuggestions !== '') {
+    $tabFilenamePrefix = substr($songIdForSuggestions, 0, 4);
+    if ($tabFilenamePrefix !== '') {
+        $tabFilenamePrefixes[] = $tabFilenamePrefix;
+    }
+}
+
+$tabSuggestions = buildFilenameSuggestions($songImagesDirectory, $tabFilenamePrefixes);
+$tabFilenameOptions = $tabSuggestions['options'];
+$matchingTabFilenames = $tabSuggestions['matching'];
+$tabDirectoryExists = $tabSuggestions['directoryExists'];
+
+$mp3FilenamePrefixes = [];
+$mp3FilenamePrefix = '';
+$trimmedSongId = $songIdForSuggestions !== '' ? ltrim($songIdForSuggestions, '0') : '';
+
+if ($trimmedSongId !== '') {
+    $mp3FilenamePrefix = $trimmedSongId;
+    $mp3FilenamePrefixes[] = $trimmedSongId;
+}
+
+if ($songIdForSuggestions !== '' && $songIdForSuggestions !== $trimmedSongId) {
+    $mp3FilenamePrefixes[] = $songIdForSuggestions;
+}
+
+$uniqueMp3Prefixes = [];
+foreach ($mp3FilenamePrefixes as $prefix) {
+    if ($prefix === '') {
+        continue;
+    }
+
+    if (! in_array($prefix, $uniqueMp3Prefixes, true)) {
+        $uniqueMp3Prefixes[] = $prefix;
+    }
+}
+
+$mp3FilenamePrefixes = $uniqueMp3Prefixes;
+
+if ($mp3FilenamePrefix === '' && ! empty($mp3FilenamePrefixes)) {
+    $mp3FilenamePrefix = $mp3FilenamePrefixes[0];
+}
+
+$mp3Suggestions = buildFilenameSuggestions($audioSongsDirectory, $mp3FilenamePrefixes);
+$mp3FilenameOptions = $mp3Suggestions['options'];
+$matchingMp3Filenames = $mp3Suggestions['matching'];
+$mp3DirectoryExists = $mp3Suggestions['directoryExists'];
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -181,6 +321,11 @@ $conn->close();
             min-height: 120px;
             resize: vertical;
             line-height: 1.4;
+        }
+        .form-note {
+            margin-top: 6px;
+            font-size: 0.9rem;
+            color: #555;
         }
         .short-textarea {
             min-height: 80px;
@@ -279,18 +424,33 @@ $conn->close();
 
                 <div class="form-group">
                     <label for="tabfilename">Tab Filename</label>
-                    <input type="text" id="tabfilename" name="tabfilename" value="<?php echo escapeHtml($songData['tabfilename'] ?? ''); ?>">
+                    <input type="text" id="tabfilename" name="tabfilename" list="tabfilename-options" value="<?php echo escapeHtml($songData['tabfilename'] ?? ''); ?>">
+                    <?php renderFilenameNote($matchingTabFilenames, $tabFilenameOptions, $tabFilenamePrefix, $tabDirectoryExists, 'img/songs/'); ?>
                 </div>
+
+                <datalist id="tabfilename-options">
+                    <?php foreach ($tabFilenameOptions as $filenameOption): ?>
+                        <option value="<?php echo escapeHtml($filenameOption); ?>"></option>
+                    <?php endforeach; ?>
+                </datalist>
 
                 <div class="form-group">
                     <label for="mp3filename">MP3 Filename</label>
-                    <input type="text" id="mp3filename" name="mp3filename" value="<?php echo escapeHtml($songData['mp3filename'] ?? ''); ?>">
+                    <input type="text" id="mp3filename" name="mp3filename" list="mp3filename-options" value="<?php echo escapeHtml($songData['mp3filename'] ?? ''); ?>">
+                    <?php renderFilenameNote($matchingMp3Filenames, $mp3FilenameOptions, $mp3FilenamePrefix, $mp3DirectoryExists, 'audio/songs/'); ?>
                 </div>
 
                 <div class="form-group">
                     <label for="mp3filename2">MP3 Filename 2</label>
-                    <input type="text" id="mp3filename2" name="mp3filename2" value="<?php echo escapeHtml($songData['mp3filename2'] ?? ''); ?>">
+                    <input type="text" id="mp3filename2" name="mp3filename2" list="mp3filename-options" value="<?php echo escapeHtml($songData['mp3filename2'] ?? ''); ?>">
+                    <?php renderFilenameNote($matchingMp3Filenames, $mp3FilenameOptions, $mp3FilenamePrefix, $mp3DirectoryExists, 'audio/songs/'); ?>
                 </div>
+
+                <datalist id="mp3filename-options">
+                    <?php foreach ($mp3FilenameOptions as $filenameOption): ?>
+                        <option value="<?php echo escapeHtml($filenameOption); ?>"></option>
+                    <?php endforeach; ?>
+                </datalist>
 
                 <div class="form-group">
                     <label for="song-author">Author(s)</label>
