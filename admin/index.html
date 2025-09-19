@@ -20,11 +20,12 @@
 		</div>
 
 		<!-- Search Box with Local PNG Icon -->
-		<div class="search-container">
-			<img src="/img/search2.png" alt="Search"> <input type="text" id="searchBox" placeholder="Search..."
-				oninput="toggleClearButton()" onkeyup="searchSongs()">
-			<button id="clearButton" onclick="clearSearch()">✕</button>
-		</div>
+                <div class="search-container">
+                        <img src="/img/search2.png" alt="Search"> <input type="text" id="searchBox" placeholder="Search..."
+                                oninput="toggleClearButton()" onkeyup="searchSongs()">
+                        <button id="clearButton" type="button" aria-label="Clear search" title="Clear search"
+                                onclick="clearSearch()">✕</button>
+                </div>
 
 		<!-- Table for Results -->
 		<table>
@@ -71,5 +72,6 @@
 	</div>
 
 	<script src="/js/songbook.js"></script>
+	<script src="/js/songadmin.js"></script>
 </body>
 </html>
