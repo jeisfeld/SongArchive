@@ -47,6 +47,7 @@ import de.jeisfeld.songarchive.audio.PlaybackViewModel
 import de.jeisfeld.songarchive.db.Song
 import de.jeisfeld.songarchive.db.SongViewModel
 import de.jeisfeld.songarchive.ui.theme.AppColors
+import de.jeisfeld.songarchive.util.LocalTabUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -191,13 +192,26 @@ fun SongTable(
                                 }
                             )
 
-                            song.tabfilename?.takeIf { it.isNotBlank() }?.let {
-                                Image(
-                                    painter = painterResource(id = R.drawable.chords2),
-                                    contentDescription = stringResource(id = R.string.view_chords),
-                                    modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small)).clickable {
-                                        val imageFile = File(context.filesDir, "chords/$it")
-                                        if (imageFile.exists()) {
+                            song.tabfilename?.takeIf { it.isNotBlank() }?.let { tabFilename ->
+                                val isLocalTab = LocalTabUtils.isLocalTab(tabFilename)
+                                val localTabUri = if (isLocalTab) LocalTabUtils.decodeLocalTab(tabFilename) else null
+                                val remoteTabFilename = if (!isLocalTab) tabFilename else null
+                                val chordsAvailable = when {
+                                    localTabUri != null -> true
+                                    remoteTabFilename != null -> File(context.filesDir, "chords/$remoteTabFilename").exists()
+                                    else -> false
+                                }
+                                if (chordsAvailable) {
+                                    Image(
+                                        painter = painterResource(id = R.drawable.chords2),
+                                        contentDescription = stringResource(id = R.string.view_chords),
+                                        modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small)).clickable {
+                                            if (remoteTabFilename != null) {
+                                                val imageFile = File(context.filesDir, "chords/$remoteTabFilename")
+                                                if (!imageFile.exists()) {
+                                                    return@clickable
+                                                }
+                                            }
                                             CoroutineScope(Dispatchers.IO).launch {
                                                 val meanings = viewModel.getMeaningsForSong(song.id) // Fetch in IO thread
                                                 withContext(Dispatchers.Main) {  // Switch back to Main thread to start Activity
@@ -209,8 +223,8 @@ fun SongTable(
                                                 }
                                             }
                                         }
-                                    }
-                                )
+                                    )
+                                }
                             }
 
                             song.mp3filename?.takeIf { it.isNotBlank() && isConnected }?.let { filename ->

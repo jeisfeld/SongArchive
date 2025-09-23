@@ -1,9 +1,11 @@
 package de.jeisfeld.songarchive.ui
 
 import android.content.Context
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.view.View
@@ -33,6 +35,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,6 +48,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -57,6 +61,7 @@ import de.jeisfeld.songarchive.db.Song
 import de.jeisfeld.songarchive.network.DisplayStyle
 import de.jeisfeld.songarchive.network.PeerConnectionViewModel
 import de.jeisfeld.songarchive.ui.theme.AppTheme
+import de.jeisfeld.songarchive.util.LocalTabUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -117,30 +122,63 @@ class ChordsViewerActivity : AppCompatActivity() {
     private fun updateUI(context: Context, song: Song?, displayStyle: DisplayStyle) {
         if (song == null) {
             finish()
+            return
         }
 
-        val imageFile = File(context.filesDir, "chords/${song?.tabfilename}")
+        val tabFilename = song.tabfilename?.takeIf { it.isNotBlank() }
+        val imageSource = when {
+            tabFilename == null -> null
+            LocalTabUtils.isLocalTab(tabFilename) -> {
+                LocalTabUtils.decodeLocalTab(tabFilename)?.let { ChordsImageSource.ContentUri(it) }
+            }
+            else -> {
+                val imageFile = File(context.filesDir, "chords/$tabFilename")
+                if (imageFile.exists()) {
+                    ChordsImageSource.LocalFile(imageFile.absolutePath)
+                } else {
+                    null
+                }
+            }
+        }
+
+        if (imageSource == null) {
+            finish()
+            return
+        }
 
         @Suppress("DEPRECATION")
         val meanings: List<Meaning> = intent.getParcelableArrayListExtra("MEANINGS") ?: emptyList()
         setContent {
             AppTheme {
-                ChordsViewerScreen(song, imageFile.absolutePath, displayStyle, meanings) { finish() }
+                ChordsViewerScreen(song, imageSource, displayStyle, meanings) { finish() }
             }
         }
     }
 }
 
+sealed class ChordsImageSource {
+    data class LocalFile(val path: String) : ChordsImageSource()
+    data class ContentUri(val uriString: String) : ChordsImageSource()
+}
+
 @Composable
-fun ChordsViewerScreen(song: Song?, imagePath: String, displayStyle: DisplayStyle, meanings: List<Meaning>, onClose: () -> Unit) {
+fun ChordsViewerScreen(
+    song: Song?,
+    imageSource: ChordsImageSource,
+    displayStyle: DisplayStyle,
+    meanings: List<Meaning>,
+    onClose: () -> Unit
+) {
     var showMeaningsPopup by remember { mutableStateOf(false) }
     var showButtons by remember { mutableStateOf(displayStyle == DisplayStyle.STANDARD) }
 
     val configuration = LocalConfiguration.current
-    val bitmap = remember(imagePath) {
-        val originalBitmap = BitmapFactory.decodeFile(imagePath)
+    val context = LocalContext.current
+    val orientation = configuration.orientation
+    val bitmap = remember(imageSource, orientation, context) {
+        val originalBitmap = loadBitmapFromSource(context, imageSource)
 
-        if (originalBitmap != null && configuration.orientation == android.content.res.Configuration.ORIENTATION_PORTRAIT) {
+        if (originalBitmap != null && orientation == Configuration.ORIENTATION_PORTRAIT) {
             rotateBitmap(originalBitmap, 90f)
         } else {
             originalBitmap
@@ -148,9 +186,11 @@ fun ChordsViewerScreen(song: Song?, imagePath: String, displayStyle: DisplayStyl
     }
 
     if (bitmap == null) {
+        LaunchedEffect(Unit) {
+            onClose()
+        }
         return
     }
-
     var scale by remember { mutableStateOf(1f) }
     var offsetX by remember { mutableStateOf(0f) }
     var offsetY by remember { mutableStateOf(0f) }
@@ -260,6 +300,21 @@ fun ChordsViewerScreen(song: Song?, imagePath: String, displayStyle: DisplayStyl
     }
 }
 
+
+private fun loadBitmapFromSource(context: Context, source: ChordsImageSource): Bitmap? {
+    return when (source) {
+        is ChordsImageSource.LocalFile -> BitmapFactory.decodeFile(source.path)
+        is ChordsImageSource.ContentUri -> {
+            try {
+                context.contentResolver.openInputStream(Uri.parse(source.uriString))?.use { inputStream ->
+                    BitmapFactory.decodeStream(inputStream)
+                }
+            } catch (e: Exception) {
+                null
+            }
+        }
+    }
+}
 
 // Function to rotate a bitmap
 fun rotateBitmap(source: Bitmap, angle: Float): Bitmap {

@@ -17,6 +17,10 @@
     <string name="song_title">Title</string>
     <string name="song_lyrics">Lyrics</string>
     <string name="song_lyrics_paged">Lyrics (paged)</string>
+    <string name="song_tab_file">Tab file</string>
+    <string name="select_tab_file">Select tab file</string>
+    <string name="remove_tab_file">Remove tab file</string>
+    <string name="no_tab_file_selected">No tab file selected</string>
     <string name="delete_song">Delete song</string>
     <string name="confirm_delete_song">Delete this song?</string>
 

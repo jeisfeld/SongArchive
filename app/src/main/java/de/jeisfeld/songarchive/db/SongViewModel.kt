@@ -13,6 +13,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import de.jeisfeld.songarchive.sync.CheckUpdateResponse
 import de.jeisfeld.songarchive.sync.RetrofitClient
+import de.jeisfeld.songarchive.util.LocalTabUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -81,11 +82,17 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun addLocalSong(title: String, lyrics: String, lyricsPaged: String?, onResult: (Song) -> Unit = {}) {
+    fun addLocalSong(
+        title: String,
+        lyrics: String,
+        lyricsPaged: String?,
+        localTabUri: String?,
+        onResult: (Song) -> Unit = {}
+    ) {
         viewModelScope.launch {
             val newSong = withContext(Dispatchers.IO) {
                 val newId = generateNextLocalSongId()
-                val song = buildLocalSong(newId, title, lyrics, lyricsPaged)
+                val song = buildLocalSong(newId, title, lyrics, lyricsPaged, localTabUri)
                 songDao.insertSong(song)
                 song
             }
@@ -94,13 +101,20 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun updateLocalSong(songId: String, title: String, lyrics: String, lyricsPaged: String?, onResult: (Song) -> Unit = {}) {
+    fun updateLocalSong(
+        songId: String,
+        title: String,
+        lyrics: String,
+        lyricsPaged: String?,
+        localTabUri: String?,
+        onResult: (Song) -> Unit = {}
+    ) {
         if (!songId.startsWith("Y")) {
             return
         }
         viewModelScope.launch {
             val updatedSong = withContext(Dispatchers.IO) {
-                val sanitizedSong = buildLocalSong(songId, title, lyrics, lyricsPaged)
+                val sanitizedSong = buildLocalSong(songId, title, lyrics, lyricsPaged, localTabUri)
                 val existingSong = songDao.getSongById(songId)
                 val mergedSong = existingSong?.copy(
                     title = sanitizedSong.title,
@@ -109,6 +123,7 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
                     lyricsPaged = sanitizedSong.lyricsPaged,
                     author = sanitizedSong.author,
                     keywords = sanitizedSong.keywords,
+                    tabfilename = sanitizedSong.tabfilename,
                     title_normalized = sanitizedSong.title_normalized,
                     lyrics_normalized = sanitizedSong.lyrics_normalized,
                     author_normalized = sanitizedSong.author_normalized,
@@ -272,10 +287,17 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
         return "Y%03d".format(candidate)
     }
 
-    private fun buildLocalSong(id: String, title: String, lyrics: String, lyricsPaged: String?): Song {
+    private fun buildLocalSong(
+        id: String,
+        title: String,
+        lyrics: String,
+        lyricsPaged: String?,
+        localTabUri: String?
+    ): Song {
         val trimmedTitle = title.trim()
         val trimmedLyrics = lyrics.trim()
         val sanitizedLyricsPaged = sanitizeLyricsPaged(lyricsPaged)
+        val sanitizedLocalTab = localTabUri?.takeIf { it.isNotBlank() }
         return Song(
             id = id,
             title = trimmedTitle,
@@ -284,7 +306,7 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
             lyricsPaged = sanitizedLyricsPaged,
             author = "",
             keywords = "",
-            tabfilename = null,
+            tabfilename = LocalTabUtils.encodeLocalTab(sanitizedLocalTab),
             mp3filename = null,
             mp3filename2 = null,
             title_normalized = normalizeForSearch(trimmedTitle),

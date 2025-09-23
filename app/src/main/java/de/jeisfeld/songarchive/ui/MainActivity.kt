@@ -329,8 +329,8 @@ fun MainScreen(viewModel: SongViewModel) {
             LocalSongDialog(
                 isEditing = false,
                 onDismiss = { showLocalSongDialog = false },
-                onConfirm = { title, lyrics, lyricsPaged ->
-                    viewModel.addLocalSong(title, lyrics, lyricsPaged)
+                onConfirm = { title, lyrics, lyricsPaged, tabUri ->
+                    viewModel.addLocalSong(title, lyrics, lyricsPaged, tabUri)
                     showLocalSongDialog = false
                 }
             )
