@@ -18,6 +18,10 @@
     <string name="song_title">Titel</string>
     <string name="song_lyrics">Liedtext</string>
     <string name="song_lyrics_paged">Liedtext (seitenweise)</string>
+    <string name="song_tab_file">Akkorddatei</string>
+    <string name="select_tab_file">Akkorddatei\nauswählen</string>
+    <string name="remove_tab_file">Akkorddatei\nentfernen</string>
+    <string name="no_tab_file_selected">Keine Akkorddatei ausgewählt</string>
     <string name="delete_song">Lied löschen</string>
     <string name="confirm_delete_song">Dieses Lied löschen?</string>
 

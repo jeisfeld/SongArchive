@@ -226,7 +226,7 @@ fun MainScreen(viewModel: SongViewModel) {
                             .padding(horizontal = dimensionResource(id = R.dimen.spacing_medium))
                             .offset(y = -12.dp) // Move up slightly to overlap
                     ) {
-                        SearchBar(viewModel, onShuffle = {viewModel.shuffleSongs()})
+                        SearchBar(viewModel, onShuffle = { viewModel.shuffleSongs() })
                     }
                 }
             }
@@ -329,8 +329,8 @@ fun MainScreen(viewModel: SongViewModel) {
             LocalSongDialog(
                 isEditing = false,
                 onDismiss = { showLocalSongDialog = false },
-                onConfirm = { title, lyrics, lyricsPaged ->
-                    viewModel.addLocalSong(title, lyrics, lyricsPaged)
+                onConfirm = { title, lyrics, lyricsPaged, tabUri ->
+                    viewModel.addLocalSong(title, lyrics, lyricsPaged, tabUri)
                     showLocalSongDialog = false
                 }
             )

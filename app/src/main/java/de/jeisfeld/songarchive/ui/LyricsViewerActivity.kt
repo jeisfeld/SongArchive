@@ -4,8 +4,8 @@ import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.view.WindowManager
-import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.compose.setContent
+import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -323,9 +323,16 @@ fun LyricsViewerScreen(
             initialTitle = currentSong!!.title,
             initialLyrics = currentSong!!.lyrics,
             initialLyricsPaged = currentSong!!.lyricsPaged ?: "",
+            initialTabFilename = currentSong!!.tabfilename,
             onDismiss = { showEditDialog = false },
-            onConfirm = { updatedTitle, updatedLyrics, updatedLyricsPaged ->
-                viewModel.updateLocalSong(currentSong!!.id, updatedTitle, updatedLyrics, updatedLyricsPaged) { updatedSong ->
+            onConfirm = { updatedTitle, updatedLyrics, updatedLyricsPaged, updatedTabUri ->
+                viewModel.updateLocalSong(
+                    currentSong!!.id,
+                    updatedTitle,
+                    updatedLyrics,
+                    updatedLyricsPaged,
+                    updatedTabUri
+                ) { updatedSong ->
                     currentSong = updatedSong
                     val sanitizedLyrics = updatedSong.lyrics.replace("|", "").trim()
                     val sanitizedShort = updatedSong.lyricsShort?.replace("|", "")?.trim()

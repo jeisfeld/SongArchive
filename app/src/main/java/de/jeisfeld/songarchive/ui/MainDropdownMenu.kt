@@ -151,22 +151,27 @@ fun MainDropdownMenu(
                                         DefaultNetworkConnection.SERVER -> {
                                             PeerConnectionViewModel.peerConnectionMode = PeerConnectionMode.SERVER
                                         }
+
                                         DefaultNetworkConnection.CLIENT_LYRICS_BS -> {
                                             PeerConnectionViewModel.peerConnectionMode = PeerConnectionMode.CLIENT
                                             PeerConnectionViewModel.clientMode = ClientMode.LYRICS_BS
                                         }
+
                                         DefaultNetworkConnection.CLIENT_LYRICS_BW -> {
                                             PeerConnectionViewModel.peerConnectionMode = PeerConnectionMode.CLIENT
                                             PeerConnectionViewModel.clientMode = ClientMode.LYRICS_BW
                                         }
+
                                         DefaultNetworkConnection.CLIENT_LYRICS_WB -> {
                                             PeerConnectionViewModel.peerConnectionMode = PeerConnectionMode.CLIENT
                                             PeerConnectionViewModel.clientMode = ClientMode.LYRICS_WB
                                         }
+
                                         DefaultNetworkConnection.CLIENT_CHORDS -> {
                                             PeerConnectionViewModel.peerConnectionMode = PeerConnectionMode.CLIENT
                                             PeerConnectionViewModel.clientMode = ClientMode.CHORDS
                                         }
+
                                         else -> {}
                                     }
                                 } else {
