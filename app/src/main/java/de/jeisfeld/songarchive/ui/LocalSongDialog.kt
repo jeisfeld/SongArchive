@@ -2,6 +2,7 @@ package de.jeisfeld.songarchive.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -65,6 +66,8 @@ fun LocalSongDialog(
     val trimmedLyricsPagedText = lyricsPaged.text.trim()
     val trimmedLyricsPaged = trimmedLyricsPagedText.ifEmpty { null }
 
+    val buttonContentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -104,14 +107,20 @@ fun LocalSongDialog(
         confirmButton = {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.End),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                TextButton(onClick = onDismiss) {
+                TextButton(
+                    onClick = onDismiss,
+                    contentPadding = buttonContentPadding
+                ) {
                     Text(text = stringResource(id = R.string.cancel))
                 }
                 if (onDelete != null) {
-                    TextButton(onClick = { showDeleteConfirmation = true }) {
+                    TextButton(
+                        onClick = { showDeleteConfirmation = true },
+                        contentPadding = buttonContentPadding
+                    ) {
                         Text(text = stringResource(id = R.string.delete))
                     }
                 }
@@ -119,7 +128,8 @@ fun LocalSongDialog(
                     onClick = {
                         onConfirm(trimmedTitle, trimmedLyrics, trimmedLyricsPaged)
                     },
-                    enabled = trimmedTitle.isNotEmpty() && trimmedLyrics.isNotEmpty()
+                    enabled = trimmedTitle.isNotEmpty() && trimmedLyrics.isNotEmpty(),
+                    contentPadding = buttonContentPadding
                 ) {
                     Text(text = stringResource(id = R.string.save))
                 }
