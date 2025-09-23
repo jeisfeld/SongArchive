@@ -105,10 +105,11 @@ class LyricsViewerActivity : AppCompatActivity() {
             val songId: String? = intent.getStringExtra("SONG_ID")
             val lyrics: String? = intent.getStringExtra("LYRICS")?.replace("|", "")
             val lyricsShort: String? = intent.getStringExtra("LYRICS_SHORT")?.replace("|", "")
-            if (songId != null) {
+            val fetchSongId = songId?.takeIf { it.isNotBlank() && !it.startsWith("Y", ignoreCase = true) }
+            if (fetchSongId != null) {
                 val songDao = AppDatabase.getDatabase(application).songDao()
                 lifecycleScope.launch {
-                    val fetchedSong = withContext(Dispatchers.IO) { songDao.getSongById(songId) }
+                    val fetchedSong = withContext(Dispatchers.IO) { songDao.getSongById(fetchSongId) }
                     updateUI(fetchedSong, lyrics, lyricsShort, displayStyle)
                 }
             } else {
