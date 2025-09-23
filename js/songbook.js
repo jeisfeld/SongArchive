@@ -2,11 +2,18 @@ let searchAbortController = new AbortController(); // Create a controller
 let searchTimeout = null;
 
 function getAdminModule() {
-        if (typeof window === "undefined") {
-                return null;
-        }
+	if (typeof window === "undefined") {
+		return null;
+	}
 
-        return window.songbookAdmin || null;
+	return window.songbookAdmin || null;
+}
+
+function isAdminView() {
+	return typeof document !== "undefined"
+		&& document.body
+		&& document.body.classList
+		&& document.body.classList.contains("admin-view");
 }
 
 // functions related to song search
@@ -37,7 +44,12 @@ async function performSearch(query) {
 	const signal = searchAbortController.signal;
 
 	try {
-		let response = await fetch("/search.php?q=" + encodeURIComponent(query), { signal });
+		let requestUrl = "/search.php?q=" + encodeURIComponent(query);
+		if (isAdminView()) {
+			requestUrl += "&include_hidden=1";
+		}
+
+		let response = await fetch(requestUrl, { signal });
 		let songs = await response.json();
 		displayResult(songs);
 	}
@@ -52,14 +64,14 @@ async function performSearch(query) {
 }
 
 function displayResult(songs) {
-        let tableHTML = "";
-        songs.forEach(song => {
-                const adminModule = getAdminModule();
-                const adminActions = adminModule && typeof adminModule.renderActionButtons === "function"
-                        ? adminModule.renderActionButtons(song)
-                        : "";
+	let tableHTML = "";
+	songs.forEach(song => {
+		const adminModule = getAdminModule();
+		const adminActions = adminModule && typeof adminModule.renderActionButtons === "function"
+			? adminModule.renderActionButtons(song)
+			: "";
 
-                tableHTML += `
+		tableHTML += `
                         <tr>
                                 <td><a href="?q=${song.id}" class="unformatted-link" target="_blank">${song.id}</a></td>
                                 <td>${song.title}</td>
@@ -84,40 +96,40 @@ function displayResult(songs) {
 		`;
 	});
 
-        document.getElementById("results").innerHTML = tableHTML;
+	document.getElementById("results").innerHTML = tableHTML;
 }
 
 function toggleClearButton() {
-        const searchBox = document.getElementById("searchBox");
-        const clearButton = document.getElementById("clearButton");
+	const searchBox = document.getElementById("searchBox");
+	const clearButton = document.getElementById("clearButton");
 
-        if (!clearButton || !searchBox) {
-                return;
-        }
+	if (!clearButton || !searchBox) {
+		return;
+	}
 
-        clearButton.classList.add("visible"); // Button always visible
+	clearButton.classList.add("visible"); // Button always visible
 
-        const hasValue = searchBox.value.length > 0;
-        const adminModule = getAdminModule();
+	const hasValue = searchBox.value.length > 0;
+	const adminModule = getAdminModule();
 
-        if (adminModule && typeof adminModule.updateClearButton === "function") {
-                const handled = adminModule.updateClearButton(clearButton, hasValue);
-                if (handled) {
-                        return;
-                }
-        }
+	if (adminModule && typeof adminModule.updateClearButton === "function") {
+		const handled = adminModule.updateClearButton(clearButton, hasValue);
+		if (handled) {
+			return;
+		}
+	}
 
-        if (hasValue) {
-                clearButton.textContent = "✕";
-                clearButton.onclick = clearSearch;
-                clearButton.title = "Clear search";
-                clearButton.setAttribute("aria-label", "Clear search");
-        } else {
-                clearButton.textContent = "\uD83D\uDD00"; // Shuffle icon
-                clearButton.onclick = shuffleSongs;
-                clearButton.title = "Shuffle songs";
-                clearButton.setAttribute("aria-label", "Shuffle songs");
-        }
+	if (hasValue) {
+		clearButton.textContent = "✕";
+		clearButton.onclick = clearSearch;
+		clearButton.title = "Clear search";
+		clearButton.setAttribute("aria-label", "Clear search");
+	} else {
+		clearButton.textContent = "\uD83D\uDD00"; // Shuffle icon
+		clearButton.onclick = shuffleSongs;
+		clearButton.title = "Shuffle songs";
+		clearButton.setAttribute("aria-label", "Shuffle songs");
+	}
 }
 
 function clearSearch() {
@@ -627,96 +639,96 @@ const closeModalBtn = document.getElementById('close-modal');
 const impressumContent = document.getElementById('modal-content');
 
 function hideModal() {
-        if (!modal) {
-                return;
-        }
+	if (!modal) {
+		return;
+	}
 
-        modal.style.display = 'none';
+	modal.style.display = 'none';
 
-        if (impressumContent) {
-                impressumContent.innerHTML = '';
-        }
+	if (impressumContent) {
+		impressumContent.innerHTML = '';
+	}
 
-        if (modal.dataset) {
-                delete modal.dataset.mode;
-        }
+	if (modal.dataset) {
+		delete modal.dataset.mode;
+	}
 }
 
 // When the link is clicked, load the impressum.html file and display the modal
 if (openImpressumLink) {
-        openImpressumLink.addEventListener('click', function(event) {
-                event.preventDefault();
-                // Fetch the external impressum.html content
-                fetch('/impressum.html')
-                        .then(response => {
-                                if (!response.ok) {
-                                        throw new Error('Network response was not ok');
-                                }
-                                return response.text();
-                        })
-                        .then(data => {
-                                if (!impressumContent || !modal) {
-                                        return;
-                                }
-                                // Insert the fetched content into the modal
-                                impressumContent.innerHTML = data;
-                                modal.dataset.mode = 'impressum';
-                                // Display the modal
-                                modal.style.display = 'block';
-                        })
-                        .catch(error => {
-                                if (impressumContent && modal) {
-                                        impressumContent.innerHTML = '<p>Error loading content.</p>';
-                                        modal.dataset.mode = 'impressum';
-                                        modal.style.display = 'block';
-                                }
-                                console.error('Error fetching Impressum:', error);
-                        });
-        });
+	openImpressumLink.addEventListener('click', function(event) {
+		event.preventDefault();
+		// Fetch the external impressum.html content
+		fetch('/impressum.html')
+			.then(response => {
+				if (!response.ok) {
+					throw new Error('Network response was not ok');
+				}
+				return response.text();
+			})
+			.then(data => {
+				if (!impressumContent || !modal) {
+					return;
+				}
+				// Insert the fetched content into the modal
+				impressumContent.innerHTML = data;
+				modal.dataset.mode = 'impressum';
+				// Display the modal
+				modal.style.display = 'block';
+			})
+			.catch(error => {
+				if (impressumContent && modal) {
+					impressumContent.innerHTML = '<p>Error loading content.</p>';
+					modal.dataset.mode = 'impressum';
+					modal.style.display = 'block';
+				}
+				console.error('Error fetching Impressum:', error);
+			});
+	});
 }
 
 // When the close button is clicked, hide the modal
 if (closeModalBtn) {
-        closeModalBtn.addEventListener('click', hideModal);
+	closeModalBtn.addEventListener('click', hideModal);
 }
 
 // Also hide the modal if the user clicks outside of the modal content
 window.addEventListener('click', function(event) {
-        if (modal && event.target === modal) {
-                hideModal();
-        }
+	if (modal && event.target === modal) {
+		hideModal();
+	}
 });
 
 let userAgent = navigator.userAgent || navigator.vendor || window.opera;
 let linkElement = document.getElementById("androidapp-link");
 
 if (/Android/i.test(userAgent)) {
-        linkElement.style.display = "block"; // Show link
+	linkElement.style.display = "block"; // Show link
 } else {
-        linkElement.style.display = "none"; // Hide link
+	linkElement.style.display = "none"; // Hide link
 }
 
 if (document.getElementById("clearButton")) {
-        toggleClearButton();
+	toggleClearButton();
 }
 
 if (typeof window !== "undefined") {
-        window.songbookReady = true;
+	window.songbookReady = true;
 
-        if (typeof document !== "undefined") {
-                let readyEvent = null;
+	if (typeof document !== "undefined") {
+		let readyEvent = null;
 
-                if (typeof window.CustomEvent === "function") {
-                        readyEvent = new CustomEvent("songbook:ready");
-                } else if (document.createEvent) {
-                        readyEvent = document.createEvent("Event");
-                        readyEvent.initEvent("songbook:ready", true, true);
-                }
+		if (typeof window.CustomEvent === "function") {
+			readyEvent = new CustomEvent("songbook:ready");
+		} else if (document.createEvent) {
+			readyEvent = document.createEvent("Event");
+			readyEvent.initEvent("songbook:ready", true, true);
+		}
 
-                if (readyEvent) {
-                        document.dispatchEvent(readyEvent);
-                }
-        }
+		if (readyEvent) {
+			document.dispatchEvent(readyEvent);
+		}
+	}
 }
 
 
