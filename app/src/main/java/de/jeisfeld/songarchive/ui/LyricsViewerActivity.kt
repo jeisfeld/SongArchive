@@ -191,7 +191,14 @@ fun LyricsViewerScreen(
     var showButtons by remember { mutableStateOf(displayStyle == DisplayStyle.STANDARD || displayStyle == DisplayStyle.LOCAL_PREVIEW) }
     var showEditDialog by remember { mutableStateOf(false) }
 
-    LaunchedEffect(lyricsPageOverride, screenWidth, screenHeight) {
+    LaunchedEffect(
+        lyricsPageOverride,
+        screenWidth,
+        screenHeight,
+        lyricsState,
+        lyricsShortState,
+        isLandscape
+    ) {
         val currentLyrics = lyricsPageOverride ?: if (isLandscape) lyricsShortState else lyricsState
         val cleanLyrics = currentLyrics.lines().joinToString("\n") { it.trimEnd() }
         val longestLine = cleanLyrics.lines().maxByOrNull { textMeasurer.measureWidth(it, 24f) } ?: ""

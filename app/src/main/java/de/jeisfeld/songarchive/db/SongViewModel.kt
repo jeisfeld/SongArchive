@@ -14,6 +14,7 @@ import androidx.lifecycle.viewModelScope
 import de.jeisfeld.songarchive.sync.CheckUpdateResponse
 import de.jeisfeld.songarchive.sync.RetrofitClient
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
@@ -39,12 +40,14 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
     var searchQuery = mutableStateOf("")
     var initState = MutableLiveData<Int>(0)
     var checkUpdateResponse: CheckUpdateResponse? = null
+    private var searchJob: Job? = null
+    private var hasEmittedInitialSongs = false
 
     init {
         viewModelScope.launch {
             _songs.value = songDao.getAllSongs()
-            initState.postValue(1)
         }
+        searchSongs(searchQuery.value)
     }
 
     fun isDatabaseEmpty(callback: (Boolean) -> Unit) {
@@ -59,10 +62,15 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun searchSongs(input: String) {
-        viewModelScope.launch {
+        searchJob?.cancel()
+        searchJob = viewModelScope.launch {
             val searchArgs = buildSearchArguments(input)
             songDao.searchSongsForArgs(searchArgs).collectLatest { results ->
                 _songs.value = results
+                if (!hasEmittedInitialSongs) {
+                    hasEmittedInitialSongs = true
+                    initState.postValue(1)
+                }
             }
         }
     }
