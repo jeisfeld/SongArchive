@@ -148,10 +148,10 @@ class ChordsViewerActivity : AppCompatActivity() {
         }
 
         val isLandscapeImage = isLandscapeImage(this, imageSource)
-        requestedOrientation = if (isLandscapeImage == true) {
-            ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-        } else {
-            ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        requestedOrientation = when (isLandscapeImage) {
+            true -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            false -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+            null -> ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }
 
         @Suppress("DEPRECATION")
