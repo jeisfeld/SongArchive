@@ -1,6 +1,8 @@
 package de.jeisfeld.songarchive.ui
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -13,6 +15,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
@@ -57,6 +60,11 @@ fun LocalSongDialog(
         )
     }
 
+    val trimmedTitle = title.text.trim()
+    val trimmedLyrics = lyrics.text.trim()
+    val trimmedLyricsPagedText = lyricsPaged.text.trim()
+    val trimmedLyricsPaged = trimmedLyricsPagedText.ifEmpty { null }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -94,28 +102,26 @@ fun LocalSongDialog(
             }
         },
         confirmButton = {
-            val trimmedTitle = title.text.trim()
-            val trimmedLyrics = lyrics.text.trim()
-            val trimmedLyricsPaged = lyricsPaged.text.trim().ifEmpty { null }
-            TextButton(
-                onClick = {
-                    onConfirm(trimmedTitle, trimmedLyrics, trimmedLyricsPaged)
-                },
-                enabled = trimmedTitle.isNotEmpty() && trimmedLyrics.isNotEmpty()
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = stringResource(id = R.string.save))
-            }
-        },
-        dismissButton = {
-            Column {
+                TextButton(onClick = onDismiss) {
+                    Text(text = stringResource(id = R.string.cancel))
+                }
                 if (onDelete != null) {
                     TextButton(onClick = { showDeleteConfirmation = true }) {
                         Text(text = stringResource(id = R.string.delete))
                     }
-                    Spacer(modifier = Modifier.height(4.dp))
                 }
-                TextButton(onClick = onDismiss) {
-                    Text(text = stringResource(id = R.string.cancel))
+                TextButton(
+                    onClick = {
+                        onConfirm(trimmedTitle, trimmedLyrics, trimmedLyricsPaged)
+                    },
+                    enabled = trimmedTitle.isNotEmpty() && trimmedLyrics.isNotEmpty()
+                ) {
+                    Text(text = stringResource(id = R.string.save))
                 }
             }
         }

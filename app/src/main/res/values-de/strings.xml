@@ -11,6 +11,15 @@
     <string name="search">Suchen</string>
     <string name="ok">OK</string>
     <string name="cancel">Abbrechen</string>
+    <string name="save">Speichern</string>
+    <string name="delete">Löschen</string>
+    <string name="add_song">Lied hinzufügen</string>
+    <string name="edit_song">Lied bearbeiten</string>
+    <string name="song_title">Titel</string>
+    <string name="song_lyrics">Liedtext</string>
+    <string name="song_lyrics_paged">Liedtext (seitenweise)</string>
+    <string name="delete_song">Lied löschen</string>
+    <string name="confirm_delete_song">Dieses Lied löschen?</string>
 
     <string name="sync">Synchronisieren</string>
     <string name="network_connection">Netzwerkverbindung</string>
