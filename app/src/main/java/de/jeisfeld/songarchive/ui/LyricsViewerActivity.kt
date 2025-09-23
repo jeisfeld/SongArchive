@@ -40,9 +40,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import de.jeisfeld.songarchive.db.AppDatabase
 import de.jeisfeld.songarchive.db.Song
+import de.jeisfeld.songarchive.db.SongViewModel
 import de.jeisfeld.songarchive.network.ClientMode
 import de.jeisfeld.songarchive.network.DisplayStyle
 import de.jeisfeld.songarchive.network.PeerConnectionViewModel
@@ -121,6 +123,7 @@ class LyricsViewerActivity : AppCompatActivity() {
         val displayLyrics = song?.lyrics?.replace("|", "")?.trim() ?: lyrics ?: " "
         val displayLyricsShort = song?.lyricsShort?.replace("|", "")?.trim() ?: lyricsShort ?: displayLyrics
         var setLyricsPaged: ((String?) -> Unit)? = null
+        val songViewModel = ViewModelProvider(this)[SongViewModel::class.java]
 
         setContent {
             MaterialTheme {
@@ -130,7 +133,8 @@ class LyricsViewerActivity : AppCompatActivity() {
                     displayLyricsShort,
                     displayStyle,
                     onClose = { finish() },
-                    setLyricsPagedCallback = { setLyricsPaged = it }
+                    setLyricsPagedCallback = { setLyricsPaged = it },
+                    viewModel = songViewModel
                 )
             }
         }
@@ -139,17 +143,36 @@ class LyricsViewerActivity : AppCompatActivity() {
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun LyricsViewerScreen(song: Song?, lyrics: String, lyricsShort: String, displayStyle: DisplayStyle, onClose: () -> Unit,
-                       setLyricsPagedCallback: ((String?) -> Unit) -> Unit = {}) {
+fun LyricsViewerScreen(
+    song: Song?,
+    lyrics: String,
+    lyricsShort: String,
+    displayStyle: DisplayStyle,
+    onClose: () -> Unit,
+    setLyricsPagedCallback: ((String?) -> Unit) -> Unit = {},
+    viewModel: SongViewModel? = null
+) {
     val configuration = LocalConfiguration.current
     val density = LocalDensity.current
     val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
 
-    var lyricsPaged by remember { mutableStateOf<String?>(null) }
-    val baseLyrics = lyricsPaged ?: if (isLandscape) lyricsShort else lyrics
+    var currentSong by remember { mutableStateOf(song) }
+    var lyricsState by remember { mutableStateOf(lyrics) }
+    var lyricsShortState by remember { mutableStateOf(lyricsShort) }
+    var lyricsPageOverride by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(song) {
+        currentSong = song
+        lyricsState = lyrics
+        lyricsShortState = lyricsShort
+        lyricsPageOverride = null
+    }
+
+    val baseLyrics = lyricsPageOverride ?: if (isLandscape) lyricsShortState else lyricsState
     val displayedLyrics = baseLyrics.lines().joinToString("\n") { it.trimEnd() }
+
     LaunchedEffect(Unit) {
-        setLyricsPagedCallback { newLyrics -> lyricsPaged = newLyrics }
+        setLyricsPagedCallback { newLyrics -> lyricsPageOverride = newLyrics }
     }
 
     var textAlign by remember { mutableStateOf(if (isLandscape) TextAlign.Center else TextAlign.Left) }
@@ -166,9 +189,10 @@ fun LyricsViewerScreen(song: Song?, lyrics: String, lyricsShort: String, display
     var screenWidth by remember { mutableStateOf(with(density) { localView.width.toDp().value }) }
     var screenHeight by remember { mutableStateOf(with(density) { localView.height.toDp().value }) }
     var showButtons by remember { mutableStateOf(displayStyle == DisplayStyle.STANDARD || displayStyle == DisplayStyle.LOCAL_PREVIEW) }
+    var showEditDialog by remember { mutableStateOf(false) }
 
-    LaunchedEffect(lyricsPaged, screenWidth, screenHeight) {
-        val currentLyrics = lyricsPaged ?: if (isLandscape) lyricsShort else lyrics
+    LaunchedEffect(lyricsPageOverride, screenWidth, screenHeight) {
+        val currentLyrics = lyricsPageOverride ?: if (isLandscape) lyricsShortState else lyricsState
         val cleanLyrics = currentLyrics.lines().joinToString("\n") { it.trimEnd() }
         val longestLine = cleanLyrics.lines().maxByOrNull { textMeasurer.measureWidth(it, 24f) } ?: ""
 
@@ -220,13 +244,11 @@ fun LyricsViewerScreen(song: Song?, lyrics: String, lyricsShort: String, display
                     }
                     .pointerInput(Unit) {
                         detectTransformGestures { _, pan, zoom, _ ->
-                            if (zoom != 1f) { // Two-finger gesture detected
+                            if (zoom != 1f) {
                                 isZooming = true
                                 if (kotlin.math.abs(pan.x) > kotlin.math.abs(pan.y)) {
-                                    // Horizontal pinch → Adjust font size
                                     fontSize = (fontSize * zoom).coerceIn(8f, 96f)
                                 } else {
-                                    // Vertical pinch → Adjust line spacing
                                     lineHeight = (lineHeight * zoom).coerceIn(1f, 3f)
                                 }
                             }
@@ -236,7 +258,7 @@ fun LyricsViewerScreen(song: Song?, lyrics: String, lyricsShort: String, display
                         isZooming = event.pointerCount > 1
                         false
                     }
-                    .verticalScroll(if (isZooming) rememberScrollState() else scrollState) // Enable scrolling only if not zooming
+                    .verticalScroll(if (isZooming) rememberScrollState() else scrollState)
                     .clickable {
                         showButtons = if (textAlign == TextAlign.Center && displayStyle != DisplayStyle.LOCAL_PREVIEW) !showButtons else showButtons
                         textAlign = if (textAlign == TextAlign.Left) TextAlign.Center else TextAlign.Left
@@ -273,14 +295,46 @@ fun LyricsViewerScreen(song: Song?, lyrics: String, lyricsShort: String, display
             ViewerControlButtons(
                 showButtons = showButtons,
                 isShowingLyrics = true,
-                song = song,
+                song = currentSong,
                 displayStyle = displayStyle,
                 meanings = emptyList(),
                 onShowMeaningChange = { },
-                onDisplayLyricsPage = { lyricsPaged = it },
+                onDisplayLyricsPage = { lyricsPageOverride = it },
                 onClose = onClose,
+                onEditLocalSong = if (currentSong?.id?.startsWith("Y") == true && viewModel != null) {
+                    { _ -> showEditDialog = true }
+                } else {
+                    null
+                }
             )
         }
+    }
+
+    if (showEditDialog && currentSong?.id?.startsWith("Y") == true && viewModel != null) {
+        LocalSongDialog(
+            isEditing = true,
+            initialTitle = currentSong!!.title,
+            initialLyrics = currentSong!!.lyrics,
+            initialLyricsPaged = currentSong!!.lyricsPaged ?: "",
+            onDismiss = { showEditDialog = false },
+            onConfirm = { updatedTitle, updatedLyrics, updatedLyricsPaged ->
+                viewModel.updateLocalSong(currentSong!!.id, updatedTitle, updatedLyrics, updatedLyricsPaged) { updatedSong ->
+                    currentSong = updatedSong
+                    val sanitizedLyrics = updatedSong.lyrics.replace("|", "").trim()
+                    val sanitizedShort = updatedSong.lyricsShort?.replace("|", "")?.trim()
+                    lyricsState = sanitizedLyrics.ifBlank { " " }
+                    lyricsShortState = sanitizedShort?.takeIf { it.isNotEmpty() } ?: sanitizedLyrics.ifBlank { " " }
+                    lyricsPageOverride = null
+                    showEditDialog = false
+                }
+            },
+            onDelete = {
+                viewModel.deleteLocalSong(currentSong!!.id) {
+                    showEditDialog = false
+                    onClose()
+                }
+            }
+        )
     }
 }
 

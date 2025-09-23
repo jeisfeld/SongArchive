@@ -48,6 +48,7 @@ fun MainDropdownMenu(
     permissionLauncher: ManagedActivityResultLauncher<Array<String>, Map<String, Boolean>>,
     onShareText: () -> Unit,
     onSync: () -> Unit,
+    onAddSong: () -> Unit,
 ) {
     var showNetworkMenu by remember { mutableStateOf(false) }
     val settingsViewModel: SettingsViewModel = viewModel()
@@ -73,6 +74,25 @@ fun MainDropdownMenu(
                 Icon(
                     painter = painterResource(id = R.drawable.ic_sync),
                     contentDescription = "Sync",
+                    modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small))
+                )
+            }
+        )
+        DropdownMenuItem(
+            text = {
+                Text(
+                    stringResource(id = R.string.add_song),
+                    color = AppColors.TextColor
+                )
+            },
+            onClick = {
+                onDismissRequest()
+                onAddSong()
+            },
+            leadingIcon = {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_add),
+                    contentDescription = stringResource(id = R.string.add_song),
                     modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small))
                 )
             }
