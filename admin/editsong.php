@@ -203,6 +203,57 @@ function fetchSongMeaningIds($conn, $songId) {
 
 	return $meaningIds;
 }
+function fetchAllAuthors($conn) {
+	$sql = "SELECT author FROM songs WHERE author IS NOT NULL AND TRIM(author) <> ''";
+	$result = $conn->query ( $sql );
+
+	if ($result === false) {
+		error_log ( 'Failed to fetch authors: ' . $conn->error );
+		return [ ];
+	}
+
+	$authors = [ ];
+
+	while ( $row = $result->fetch_assoc () ) {
+		$authorField = isset ( $row ['author'] ) ? ( string ) $row ['author'] : '';
+
+		if ($authorField === '') {
+			continue;
+		}
+
+		$normalizedAuthorField = str_replace ( [ 
+				"\r",
+				"\n",
+				";"
+		], ',', $authorField );
+		$parts = explode ( ',', $normalizedAuthorField );
+
+		foreach ( $parts as $part ) {
+			$trimmed = trim ( $part );
+
+			if ($trimmed === '') {
+				continue;
+			}
+
+			$lowerKey = function_exists ( 'mb_strtolower' ) ? mb_strtolower ( $trimmed, 'UTF-8' ) : strtolower ( $trimmed );
+
+			if (! array_key_exists ( $lowerKey, $authors )) {
+				$authors [$lowerKey] = $trimmed;
+			}
+		}
+	}
+
+	$result->free ();
+
+	if (empty ( $authors )) {
+		return [ ];
+	}
+
+	$uniqueAuthors = array_values ( $authors );
+	natcasesort ( $uniqueAuthors );
+
+	return array_values ( $uniqueAuthors );
+}
 function parseMeaningIdsFromInput($input) {
 	if ($input === null || $input === '') {
 		return [ ];
@@ -567,6 +618,7 @@ elseif ($errorMessage === '') {
 }
 
 $allMeanings = fetchAllMeanings ( $conn );
+$allAuthors = fetchAllAuthors ( $conn );
 
 if ($updateSuccess && $songFromDatabase) {
 	$songData = $songFromDatabase;
@@ -631,6 +683,11 @@ if ($selectedMeaningIdsJson === false) {
 $allMeaningsJson = json_encode ( $allMeanings, $jsonEncodeOptions );
 if ($allMeaningsJson === false) {
 	$allMeaningsJson = '[]';
+}
+
+$authorSuggestionsJson = json_encode ( $allAuthors, $jsonEncodeOptions );
+if ($authorSuggestionsJson === false) {
+	$authorSuggestionsJson = '[]';
 }
 
 $songImagesDirectory = __DIR__ . '/../img/songs';
@@ -744,6 +801,45 @@ h1 {
 	min-height: 120px;
 	resize: vertical;
 	line-height: 1.4;
+}
+
+.form-group--with-suggestions {
+	position: relative;
+}
+
+.author-suggestions {
+	display: none;
+	position: absolute;
+	top: calc(100% - 4px);
+	left: 0;
+	right: 0;
+	background-color: #fff;
+	border: 1px solid #c5c5c5;
+	border-top: none;
+	border-radius: 0 0 4px 4px;
+	box-shadow: 0 6px 12px rgba(0, 0, 0, 0.12);
+	max-height: 220px;
+	overflow-y: auto;
+	z-index: 20;
+}
+
+.author-suggestions.is-visible {
+	display: block;
+}
+
+.author-suggestion {
+	padding: 8px 12px;
+	cursor: pointer;
+	font-size: 0.95rem;
+	border-top: 1px solid #e6e6e6;
+}
+
+.author-suggestion:first-child {
+	border-top: none;
+}
+
+.author-suggestion:hover, .author-suggestion.is-active {
+	background-color: #e8f1ff;
 }
 
 .form-note {
@@ -1271,9 +1367,11 @@ h1 {
                     <?php endforeach; ?>
                 </datalist>
 
-			<div class="form-group">
-				<label for="song-author">Author(s)</label> <input type="text" id="song-author" name="author"
+			<div class="form-group form-group--with-suggestions">
+				<label for="song-author">Author(s)</label> <input type="text" id="song-author" name="author" autocomplete="off"
 					value="<?php echo escapeHtml($songData['author'] ?? ''); ?>">
+				<div class="author-suggestions" id="author-suggestions" role="listbox" aria-label="Author suggestions"
+					aria-hidden="true"></div>
 			</div>
 
 			<div class="form-group">
@@ -1378,6 +1476,11 @@ h1 {
 
             var allMeaningsData = <?php echo $allMeaningsJson; ?>;
             var initialSelectedMeaningIds = <?php echo $selectedMeaningIdsJson; ?>;
+            var authorSuggestions = <?php echo $authorSuggestionsJson; ?>;
+
+            if (! Array.isArray(authorSuggestions)) {
+                authorSuggestions = [];
+            }
 
             var meaningIdsInput = document.getElementById('meaning-ids-input');
             var summaryContainer = document.getElementById('selected-meanings-summary');
@@ -2147,6 +2250,317 @@ h1 {
 
                 syncHiddenInput();
                 updateSummary();
+            }
+
+            var authorInput = document.getElementById('song-author');
+            var authorSuggestionsContainer = document.getElementById('author-suggestions');
+
+            if (authorInput && authorSuggestionsContainer && authorSuggestions.length) {
+                var MAX_AUTHOR_SUGGESTIONS = 12;
+                var filteredAuthorSuggestions = [];
+                var highlightedAuthorSuggestionIndex = -1;
+                var latestAuthorSegmentInfo = null;
+                var hideAuthorSuggestionsTimeoutId = null;
+
+                function clearHideAuthorSuggestionsTimeout() {
+                    if (hideAuthorSuggestionsTimeoutId !== null) {
+                        clearTimeout(hideAuthorSuggestionsTimeoutId);
+                        hideAuthorSuggestionsTimeoutId = null;
+                    }
+                }
+
+                function getCurrentAuthorSegmentInfo() {
+                    var inputValue = typeof authorInput.value === 'string' ? authorInput.value : '';
+                    var selectionStart = typeof authorInput.selectionStart === 'number' ? authorInput.selectionStart : inputValue.length;
+                    var selectionEnd = typeof authorInput.selectionEnd === 'number' ? authorInput.selectionEnd : selectionStart;
+
+                    if (selectionEnd < selectionStart) {
+                        var temp = selectionStart;
+                        selectionStart = selectionEnd;
+                        selectionEnd = temp;
+                    }
+
+                    var beforeCursor = inputValue.slice(0, selectionStart);
+                    var lastCommaIndex = beforeCursor.lastIndexOf(',');
+                    var segmentStart = lastCommaIndex === -1 ? 0 : lastCommaIndex + 1;
+                    var nextCommaIndex = inputValue.indexOf(',', selectionEnd);
+                    var segmentEnd = nextCommaIndex === -1 ? inputValue.length : nextCommaIndex;
+                    var segmentBeforeCursor = inputValue.slice(segmentStart, selectionStart);
+                    var leadingSpacesMatch = segmentBeforeCursor.match(/^\s*/);
+                    var leadingSpaces = leadingSpacesMatch ? leadingSpacesMatch[0] : '';
+                    var typedFragment = segmentBeforeCursor.slice(leadingSpaces.length);
+                    var query = typedFragment.trim();
+
+                    return {
+                        segmentStart: segmentStart,
+                        segmentEnd: segmentEnd,
+                        beforeSegmentText: inputValue.slice(0, segmentStart),
+                        afterSegmentText: inputValue.slice(segmentEnd),
+                        leadingSpaces: leadingSpaces,
+                        query: query
+                    };
+                }
+
+                function hideAuthorSuggestions() {
+                    clearHideAuthorSuggestionsTimeout();
+                    filteredAuthorSuggestions = [];
+                    highlightedAuthorSuggestionIndex = -1;
+                    authorSuggestionsContainer.innerHTML = '';
+                    authorSuggestionsContainer.classList.remove('is-visible');
+                    authorSuggestionsContainer.setAttribute('aria-hidden', 'true');
+                }
+
+                function highlightAuthorSuggestion(index) {
+                    var suggestionItems = authorSuggestionsContainer.querySelectorAll('.author-suggestion');
+
+                    if (! suggestionItems.length) {
+                        highlightedAuthorSuggestionIndex = -1;
+                        return;
+                    }
+
+                    if (index < 0 || index >= suggestionItems.length) {
+                        for (var i = 0; i < suggestionItems.length; i++) {
+                            suggestionItems[i].classList.remove('is-active');
+                            suggestionItems[i].setAttribute('aria-selected', 'false');
+                        }
+
+                        highlightedAuthorSuggestionIndex = -1;
+                        return;
+                    }
+
+                    for (var j = 0; j < suggestionItems.length; j++) {
+                        if (j === index) {
+                            suggestionItems[j].classList.add('is-active');
+                            suggestionItems[j].setAttribute('aria-selected', 'true');
+
+                            if (typeof suggestionItems[j].scrollIntoView === 'function') {
+                                try {
+                                    suggestionItems[j].scrollIntoView({ block: 'nearest' });
+                                } catch (scrollError) {
+                                    suggestionItems[j].scrollIntoView();
+                                }
+                            }
+                        } else {
+                            suggestionItems[j].classList.remove('is-active');
+                            suggestionItems[j].setAttribute('aria-selected', 'false');
+                        }
+                    }
+
+                    highlightedAuthorSuggestionIndex = index;
+                }
+
+                function renderAuthorSuggestions(list) {
+                    authorSuggestionsContainer.innerHTML = '';
+
+                    if (! list.length) {
+                        hideAuthorSuggestions();
+                        return;
+                    }
+
+                    var fragment = document.createDocumentFragment();
+
+                    list.forEach(function(suggestion, index) {
+                        if (typeof suggestion !== 'string' || suggestion === '') {
+                            return;
+                        }
+
+                        var optionElement = document.createElement('div');
+                        optionElement.className = 'author-suggestion';
+                        optionElement.textContent = suggestion;
+                        optionElement.setAttribute('role', 'option');
+                        optionElement.setAttribute('aria-selected', 'false');
+
+                        optionElement.addEventListener('mousedown', function(event) {
+                            event.preventDefault();
+                            selectAuthorSuggestion(suggestion);
+                        });
+
+                        optionElement.addEventListener('mouseenter', function() {
+                            highlightAuthorSuggestion(index);
+                        });
+
+                        fragment.appendChild(optionElement);
+                    });
+
+                    authorSuggestionsContainer.appendChild(fragment);
+                    authorSuggestionsContainer.classList.add('is-visible');
+                    authorSuggestionsContainer.setAttribute('aria-hidden', 'false');
+                    highlightAuthorSuggestion(-1);
+                }
+
+                function updateAuthorSuggestions() {
+                    clearHideAuthorSuggestionsTimeout();
+
+                    if (! authorSuggestions.length) {
+                        hideAuthorSuggestions();
+                        return;
+                    }
+
+                    latestAuthorSegmentInfo = getCurrentAuthorSegmentInfo();
+
+                    if (! latestAuthorSegmentInfo) {
+                        hideAuthorSuggestions();
+                        return;
+                    }
+
+                    var query = latestAuthorSegmentInfo.query.toLowerCase();
+                    var prefixMatches = [];
+                    var otherMatches = [];
+
+                    for (var i = 0; i < authorSuggestions.length; i++) {
+                        var suggestion = authorSuggestions[i];
+
+                        if (typeof suggestion !== 'string' || suggestion === '') {
+                            continue;
+                        }
+
+                        var suggestionLower = suggestion.toLowerCase();
+
+                        if (query === '') {
+                            prefixMatches.push(suggestion);
+                        } else if (suggestionLower.indexOf(query) === 0) {
+                            prefixMatches.push(suggestion);
+                        } else if (suggestionLower.indexOf(query) !== -1) {
+                            otherMatches.push(suggestion);
+                        }
+                    }
+
+                    var combined = prefixMatches.concat(otherMatches);
+                    filteredAuthorSuggestions = combined.slice(0, MAX_AUTHOR_SUGGESTIONS);
+
+                    if (! filteredAuthorSuggestions.length) {
+                        hideAuthorSuggestions();
+                        return;
+                    }
+
+                    renderAuthorSuggestions(filteredAuthorSuggestions);
+                }
+
+                function selectAuthorSuggestion(value) {
+                    if (typeof value !== 'string' || value === '') {
+                        return;
+                    }
+
+                    clearHideAuthorSuggestionsTimeout();
+
+                    var segmentInfo = latestAuthorSegmentInfo || getCurrentAuthorSegmentInfo();
+
+                    if (! segmentInfo) {
+                        return;
+                    }
+
+                    var beforeText = segmentInfo.beforeSegmentText;
+                    var leadingSpaces = segmentInfo.leadingSpaces;
+                    var afterText = segmentInfo.afterSegmentText;
+
+                    if (leadingSpaces === '' && beforeText !== '' && beforeText.slice(-1) === ',') {
+                        leadingSpaces = ' ';
+                    }
+
+                    var newValue = beforeText + leadingSpaces + value + afterText;
+                    authorInput.value = newValue;
+
+                    var caretPosition = (beforeText + leadingSpaces + value).length;
+
+                    if (typeof authorInput.setSelectionRange === 'function') {
+                        try {
+                            authorInput.setSelectionRange(caretPosition, caretPosition);
+                        } catch (selectionError) {
+                            // Ignore selection errors that may occur in older browsers.
+                        }
+                    }
+
+                    if (typeof authorInput.focus === 'function') {
+                        authorInput.focus();
+                    }
+
+                    hideAuthorSuggestions();
+                    latestAuthorSegmentInfo = null;
+                }
+
+                function moveAuthorHighlight(direction) {
+                    if (! filteredAuthorSuggestions.length) {
+                        return;
+                    }
+
+                    var nextIndex = highlightedAuthorSuggestionIndex + direction;
+
+                    if (nextIndex < 0) {
+                        nextIndex = filteredAuthorSuggestions.length - 1;
+                    } else if (nextIndex >= filteredAuthorSuggestions.length) {
+                        nextIndex = 0;
+                    }
+
+                    highlightAuthorSuggestion(nextIndex);
+                }
+
+                authorInput.addEventListener('input', function() {
+                    updateAuthorSuggestions();
+                });
+
+                authorInput.addEventListener('focus', function() {
+                    updateAuthorSuggestions();
+                });
+
+                authorInput.addEventListener('click', function() {
+                    updateAuthorSuggestions();
+                });
+
+                authorInput.addEventListener('keydown', function(event) {
+                    var key = event.key || event.keyCode;
+                    var suggestionsVisible = authorSuggestionsContainer.classList.contains('is-visible');
+
+                    if (key === 'ArrowDown' || key === 40) {
+                        if (! suggestionsVisible) {
+                            updateAuthorSuggestions();
+                        }
+
+                        if (filteredAuthorSuggestions.length) {
+                            event.preventDefault();
+                            moveAuthorHighlight(1);
+                        }
+                    } else if (key === 'ArrowUp' || key === 38) {
+                        if (filteredAuthorSuggestions.length) {
+                            event.preventDefault();
+                            moveAuthorHighlight(-1);
+                        }
+                    } else if (key === 'Enter' || key === 13) {
+                        if (filteredAuthorSuggestions.length && highlightedAuthorSuggestionIndex !== -1) {
+                            event.preventDefault();
+                            selectAuthorSuggestion(filteredAuthorSuggestions[highlightedAuthorSuggestionIndex]);
+                        }
+                    } else if (key === 'Escape' || key === 'Esc' || key === 27) {
+                        if (suggestionsVisible) {
+                            event.preventDefault();
+                            hideAuthorSuggestions();
+                        }
+                    } else if (key === 'Tab' || key === 9) {
+                        if (filteredAuthorSuggestions.length && highlightedAuthorSuggestionIndex !== -1) {
+                            selectAuthorSuggestion(filteredAuthorSuggestions[highlightedAuthorSuggestionIndex]);
+                        }
+
+                        hideAuthorSuggestions();
+                    }
+                });
+
+                authorInput.addEventListener('blur', function() {
+                    clearHideAuthorSuggestionsTimeout();
+                    hideAuthorSuggestionsTimeoutId = window.setTimeout(function() {
+                        hideAuthorSuggestions();
+                    }, 150);
+                });
+
+                authorSuggestionsContainer.addEventListener('mouseenter', function() {
+                    clearHideAuthorSuggestionsTimeout();
+                });
+
+                authorSuggestionsContainer.addEventListener('mouseleave', function() {
+                    highlightAuthorSuggestion(-1);
+                });
+
+                authorSuggestionsContainer.addEventListener('mousedown', function(event) {
+                    event.preventDefault();
+                });
             }
         })();
     </script>
