@@ -1,10 +1,9 @@
 package de.jeisfeld.songarchive.ui
 
 import android.content.Context
-import android.content.res.Configuration
+import android.content.pm.ActivityInfo
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Matrix
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -146,6 +145,13 @@ class ChordsViewerActivity : AppCompatActivity() {
             return
         }
 
+        val shouldUseLandscapeOrientation = isLandscapeImage(context, imageSource) == true
+        requestedOrientation = if (shouldUseLandscapeOrientation) {
+            ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE
+        } else {
+            ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        }
+
         @Suppress("DEPRECATION")
         val meanings: List<Meaning> = intent.getParcelableArrayListExtra("MEANINGS") ?: emptyList()
         setContent {
@@ -172,17 +178,9 @@ fun ChordsViewerScreen(
     var showMeaningsPopup by remember { mutableStateOf(false) }
     var showButtons by remember { mutableStateOf(displayStyle == DisplayStyle.STANDARD) }
 
-    val configuration = LocalConfiguration.current
     val context = LocalContext.current
-    val orientation = configuration.orientation
-    val bitmap = remember(imageSource, orientation, context) {
-        val originalBitmap = loadBitmapFromSource(context, imageSource)
-
-        if (originalBitmap != null && orientation == Configuration.ORIENTATION_PORTRAIT) {
-            rotateBitmap(originalBitmap, 90f)
-        } else {
-            originalBitmap
-        }
+    val bitmap = remember(imageSource, context) {
+        loadBitmapFromSource(context, imageSource)
     }
 
     if (bitmap == null) {
@@ -301,6 +299,39 @@ fun ChordsViewerScreen(
 }
 
 
+private fun isLandscapeImage(context: Context, source: ChordsImageSource): Boolean? {
+    return when (source) {
+        is ChordsImageSource.LocalFile -> {
+            val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(source.path, options)
+            val width = options.outWidth
+            val height = options.outHeight
+            if (width > 0 && height > 0) {
+                width > height
+            } else {
+                null
+            }
+        }
+        is ChordsImageSource.ContentUri -> {
+            val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            try {
+                context.contentResolver.openInputStream(Uri.parse(source.uriString))?.use { inputStream ->
+                    BitmapFactory.decodeStream(inputStream, null, options)
+                }
+                val width = options.outWidth
+                val height = options.outHeight
+                if (width > 0 && height > 0) {
+                    width > height
+                } else {
+                    null
+                }
+            } catch (e: Exception) {
+                null
+            }
+        }
+    }
+}
+
 private fun loadBitmapFromSource(context: Context, source: ChordsImageSource): Bitmap? {
     return when (source) {
         is ChordsImageSource.LocalFile -> BitmapFactory.decodeFile(source.path)
@@ -314,11 +345,4 @@ private fun loadBitmapFromSource(context: Context, source: ChordsImageSource): B
             }
         }
     }
-}
-
-// Function to rotate a bitmap
-fun rotateBitmap(source: Bitmap, angle: Float): Bitmap {
-    val matrix = Matrix()
-    matrix.postRotate(angle)
-    return Bitmap.createBitmap(source, 0, 0, source.width, source.height, matrix, true)
 }
