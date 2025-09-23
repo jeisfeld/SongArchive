@@ -1,6 +1,7 @@
 package de.jeisfeld.songarchive.ui
 
 import android.content.Context
+import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -146,6 +147,13 @@ class ChordsViewerActivity : AppCompatActivity() {
             return
         }
 
+        val isLandscapeImage = isLandscapeImage(this, imageSource)
+        requestedOrientation = if (isLandscapeImage == true) {
+            ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        } else {
+            ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        }
+
         @Suppress("DEPRECATION")
         val meanings: List<Meaning> = intent.getParcelableArrayListExtra("MEANINGS") ?: emptyList()
         setContent {
@@ -178,7 +186,10 @@ fun ChordsViewerScreen(
     val bitmap = remember(imageSource, orientation, context) {
         val originalBitmap = loadBitmapFromSource(context, imageSource)
 
-        if (originalBitmap != null && orientation == Configuration.ORIENTATION_PORTRAIT) {
+        if (originalBitmap != null &&
+            orientation == Configuration.ORIENTATION_PORTRAIT &&
+            originalBitmap.width > originalBitmap.height
+        ) {
             rotateBitmap(originalBitmap, 90f)
         } else {
             originalBitmap
@@ -300,6 +311,29 @@ fun ChordsViewerScreen(
     }
 }
 
+
+private fun isLandscapeImage(context: Context, source: ChordsImageSource): Boolean? {
+    val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    when (source) {
+        is ChordsImageSource.LocalFile -> BitmapFactory.decodeFile(source.path, options)
+        is ChordsImageSource.ContentUri -> {
+            try {
+                val uri = Uri.parse(source.uriString)
+                val inputStream = context.contentResolver.openInputStream(uri) ?: return null
+                inputStream.use { stream ->
+                    BitmapFactory.decodeStream(stream, null, options)
+                }
+            } catch (e: Exception) {
+                return null
+            }
+        }
+    }
+    return if (options.outWidth > 0 && options.outHeight > 0) {
+        options.outWidth > options.outHeight
+    } else {
+        null
+    }
+}
 
 private fun loadBitmapFromSource(context: Context, source: ChordsImageSource): Bitmap? {
     return when (source) {

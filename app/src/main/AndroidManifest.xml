@@ -44,7 +44,6 @@
             </intent-filter>
         </activity>
         <activity android:name=".ui.ChordsViewerActivity"
-            android:screenOrientation="userLandscape"
             android:theme="@style/Theme.CircleSongArchive"/>
         <activity android:name=".ui.LyricsViewerActivity"
             android:theme="@style/Theme.CircleSongArchive"/>
