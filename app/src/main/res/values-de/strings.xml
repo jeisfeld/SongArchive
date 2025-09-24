@@ -17,6 +17,7 @@
     <string name="edit_song">Lied bearbeiten</string>
     <string name="song_title">Titel</string>
     <string name="song_lyrics">Liedtext</string>
+    <string name="song_lyrics_long">Liedtext (Langfassung)</string>
     <string name="song_lyrics_paged">Liedtext (seitenweise)</string>
     <string name="song_tab_file">Akkorddatei</string>
     <string name="select_tab_file">Akkorddatei\nauswählen</string>

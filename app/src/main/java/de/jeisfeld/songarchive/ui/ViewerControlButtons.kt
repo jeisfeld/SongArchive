@@ -69,7 +69,7 @@ fun ViewerControlButtons(
     onShowMeaningChange: (Boolean) -> Unit,
     onDisplayLyricsPage: (String?) -> Unit,
     onClose: () -> Unit,
-    onEditLocalSong: ((Song) -> Unit)? = null,
+    onEditSong: ((Song) -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
@@ -295,9 +295,9 @@ fun ViewerControlButtons(
                         Spacer(modifier = Modifier.width(dimensionResource(id = R.dimen.spacing_medium)))
                     }
 
-                    if (onEditLocalSong != null && song?.id?.startsWith("Y") == true) {
+                    if (onEditSong != null && song != null) {
                         IconButton(
-                            onClick = { onEditLocalSong.invoke(song) },
+                            onClick = { onEditSong.invoke(song) },
                             modifier = Modifier
                                 .background(
                                     Brush.verticalGradient(

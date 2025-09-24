@@ -16,6 +16,7 @@
     <string name="edit_song">Edit song</string>
     <string name="song_title">Title</string>
     <string name="song_lyrics">Lyrics</string>
+    <string name="song_lyrics_long">Lyrics (long)</string>
     <string name="song_lyrics_paged">Lyrics (paged)</string>
     <string name="song_tab_file">Chord file</string>
     <string name="select_tab_file">Select chord file</string>

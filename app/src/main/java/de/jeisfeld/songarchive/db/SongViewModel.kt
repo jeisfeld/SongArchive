@@ -101,6 +101,47 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun cloneSongToLocal(
+        originalSong: Song,
+        title: String,
+        lyrics: String,
+        lyricsPaged: String?,
+        localTabUri: String?,
+        onResult: (Song) -> Unit = {},
+    ) {
+        viewModelScope.launch {
+            val clonedSong = withContext(Dispatchers.IO) {
+                val newId = generateNextLocalSongId()
+                val trimmedTitle = title.trim()
+                val trimmedLyrics = lyrics.trim()
+                val sanitizedLyricsPaged = sanitizeLyricsPaged(lyricsPaged)
+                val sanitizedLocalTab = localTabUri?.takeIf { it.isNotBlank() }
+                val finalTabFilename = sanitizedLocalTab?.let { LocalTabUtils.encodeLocalTab(it) } ?: originalSong.tabfilename
+
+                val newSong = originalSong.copy(
+                    id = newId,
+                    title = trimmedTitle,
+                    lyrics = trimmedLyrics,
+                    lyricsShort = null,
+                    lyricsPaged = sanitizedLyricsPaged,
+                    tabfilename = finalTabFilename,
+                    mp3filename = originalSong.mp3filename,
+                    mp3filename2 = originalSong.mp3filename2,
+                    author = originalSong.author,
+                    keywords = originalSong.keywords,
+                    title_normalized = normalizeForSearch(trimmedTitle),
+                    lyrics_normalized = normalizeForSearch(trimmedLyrics),
+                    author_normalized = normalizeForSearch(originalSong.author),
+                    keywords_normalized = normalizeForSearch(originalSong.keywords)
+                )
+                songDao.insertSong(newSong)
+                newSong
+            }
+            refreshSongsList()
+            onResult(clonedSong)
+        }
+    }
+
     fun updateLocalSong(
         songId: String,
         title: String,
@@ -116,6 +157,8 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
             val updatedSong = withContext(Dispatchers.IO) {
                 val sanitizedSong = buildLocalSong(songId, title, lyrics, lyricsPaged, localTabUri)
                 val existingSong = songDao.getSongById(songId)
+                val preservedRemoteTab = existingSong?.tabfilename?.takeIf { tab -> !LocalTabUtils.isLocalTab(tab) }
+                val mergedTabFilename = sanitizedSong.tabfilename ?: preservedRemoteTab
                 val mergedSong = existingSong?.copy(
                     title = sanitizedSong.title,
                     lyrics = sanitizedSong.lyrics,
@@ -123,12 +166,12 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
                     lyricsPaged = sanitizedSong.lyricsPaged,
                     author = sanitizedSong.author,
                     keywords = sanitizedSong.keywords,
-                    tabfilename = sanitizedSong.tabfilename,
+                    tabfilename = mergedTabFilename,
                     title_normalized = sanitizedSong.title_normalized,
                     lyrics_normalized = sanitizedSong.lyrics_normalized,
                     author_normalized = sanitizedSong.author_normalized,
                     keywords_normalized = sanitizedSong.keywords_normalized
-                ) ?: sanitizedSong
+                ) ?: sanitizedSong.copy(tabfilename = mergedTabFilename)
                 songDao.insertSong(mergedSong)
                 mergedSong
             }
