@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -64,6 +66,8 @@ fun LocalSongDialog(
     val sanitizedInitialLongLyrics = remember(initialLongLyrics) {
         initialLongLyrics?.replace("\r\n", "\n")?.trim() ?: ""
     }
+
+    val scrollState = rememberScrollState()
 
     val openDocumentLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
@@ -119,7 +123,11 @@ fun LocalSongDialog(
             Text(text = stringResource(id = if (isEditing) R.string.edit_song else R.string.add_song))
         },
         text = {
-            Column(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(scrollState)
+            ) {
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
