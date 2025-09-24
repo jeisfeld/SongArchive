@@ -37,6 +37,7 @@ fun LocalSongDialog(
     initialLyrics: String = "",
     initialLyricsPaged: String = "",
     initialTabFilename: String? = null,
+    initialLongLyrics: String? = null,
     onDismiss: () -> Unit,
     onConfirm: (String, String, String?, String?) -> Unit,
     onDelete: (() -> Unit)? = null,
@@ -48,9 +49,21 @@ fun LocalSongDialog(
     val initialLocalTabUri = remember(initialTabFilename) { LocalTabUtils.decodeLocalTab(initialTabFilename) }
     var selectedTabUri by remember(initialTabFilename) { mutableStateOf(initialLocalTabUri) }
     var selectedTabDisplayName by remember(initialTabFilename) {
-        mutableStateOf(initialLocalTabUri?.let { LocalTabUtils.getDisplayName(context, it) } ?: "")
+        mutableStateOf(
+            initialLocalTabUri?.let { LocalTabUtils.getDisplayName(context, it) }
+                ?: initialTabFilename?.takeIf { it.isNotBlank() }?.let { filename ->
+                    val afterSlash = filename.substringAfterLast('/', filename)
+                    val afterBackslash = afterSlash.substringAfterLast('\\', afterSlash)
+                    afterBackslash.ifBlank { filename }
+                }
+                ?: ""
+        )
     }
     var showDeleteConfirmation by remember { mutableStateOf(false) }
+
+    val sanitizedInitialLongLyrics = remember(initialLongLyrics) {
+        initialLongLyrics?.replace("\r\n", "\n")?.trim() ?: ""
+    }
 
     val openDocumentLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
@@ -125,6 +138,19 @@ fun LocalSongDialog(
                     minLines = 4,
                 )
                 Spacer(modifier = Modifier.height(12.dp))
+                if (sanitizedInitialLongLyrics.isNotEmpty()) {
+                    OutlinedTextField(
+                        value = sanitizedInitialLongLyrics,
+                        onValueChange = {},
+                        label = { Text(text = stringResource(id = R.string.song_lyrics_long)) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(160.dp),
+                        minLines = 4,
+                        readOnly = true,
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
                 OutlinedTextField(
                     value = lyricsPaged,
                     onValueChange = { lyricsPaged = it },

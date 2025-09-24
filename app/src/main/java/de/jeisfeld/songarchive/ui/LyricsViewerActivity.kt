@@ -191,6 +191,8 @@ fun LyricsViewerScreen(
     var screenHeight by remember { mutableStateOf(with(density) { localView.height.toDp().value }) }
     var showButtons by remember { mutableStateOf(displayStyle == DisplayStyle.STANDARD || displayStyle == DisplayStyle.LOCAL_PREVIEW) }
     var showEditDialog by remember { mutableStateOf(false) }
+    var showCloneDialog by remember { mutableStateOf(false) }
+    var songForClone by remember { mutableStateOf<Song?>(null) }
 
     LaunchedEffect(
         lyricsPageOverride,
@@ -309,13 +311,60 @@ fun LyricsViewerScreen(
                 onShowMeaningChange = { },
                 onDisplayLyricsPage = { lyricsPageOverride = it },
                 onClose = onClose,
-                onEditLocalSong = if (currentSong?.id?.startsWith("Y") == true && viewModel != null) {
-                    { _ -> showEditDialog = true }
+                onEditSong = if (viewModel != null && currentSong != null) {
+                    { selectedSong ->
+                        if (selectedSong.id.startsWith("Y")) {
+                            songForClone = null
+                            showEditDialog = true
+                        } else {
+                            songForClone = selectedSong
+                            showCloneDialog = true
+                        }
+                    }
                 } else {
                     null
                 }
             )
         }
+    }
+
+    if (showCloneDialog && songForClone != null && !songForClone!!.id.startsWith("Y") && viewModel != null) {
+        val cloneSource = songForClone!!
+        val sanitizedLongLyrics = cloneSource.lyrics.replace("|", "").replace("\r\n", "\n").trim()
+        val sanitizedShortLyrics = cloneSource.lyricsShort?.replace("|", "")?.replace("\r\n", "\n")?.trim()
+        val initialEditableLyrics = sanitizedShortLyrics?.takeIf { it.isNotEmpty() } ?: sanitizedLongLyrics
+        val sanitizedLyricsPaged = cloneSource.lyricsPaged?.replace("\r\n", "\n")?.trim() ?: ""
+
+        LocalSongDialog(
+            isEditing = true,
+            initialTitle = cloneSource.title,
+            initialLyrics = initialEditableLyrics,
+            initialLyricsPaged = sanitizedLyricsPaged,
+            initialTabFilename = cloneSource.tabfilename,
+            initialLongLyrics = sanitizedLongLyrics,
+            onDismiss = {
+                showCloneDialog = false
+                songForClone = null
+            },
+            onConfirm = { updatedTitle, updatedLyrics, updatedLyricsPaged, updatedTabUri ->
+                viewModel.cloneSongToLocal(
+                    cloneSource,
+                    updatedTitle,
+                    updatedLyrics,
+                    updatedLyricsPaged,
+                    updatedTabUri
+                ) { newSong ->
+                    currentSong = newSong
+                    val sanitizedLyrics = newSong.lyrics.replace("|", "").trim()
+                    val sanitizedShort = newSong.lyricsShort?.replace("|", "")?.trim()
+                    lyricsState = sanitizedLyrics.ifBlank { " " }
+                    lyricsShortState = sanitizedShort?.takeIf { it.isNotEmpty() } ?: sanitizedLyrics.ifBlank { " " }
+                    lyricsPageOverride = null
+                    showCloneDialog = false
+                    songForClone = null
+                }
+            }
+        )
     }
 
     if (showEditDialog && currentSong?.id?.startsWith("Y") == true && viewModel != null) {
