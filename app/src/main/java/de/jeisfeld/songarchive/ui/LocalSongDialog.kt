@@ -49,7 +49,10 @@ fun LocalSongDialog(
     var lyricsPaged by remember { mutableStateOf(TextFieldValue(initialLyricsPaged)) }
     val context = LocalContext.current
     val initialLocalTabUri = remember(initialTabFilename) { LocalTabUtils.decodeLocalTab(initialTabFilename) }
-    var selectedTabUri by remember(initialTabFilename) { mutableStateOf(initialLocalTabUri) }
+    val allowTabSelection = remember(initialTabFilename) {
+        initialTabFilename.isNullOrBlank() || LocalTabUtils.isLocalTab(initialTabFilename)
+    }
+    var selectedTabUri by remember(initialTabFilename) { mutableStateOf(initialLocalTabUri.takeIf { allowTabSelection }) }
     var selectedTabDisplayName by remember(initialTabFilename) {
         mutableStateOf(
             initialLocalTabUri?.let { LocalTabUtils.getDisplayName(context, it) }
@@ -81,8 +84,8 @@ fun LocalSongDialog(
         }
     }
 
-    LaunchedEffect(initialLocalTabUri) {
-        if (initialLocalTabUri != null && selectedTabDisplayName.isEmpty()) {
+    LaunchedEffect(initialLocalTabUri, allowTabSelection) {
+        if (allowTabSelection && initialLocalTabUri != null && selectedTabDisplayName.isEmpty()) {
             selectedTabDisplayName = LocalTabUtils.getDisplayName(context, initialLocalTabUri) ?: ""
         }
     }
@@ -168,39 +171,41 @@ fun LocalSongDialog(
                         .height(120.dp),
                     minLines = 3,
                 )
-                Spacer(modifier = Modifier.height(12.dp))
-                OutlinedTextField(
-                    value = selectedTabDisplayName,
-                    onValueChange = {},
-                    label = { Text(text = stringResource(id = R.string.song_tab_file)) },
-                    placeholder = { Text(text = stringResource(id = R.string.no_tab_file_selected)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    readOnly = true,
-                    singleLine = true,
-                )
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (selectedTabUri != null) {
+                if (allowTabSelection) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = selectedTabDisplayName,
+                        onValueChange = {},
+                        label = { Text(text = stringResource(id = R.string.song_tab_file)) },
+                        placeholder = { Text(text = stringResource(id = R.string.no_tab_file_selected)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        readOnly = true,
+                        singleLine = true,
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (selectedTabUri != null) {
+                            TextButton(
+                                onClick = {
+                                    selectedTabUri = null
+                                    selectedTabDisplayName = ""
+                                },
+                                contentPadding = buttonContentPadding
+                            ) {
+                                Text(text = stringResource(id = R.string.remove_tab_file))
+                            }
+                        }
                         TextButton(
-                            onClick = {
-                                selectedTabUri = null
-                                selectedTabDisplayName = ""
-                            },
+                            onClick = { openDocumentLauncher.launch(arrayOf("image/*")) },
                             contentPadding = buttonContentPadding
                         ) {
-                            Text(text = stringResource(id = R.string.remove_tab_file))
+                            Text(text = stringResource(id = R.string.select_tab_file))
                         }
-                    }
-                    TextButton(
-                        onClick = { openDocumentLauncher.launch(arrayOf("image/*")) },
-                        contentPadding = buttonContentPadding
-                    ) {
-                        Text(text = stringResource(id = R.string.select_tab_file))
                     }
                 }
             }
@@ -227,7 +232,8 @@ fun LocalSongDialog(
                 }
                 TextButton(
                     onClick = {
-                        onConfirm(trimmedTitle, trimmedLyrics, trimmedLyricsPaged, selectedTabUri)
+                        val tabUriForSaving = if (allowTabSelection) selectedTabUri else null
+                        onConfirm(trimmedTitle, trimmedLyrics, trimmedLyricsPaged, tabUriForSaving)
                     },
                     enabled = trimmedTitle.isNotEmpty() && trimmedLyrics.isNotEmpty(),
                     contentPadding = buttonContentPadding
