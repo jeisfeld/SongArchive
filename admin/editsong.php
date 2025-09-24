@@ -2256,7 +2256,7 @@ h1 {
             var authorSuggestionsContainer = document.getElementById('author-suggestions');
 
             if (authorInput && authorSuggestionsContainer && authorSuggestions.length) {
-                var MAX_AUTHOR_SUGGESTIONS = 12;
+                var MAX_AUTHOR_SUGGESTIONS = 50;
                 var filteredAuthorSuggestions = [];
                 var highlightedAuthorSuggestionIndex = -1;
                 var latestAuthorSegmentInfo = null;
