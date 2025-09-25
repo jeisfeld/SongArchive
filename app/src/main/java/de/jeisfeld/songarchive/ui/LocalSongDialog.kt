@@ -1,5 +1,6 @@
 package de.jeisfeld.songarchive.ui
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -20,11 +21,11 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,11 +33,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
-import com.google.mlkit.vision.common.InputImage
-import com.google.mlkit.vision.text.TextRecognition
-import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import de.jeisfeld.songarchive.firebase.FirebaseCloudVisionClient
 import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.util.LocalTabUtils
+import java.util.Locale
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun LocalSongDialog(
@@ -72,10 +75,8 @@ fun LocalSongDialog(
     }
     var showDeleteConfirmation by remember { mutableStateOf(false) }
 
-    val textRecognizer = remember { TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS) }
-    DisposableEffect(textRecognizer) {
-        onDispose { textRecognizer.close() }
-    }
+    val coroutineScope = rememberCoroutineScope()
+    val cloudVisionClient = remember { FirebaseCloudVisionClient() }
     var isOcrInProgress by remember { mutableStateOf(false) }
     var ocrStatusResId by remember { mutableStateOf<Int?>(null) }
 
@@ -83,21 +84,19 @@ fun LocalSongDialog(
         if (lyrics.text.isNotBlank() || isOcrInProgress) {
             return
         }
-        val inputImage = try {
-            InputImage.fromFilePath(context, Uri.parse(uriString))
-        } catch (e: Exception) {
-            ocrStatusResId = R.string.ocr_status_failed
-            return
-        }
-        isOcrInProgress = true
-        ocrStatusResId = R.string.ocr_status_in_progress
-        textRecognizer
-            .process(inputImage)
-            .addOnSuccessListener { visionText ->
+        val uri = Uri.parse(uriString)
+        coroutineScope.launch {
+            isOcrInProgress = true
+            ocrStatusResId = R.string.ocr_status_in_progress
+            try {
+                val recognizedText = withContext(Dispatchers.IO) {
+                    val imageBytes = readImageBytes(context, uri)
+                    cloudVisionClient.recognizeHandwrittenText(imageBytes)
+                }
                 if (lyrics.text.isBlank()) {
-                    val recognizedText = visionText.text.trim()
-                    ocrStatusResId = if (recognizedText.isNotEmpty()) {
-                        lyrics = TextFieldValue(recognizedText)
+                    val filteredText = recognizedText?.let(::filterChordOnlyLines)?.trim().orEmpty()
+                    ocrStatusResId = if (filteredText.isNotEmpty()) {
+                        lyrics = TextFieldValue(filteredText)
                         R.string.ocr_status_success
                     } else {
                         R.string.ocr_status_no_text
@@ -105,13 +104,14 @@ fun LocalSongDialog(
                 } else {
                     ocrStatusResId = null
                 }
-            }
-            .addOnFailureListener {
+            } catch (e: FirebaseCloudVisionClient.MissingApiKeyException) {
+                ocrStatusResId = R.string.ocr_status_missing_api_key
+            } catch (e: Exception) {
                 ocrStatusResId = R.string.ocr_status_failed
-            }
-            .addOnCompleteListener {
+            } finally {
                 isOcrInProgress = false
             }
+        }
     }
 
     val sanitizedInitialLongLyrics = remember(initialLongLyrics) {
@@ -306,3 +306,108 @@ fun LocalSongDialog(
         }
     )
 }
+
+private fun readImageBytes(context: Context, uri: Uri): ByteArray {
+    return context.contentResolver.openInputStream(uri)?.use { inputStream ->
+        inputStream.readBytes()
+    } ?: throw IllegalStateException("Unable to read image bytes for $uri")
+}
+
+private fun filterChordOnlyLines(text: String): String {
+    val filteredLines = text
+        .lineSequence()
+        .filterNot { looksLikeChordLine(it) }
+        .toList()
+    return filteredLines.joinToString(separator = "\n")
+}
+
+private fun looksLikeChordLine(line: String): Boolean {
+    val trimmed = line.trim()
+    if (trimmed.isEmpty()) {
+        return false
+    }
+    val tokens = trimmed.split(Regex("\\s+"))
+    var consideredTokens = 0
+    var chordTokens = 0
+    for (token in tokens) {
+        val sanitized = sanitizeChordToken(token)
+        if (sanitized.isEmpty()) {
+            continue
+        }
+        consideredTokens++
+        if (isChordToken(sanitized)) {
+            chordTokens++
+        } else {
+            return false
+        }
+    }
+    return consideredTokens > 0 && chordTokens == consideredTokens
+}
+
+private fun sanitizeChordToken(token: String): String {
+    val trimmed = token.trim { it.isWhitespace() || it in CHORD_BOUNDARY_CHARS }
+    if (trimmed.isEmpty()) {
+        return ""
+    }
+    return buildString(trimmed.length) {
+        for (character in trimmed) {
+            if (character !in CHORD_IGNORED_CHARS) {
+                append(character)
+            }
+        }
+    }
+}
+
+private fun isChordToken(token: String): Boolean {
+    val normalized = token.uppercase(Locale.ROOT)
+    if (normalized.isEmpty()) {
+        return false
+    }
+    val parts = normalized.split('/')
+    if (parts.isEmpty() || parts.size > 2) {
+        return false
+    }
+    val mainPart = parts[0]
+    if (!isChordRoot(mainPart)) {
+        return false
+    }
+    if (parts.size == 2) {
+        val bassPart = parts[1]
+        if (bassPart.isNotBlank() && !isChordRoot(bassPart)) {
+            return false
+        }
+    }
+    return true
+}
+
+private fun isChordRoot(part: String): Boolean {
+    if (part.isEmpty()) {
+        return false
+    }
+    var index = 0
+    val firstCharacter = part[index]
+    if (firstCharacter !in CHORD_ROOT_LETTERS) {
+        return false
+    }
+    index++
+    if (index < part.length) {
+        when {
+            part.startsWith("#", index) -> index += 1
+            part.startsWith("B", index) -> index += 1
+            part.startsWith("IS", index) -> index += 2
+            part.startsWith("ES", index) -> index += 2
+        }
+    }
+    if (index >= part.length) {
+        return true
+    }
+    val suffix = part.substring(index)
+    return suffix.all { character ->
+        character.isDigit() || character in CHORD_SUFFIX_ALLOWED_CHARS
+    }
+}
+
+private val CHORD_BOUNDARY_CHARS = setOf('(', ')', '[', ']', '{', '}', '"', '\'', '“', '”', '‘', '’', '<', '>', '«', '»')
+private val CHORD_IGNORED_CHARS = setOf('.', ',', ';', ':', '!', '?', '…')
+private val CHORD_ROOT_LETTERS = setOf('A', 'B', 'C', 'D', 'E', 'F', 'G', 'H')
+private val CHORD_SUFFIX_ALLOWED_CHARS = setOf('M', 'A', 'J', 'O', 'R', 'I', 'N', 'U', 'S', 'D', 'L', 'G', '#', 'B', '+', 'T')

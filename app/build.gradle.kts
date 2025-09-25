@@ -18,6 +18,7 @@ android {
         versionName = "1.2.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "FIREBASE_CLOUD_VISION_API_KEY", "\"\"")
     }
 
     buildTypes {
@@ -37,6 +38,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -75,6 +77,6 @@ dependencies {
     // Nearby Connection
     implementation (libs.play.services.nearby)
 
-    // ML Kit OCR
-    implementation(libs.mlkit.text.recognition)
+    // Coroutines
+    implementation(libs.kotlinx.coroutines.android)
 }
