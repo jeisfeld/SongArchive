@@ -11,7 +11,7 @@ import retrofit2.http.POST
 import retrofit2.http.Query
 import java.util.concurrent.TimeUnit
 
-class FirebaseCloudVisionClient(
+internal class FirebaseCloudVisionClient(
     private val service: FirebaseCloudVisionService = defaultService,
     private val apiKey: String = BuildConfig.FIREBASE_CLOUD_VISION_API_KEY,
 ) {
@@ -66,41 +66,41 @@ internal interface FirebaseCloudVisionService {
     ): CloudVisionResponse
 }
 
-private data class CloudVisionRequest(
+internal data class CloudVisionRequest(
     val requests: List<AnnotateImageRequest>,
 )
 
-private data class AnnotateImageRequest(
+internal data class AnnotateImageRequest(
     val image: CloudVisionImage,
     val features: List<CloudVisionFeature>,
     @SerializedName("imageContext")
     val imageContext: CloudVisionImageContext? = null,
 )
 
-private data class CloudVisionImage(
+internal data class CloudVisionImage(
     val content: String,
 )
 
-private data class CloudVisionFeature(
+internal data class CloudVisionFeature(
     val type: String,
     @SerializedName("maxResults")
     val maxResults: Int? = null,
 )
 
-private data class CloudVisionImageContext(
+internal data class CloudVisionImageContext(
     @SerializedName("languageHints")
     val languageHints: List<String>? = null,
 )
 
-private data class CloudVisionResponse(
+internal data class CloudVisionResponse(
     val responses: List<AnnotateImageResponse> = emptyList(),
 )
 
-private data class AnnotateImageResponse(
+internal data class AnnotateImageResponse(
     @SerializedName("fullTextAnnotation")
     val fullTextAnnotation: FullTextAnnotation? = null,
 )
 
-private data class FullTextAnnotation(
+internal data class FullTextAnnotation(
     val text: String? = null,
 )
