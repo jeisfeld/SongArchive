@@ -23,6 +23,10 @@
     <string name="select_tab_file">Akkorddatei\nauswählen</string>
     <string name="remove_tab_file">Akkorddatei\nentfernen</string>
     <string name="no_tab_file_selected">Keine Akkorddatei ausgewählt</string>
+    <string name="ocr_status_in_progress">Scanne Text aus Bild…</string>
+    <string name="ocr_status_success">Liedtext aus Bild gefüllt</string>
+    <string name="ocr_status_no_text">Kein Text im Bild gefunden</string>
+    <string name="ocr_status_failed">Konnte Text nicht aus Bild extrahieren</string>
     <string name="delete_song">Lied löschen</string>
     <string name="confirm_delete_song">Dieses Lied löschen?</string>
 

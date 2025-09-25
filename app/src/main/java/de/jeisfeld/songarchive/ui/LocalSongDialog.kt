@@ -1,6 +1,7 @@
 package de.jeisfeld.songarchive.ui
 
 import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -14,10 +15,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -29,6 +32,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.text.TextRecognition
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.util.LocalTabUtils
 
@@ -66,6 +72,48 @@ fun LocalSongDialog(
     }
     var showDeleteConfirmation by remember { mutableStateOf(false) }
 
+    val textRecognizer = remember { TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS) }
+    DisposableEffect(textRecognizer) {
+        onDispose { textRecognizer.close() }
+    }
+    var isOcrInProgress by remember { mutableStateOf(false) }
+    var ocrStatusResId by remember { mutableStateOf<Int?>(null) }
+
+    fun startOcrIfNeeded(uriString: String) {
+        if (lyrics.text.isNotBlank() || isOcrInProgress) {
+            return
+        }
+        val inputImage = try {
+            InputImage.fromFilePath(context, Uri.parse(uriString))
+        } catch (e: Exception) {
+            ocrStatusResId = R.string.ocr_status_failed
+            return
+        }
+        isOcrInProgress = true
+        ocrStatusResId = R.string.ocr_status_in_progress
+        textRecognizer
+            .process(inputImage)
+            .addOnSuccessListener { visionText ->
+                if (lyrics.text.isBlank()) {
+                    val recognizedText = visionText.text.trim()
+                    ocrStatusResId = if (recognizedText.isNotEmpty()) {
+                        lyrics = TextFieldValue(recognizedText)
+                        R.string.ocr_status_success
+                    } else {
+                        R.string.ocr_status_no_text
+                    }
+                } else {
+                    ocrStatusResId = null
+                }
+            }
+            .addOnFailureListener {
+                ocrStatusResId = R.string.ocr_status_failed
+            }
+            .addOnCompleteListener {
+                isOcrInProgress = false
+            }
+    }
+
     val sanitizedInitialLongLyrics = remember(initialLongLyrics) {
         initialLongLyrics?.replace("\r\n", "\n")?.trim() ?: ""
     }
@@ -79,8 +127,11 @@ fun LocalSongDialog(
             } catch (e: SecurityException) {
                 // Ignore if we cannot persist the permission; best effort only
             }
-            selectedTabUri = uri.toString()
-            selectedTabDisplayName = LocalTabUtils.getDisplayName(context, uri.toString()) ?: uri.lastPathSegment.orEmpty()
+            val uriString = uri.toString()
+            selectedTabUri = uriString
+            selectedTabDisplayName = LocalTabUtils.getDisplayName(context, uriString) ?: uri.lastPathSegment.orEmpty()
+            ocrStatusResId = null
+            startOcrIfNeeded(uriString)
         }
     }
 
@@ -194,6 +245,7 @@ fun LocalSongDialog(
                                 onClick = {
                                     selectedTabUri = null
                                     selectedTabDisplayName = ""
+                                    ocrStatusResId = null
                                 },
                                 contentPadding = buttonContentPadding
                             ) {
@@ -206,6 +258,16 @@ fun LocalSongDialog(
                         ) {
                             Text(text = stringResource(id = R.string.select_tab_file))
                         }
+                    }
+                    if (isOcrInProgress || ocrStatusResId != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = stringResource(
+                                id = ocrStatusResId ?: R.string.ocr_status_in_progress
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }
