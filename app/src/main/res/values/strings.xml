@@ -21,6 +21,9 @@
     <string name="song_tab_file">Chord file</string>
     <string name="select_tab_file">Select chord file</string>
     <string name="remove_tab_file">Remove chord file</string>
+    <string name="capture_tab_photo">Take photo</string>
+    <string name="captured_tab_photo_default_name">New photo</string>
+    <string name="camera_launch_failed">Couldn’t open camera</string>
     <string name="no_tab_file_selected">No chord file selected</string>
     <string name="ocr_status_in_progress">Scanning text from image…</string>
     <string name="ocr_status_success">Lyrics filled from image</string>
