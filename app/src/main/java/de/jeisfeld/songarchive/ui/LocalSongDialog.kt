@@ -1,8 +1,12 @@
 package de.jeisfeld.songarchive.ui
 
+import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -33,13 +37,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
-import de.jeisfeld.songarchive.firebase.FirebaseCloudVisionClient
 import de.jeisfeld.songarchive.R
+import de.jeisfeld.songarchive.firebase.FirebaseCloudVisionClient
 import de.jeisfeld.songarchive.util.LocalTabUtils
-import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Locale
+import androidx.core.net.toUri
 
 @Composable
 fun LocalSongDialog(
@@ -74,6 +79,7 @@ fun LocalSongDialog(
         )
     }
     var showDeleteConfirmation by remember { mutableStateOf(false) }
+    var pendingCameraUri by remember { mutableStateOf<Uri?>(null) }
 
     val coroutineScope = rememberCoroutineScope()
     val cloudVisionClient = remember { FirebaseCloudVisionClient() }
@@ -84,7 +90,7 @@ fun LocalSongDialog(
         if (lyrics.text.isNotBlank() || isOcrInProgress) {
             return
         }
-        val uri = Uri.parse(uriString)
+        val uri = uriString.toUri()
         coroutineScope.launch {
             isOcrInProgress = true
             ocrStatusResId = R.string.ocr_status_in_progress
@@ -119,6 +125,27 @@ fun LocalSongDialog(
     }
 
     val scrollState = rememberScrollState()
+
+    val takePictureLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
+            val capturedUri = pendingCameraUri
+            if (success && capturedUri != null) {
+                val uriString = capturedUri.toString()
+                selectedTabUri = uriString
+                selectedTabDisplayName =
+                    LocalTabUtils.getDisplayName(context, uriString)
+                        ?: capturedUri.lastPathSegment.orEmpty()
+                ocrStatusResId = null
+                startOcrIfNeeded(uriString)
+            } else if (!success && capturedUri != null) {
+                try {
+                    context.contentResolver.delete(capturedUri, null, null)
+                } catch (_: SecurityException) {
+                    // Ignore if we cannot delete the placeholder entry
+                }
+            }
+            pendingCameraUri = null
+        }
 
     val openDocumentLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
@@ -251,6 +278,22 @@ fun LocalSongDialog(
                             ) {
                                 Text(text = stringResource(id = R.string.remove_tab_file))
                             }
+                        } else {
+                            TextButton(
+                                onClick = {
+                                    val captureUri = createImageCaptureUri(context)
+                                    if (captureUri != null) {
+                                        pendingCameraUri = captureUri
+                                        ocrStatusResId = null
+                                        takePictureLauncher.launch(captureUri)
+                                    } else {
+                                        ocrStatusResId = R.string.ocr_status_failed
+                                    }
+                                },
+                                contentPadding = buttonContentPadding
+                            ) {
+                                Text(text = stringResource(id = R.string.capture_tab_photo))
+                            }
                         }
                         TextButton(
                             onClick = { openDocumentLauncher.launch(arrayOf("image/*")) },
@@ -311,6 +354,20 @@ private fun readImageBytes(context: Context, uri: Uri): ByteArray {
     return context.contentResolver.openInputStream(uri)?.use { inputStream ->
         inputStream.readBytes()
     } ?: throw IllegalStateException("Unable to read image bytes for $uri")
+}
+
+private fun createImageCaptureUri(context: Context): Uri? {
+    val contentValues = ContentValues().apply {
+        put(MediaStore.MediaColumns.DISPLAY_NAME, "SongArchive_${System.currentTimeMillis()}.jpg")
+        put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            put(
+                MediaStore.Images.Media.RELATIVE_PATH,
+                Environment.DIRECTORY_PICTURES + "/SongArchive"
+            )
+        }
+    }
+    return context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
 }
 
 private fun filterChordOnlyLines(text: String): String {
