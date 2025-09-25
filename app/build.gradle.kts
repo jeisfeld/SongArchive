@@ -74,4 +74,7 @@ dependencies {
 
     // Nearby Connection
     implementation (libs.play.services.nearby)
+
+    // ML Kit OCR
+    implementation(libs.mlkit.text.recognition)
 }

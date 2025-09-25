@@ -22,6 +22,10 @@
     <string name="select_tab_file">Select chord file</string>
     <string name="remove_tab_file">Remove chord file</string>
     <string name="no_tab_file_selected">No chord file selected</string>
+    <string name="ocr_status_in_progress">Scanning text from image…</string>
+    <string name="ocr_status_success">Lyrics filled from image</string>
+    <string name="ocr_status_no_text">No text detected in selected image</string>
+    <string name="ocr_status_failed">Couldn’t extract text from image</string>
     <string name="delete_song">Delete song</string>
     <string name="confirm_delete_song">Delete this song?</string>
 
