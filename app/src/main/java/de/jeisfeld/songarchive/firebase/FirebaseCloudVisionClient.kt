@@ -58,7 +58,7 @@ class FirebaseCloudVisionClient(
     }
 }
 
-private interface FirebaseCloudVisionService {
+internal interface FirebaseCloudVisionService {
     @POST("v1/images:annotate")
     suspend fun annotate(
         @Body request: CloudVisionRequest,

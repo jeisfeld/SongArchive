@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -5,6 +7,14 @@ plugins {
     alias(libs.plugins.ksp)
     id("kotlin-parcelize")
 }
+
+val firebasePropertiesFile = project.layout.projectDirectory.file("firebase.properties").asFile
+val firebaseProperties = Properties()
+if (firebasePropertiesFile.exists()) {
+    firebasePropertiesFile.inputStream().use(firebaseProperties::load)
+}
+val firebaseCloudVisionApiKey =
+    firebaseProperties.getProperty("firebaseCloudVisionApiKey", "")
 
 android {
     namespace = "de.jeisfeld.songarchive"
@@ -18,7 +28,10 @@ android {
         versionName = "1.2.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "FIREBASE_CLOUD_VISION_API_KEY", "\"\"")
+        val escapedApiKey = firebaseCloudVisionApiKey
+            .replace("\\", "\\\\")
+            .replace("\"", "\\\"")
+        buildConfigField("String", "FIREBASE_CLOUD_VISION_API_KEY", "\"$escapedApiKey\"")
     }
 
     buildTypes {

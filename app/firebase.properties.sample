@@ -1,0 +1,2 @@
+# Copy this file to firebase.properties and replace the value with your Firebase Cloud Vision API key.
+firebaseCloudVisionApiKey=
