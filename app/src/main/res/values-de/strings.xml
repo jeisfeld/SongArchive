@@ -22,6 +22,7 @@
     <string name="song_tab_file">Akkorddatei</string>
     <string name="select_tab_file">Akkorddatei\nauswählen</string>
     <string name="remove_tab_file">Akkorddatei\nentfernen</string>
+    <string name="capture_tab_photo">Foto aufnehmen</string>
     <string name="no_tab_file_selected">Keine Akkorddatei ausgewählt</string>
     <string name="ocr_status_in_progress">Scanne Text aus Bild…</string>
     <string name="ocr_status_success">Liedtext aus Bild gefüllt</string>

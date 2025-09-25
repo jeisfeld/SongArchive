@@ -277,21 +277,22 @@ fun LocalSongDialog(
                             ) {
                                 Text(text = stringResource(id = R.string.remove_tab_file))
                             }
-                        }
-                        TextButton(
-                            onClick = {
-                                val captureUri = createImageCaptureUri(context)
-                                if (captureUri != null) {
-                                    pendingCameraUri = captureUri
-                                    ocrStatusResId = null
-                                    takePictureLauncher.launch(captureUri)
-                                } else {
-                                    ocrStatusResId = R.string.ocr_status_failed
-                                }
-                            },
-                            contentPadding = buttonContentPadding
-                        ) {
-                            Text(text = stringResource(id = R.string.capture_tab_photo))
+                        } else {
+                            TextButton(
+                                onClick = {
+                                    val captureUri = createImageCaptureUri(context)
+                                    if (captureUri != null) {
+                                        pendingCameraUri = captureUri
+                                        ocrStatusResId = null
+                                        takePictureLauncher.launch(captureUri)
+                                    } else {
+                                        ocrStatusResId = R.string.ocr_status_failed
+                                    }
+                                },
+                                contentPadding = buttonContentPadding
+                            ) {
+                                Text(text = stringResource(id = R.string.capture_tab_photo))
+                            }
                         }
                         TextButton(
                             onClick = { openDocumentLauncher.launch(arrayOf("image/*")) },
