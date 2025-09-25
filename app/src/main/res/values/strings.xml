@@ -26,6 +26,7 @@
     <string name="ocr_status_success">Lyrics filled from image</string>
     <string name="ocr_status_no_text">No text detected in selected image</string>
     <string name="ocr_status_failed">Couldn’t extract text from image</string>
+    <string name="ocr_status_missing_api_key">Add Firebase Cloud Vision API key to enable OCR</string>
     <string name="delete_song">Delete song</string>
     <string name="confirm_delete_song">Delete this song?</string>
 
