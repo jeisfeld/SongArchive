@@ -6,11 +6,13 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.runtime.mutableStateOf
 import androidx.core.net.toUri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
+import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.sync.CheckUpdateResponse
 import de.jeisfeld.songarchive.sync.RetrofitClient
 import de.jeisfeld.songarchive.util.LocalTabUtils
@@ -22,6 +24,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import okhttp3.FormBody
 import okhttp3.Request
 import java.io.File
 import java.io.FileInputStream
@@ -176,6 +179,77 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
             }
             refreshSongsList()
             onResult(updatedSong)
+        }
+    }
+
+    fun uploadLocalSongToServer(
+        songId: String,
+        title: String,
+        lyrics: String,
+        lyricsPaged: String?,
+        localTabUri: String?,
+    ) {
+        if (!songId.startsWith("Y")) {
+            return
+        }
+        viewModelScope.launch {
+            val uploadSuccessful = withContext(Dispatchers.IO) {
+                try {
+                    val sanitizedSong = buildLocalSong(songId, title, lyrics, lyricsPaged, localTabUri)
+                    val existingSong = songDao.getSongById(songId)
+                    val preservedRemoteTab = existingSong?.tabfilename?.takeIf { tab -> !LocalTabUtils.isLocalTab(tab) }
+                    val mergedTabFilename = sanitizedSong.tabfilename ?: preservedRemoteTab
+                    val finalLyricsShort = sanitizedSong.lyricsShort ?: existingSong?.lyricsShort
+                    val finalLyricsPaged = sanitizedSong.lyricsPaged ?: existingSong?.lyricsPaged
+
+                    val formBodyBuilder = FormBody.Builder()
+                        .add("id", songId)
+                        .add("title", sanitizedSong.title)
+                        .add("lyrics", sanitizedSong.lyrics)
+
+                    finalLyricsShort?.takeIf { it.isNotBlank() }?.let {
+                        formBodyBuilder.add("lyrics_short", it)
+                    }
+                    finalLyricsPaged?.takeIf { it.isNotBlank() }?.let {
+                        formBodyBuilder.add("lyrics_paged", it)
+                    }
+                    mergedTabFilename?.takeIf { it.isNotBlank() && !LocalTabUtils.isLocalTab(it) }?.let {
+                        formBodyBuilder.add("tabfilename", it)
+                    }
+                    existingSong?.mp3filename?.takeIf { it.isNotBlank() }?.let {
+                        formBodyBuilder.add("mp3filename", it)
+                    }
+                    existingSong?.mp3filename2?.takeIf { it.isNotBlank() }?.let {
+                        formBodyBuilder.add("mp3filename2", it)
+                    }
+                    existingSong?.author?.takeIf { it.isNotBlank() }?.let {
+                        formBodyBuilder.add("author", it)
+                    }
+                    existingSong?.keywords?.takeIf { it.isNotBlank() }?.let {
+                        formBodyBuilder.add("keywords", it)
+                    }
+
+                    val request = Request.Builder()
+                        .url("https://heilsame-lieder.de/admin/addsong_external.php")
+                        .post(formBodyBuilder.build())
+                        .build()
+
+                    client.newCall(request).execute().use { response ->
+                        response.isSuccessful
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to upload song", e)
+                    false
+                }
+            }
+
+            val appContext = getApplication<Application>()
+            val messageResId = if (uploadSuccessful) {
+                R.string.upload_song_success
+            } else {
+                R.string.upload_song_failed
+            }
+            Toast.makeText(appContext, appContext.getString(messageResId), Toast.LENGTH_SHORT).show()
         }
     }
 

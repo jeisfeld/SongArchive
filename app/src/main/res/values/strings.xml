@@ -30,6 +30,11 @@
     <string name="ocr_status_missing_api_key">Add Firebase Cloud Vision API key to enable OCR</string>
     <string name="delete_song">Delete song</string>
     <string name="confirm_delete_song">Delete this song?</string>
+    <string name="upload">Upload</string>
+    <string name="upload_song_title">Upload song</string>
+    <string name="confirm_upload_song">Upload this song to the server?</string>
+    <string name="upload_song_success">Song uploaded to server.</string>
+    <string name="upload_song_failed">Song upload failed.</string>
 
     <string name="sync">Sync</string>
     <string name="network_connection">Network Connection</string>
