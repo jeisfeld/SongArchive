@@ -11,7 +11,7 @@ $includeHidden = filter_var ( $_GET ['include_hidden'] ?? false, FILTER_VALIDATE
 $applyIdFilter = ! $includeHidden;
 
 // Use regex to check if query is a valid ID (numeric OR numeric + single letter)
-$is_valid_id = preg_match ( '/^[X\d]\d{3}[a-zA-Z]?$/', $query );
+$is_valid_id = preg_match ( '/^[XY\d]\d{3}[a-zA-Z]?$/', $query );
 $isSingleLetter = preg_match ( '/^[a-zA-Z]$/', $query );
 function interpolateQuery($query, $params) {
 	foreach ( $params as $key => $value ) {
