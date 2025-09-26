@@ -1,0 +1,4 @@
+# Copy this file to auth.properties and replace the placeholder values
+# with the credentials for the basic authentication protected endpoints.
+basicAuthUsername=yourUsername
+basicAuthPassword=yourPassword
