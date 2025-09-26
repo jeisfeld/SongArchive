@@ -16,6 +16,14 @@ if (firebasePropertiesFile.exists()) {
 val firebaseCloudVisionApiKey =
     firebaseProperties.getProperty("firebaseCloudVisionApiKey", "")
 
+val authPropertiesFile = project.layout.projectDirectory.file("auth.properties").asFile
+val authProperties = Properties()
+if (authPropertiesFile.exists()) {
+    authPropertiesFile.inputStream().use(authProperties::load)
+}
+val basicAuthUsername = authProperties.getProperty("basicAuthUsername", "")
+val basicAuthPassword = authProperties.getProperty("basicAuthPassword", "")
+
 android {
     namespace = "de.jeisfeld.songarchive"
     compileSdk = 35
@@ -32,6 +40,15 @@ android {
             .replace("\\", "\\\\")
             .replace("\"", "\\\"")
         buildConfigField("String", "FIREBASE_CLOUD_VISION_API_KEY", "\"$escapedApiKey\"")
+
+        val escapedUsername = basicAuthUsername
+            .replace("\\", "\\\\")
+            .replace("\"", "\\\"")
+        val escapedPassword = basicAuthPassword
+            .replace("\\", "\\\\")
+            .replace("\"", "\\\"")
+        buildConfigField("String", "BASIC_AUTH_USERNAME", "\"$escapedUsername\"")
+        buildConfigField("String", "BASIC_AUTH_PASSWORD", "\"$escapedPassword\"")
     }
 
     buildTypes {

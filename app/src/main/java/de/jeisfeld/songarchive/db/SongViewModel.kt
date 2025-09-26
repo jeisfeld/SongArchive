@@ -22,7 +22,6 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
 import java.io.FileInputStream
@@ -37,7 +36,7 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
     private val favoriteDao = AppDatabase.getDatabase(application).favoriteListDao()
     private val _songs = MutableStateFlow<List<Song>>(emptyList())
     val songs: StateFlow<List<Song>> = _songs
-    private val client = OkHttpClient()
+    private val client = RetrofitClient.httpClient
     var searchQuery = mutableStateOf("")
     var initState = MutableLiveData<Int>(0)
     var checkUpdateResponse: CheckUpdateResponse? = null
@@ -257,7 +256,7 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
                 favoriteDao.insertSongs(existingFavorites.filter { validSongIds.contains(it.songId) })
 
                 // Step 2: Download and Extract Images
-                val success = downloadAndExtractZip(getApplication(), "https://heilsame-lieder.de/download_chords.php")
+                val success = downloadAndExtractZip(getApplication(), "https://heilsame-lieder.de/admin/download_chords.php")
 
                 if (success) {
                     if (recheckUpdate) {
