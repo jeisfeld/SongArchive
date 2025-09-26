@@ -9,6 +9,7 @@ import android.os.Environment
 import android.provider.MediaStore
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -33,10 +34,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.firebase.FirebaseCloudVisionClient
 import de.jeisfeld.songarchive.util.LocalTabUtils
@@ -44,7 +47,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
-import androidx.core.net.toUri
 
 @Composable
 fun LocalSongDialog(
@@ -57,6 +59,7 @@ fun LocalSongDialog(
     onDismiss: () -> Unit,
     onConfirm: (String, String, String?, String?) -> Unit,
     onDelete: (() -> Unit)? = null,
+    onUpload: ((String, String, String?, String?) -> Unit)? = null,
 ) {
     var title by remember { mutableStateOf(TextFieldValue(initialTitle)) }
     var lyrics by remember { mutableStateOf(TextFieldValue(initialLyrics)) }
@@ -79,6 +82,7 @@ fun LocalSongDialog(
         )
     }
     var showDeleteConfirmation by remember { mutableStateOf(false) }
+    var showUploadConfirmation by remember { mutableStateOf(false) }
     var pendingCameraUri by remember { mutableStateOf<Uri?>(null) }
 
     val coroutineScope = rememberCoroutineScope()
@@ -168,6 +172,12 @@ fun LocalSongDialog(
         }
     }
 
+    val trimmedTitle = title.text.trim()
+    val trimmedLyrics = lyrics.text.trim()
+    val trimmedLyricsPagedText = lyricsPaged.text.trim()
+    val trimmedLyricsPaged = trimmedLyricsPagedText.ifEmpty { null }
+    val tabUriForSaving = if (allowTabSelection) selectedTabUri else null
+
     if (showDeleteConfirmation) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirmation = false },
@@ -191,17 +201,59 @@ fun LocalSongDialog(
         )
     }
 
-    val trimmedTitle = title.text.trim()
-    val trimmedLyrics = lyrics.text.trim()
-    val trimmedLyricsPagedText = lyricsPaged.text.trim()
-    val trimmedLyricsPaged = trimmedLyricsPagedText.ifEmpty { null }
+    if (showUploadConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showUploadConfirmation = false },
+            title = { Text(text = stringResource(id = R.string.upload_song_title)) },
+            text = { Text(text = stringResource(id = R.string.confirm_upload_song)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showUploadConfirmation = false
+                        if (trimmedTitle.isNotEmpty() && trimmedLyrics.isNotEmpty()) {
+                            onUpload?.invoke(
+                                trimmedTitle,
+                                trimmedLyrics,
+                                trimmedLyricsPaged,
+                                tabUriForSaving
+                            )
+                        }
+                    }
+                ) {
+                    Text(text = stringResource(id = R.string.upload))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showUploadConfirmation = false }) {
+                    Text(text = stringResource(id = R.string.cancel))
+                }
+            }
+        )
+    }
 
     val buttonContentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(text = stringResource(id = if (isEditing) R.string.edit_song else R.string.add_song))
+            val titleText = stringResource(id = if (isEditing) R.string.edit_song else R.string.add_song)
+            val titleModifier = if (isEditing && onUpload != null) {
+                Modifier.pointerInput(trimmedTitle, trimmedLyrics) {
+                    detectTapGestures(
+                        onLongPress = {
+                            if (trimmedTitle.isNotEmpty() && trimmedLyrics.isNotEmpty()) {
+                                showUploadConfirmation = true
+                            }
+                        }
+                    )
+                }
+            } else {
+                Modifier
+            }
+            Text(
+                text = titleText,
+                modifier = titleModifier
+            )
         },
         text = {
             Column(
@@ -337,7 +389,6 @@ fun LocalSongDialog(
                 }
                 TextButton(
                     onClick = {
-                        val tabUriForSaving = if (allowTabSelection) selectedTabUri else null
                         onConfirm(trimmedTitle, trimmedLyrics, trimmedLyricsPaged, tabUriForSaving)
                     },
                     enabled = trimmedTitle.isNotEmpty() && trimmedLyrics.isNotEmpty(),

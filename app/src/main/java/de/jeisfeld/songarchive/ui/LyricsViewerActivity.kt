@@ -397,6 +397,15 @@ fun LyricsViewerScreen(
                     showEditDialog = false
                     onClose()
                 }
+            },
+            onUpload = { updatedTitle, updatedLyrics, updatedLyricsPaged, updatedTabUri ->
+                viewModel.uploadLocalSongToServer(
+                    currentSong!!.id,
+                    updatedTitle,
+                    updatedLyrics,
+                    updatedLyricsPaged,
+                    updatedTabUri
+                )
             }
         )
     }
