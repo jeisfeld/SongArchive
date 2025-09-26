@@ -73,7 +73,7 @@ function displayResult(songs) {
 
 		tableHTML += `
                         <tr>
-                                <td><a href="?q=${song.id}" class="unformatted-link" target="_blank">${song.id}</a></td>
+                                <td><a href="/?q=${song.id}" class="unformatted-link" target="_blank">${song.id}</a></td>
                                 <td>${song.title}</td>
                                 <td class="author-col">${formatAuthors(song.author || "")}</td>
                                 <td class="actions">

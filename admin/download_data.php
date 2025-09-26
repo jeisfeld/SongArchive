@@ -3,7 +3,7 @@ header("Content-Type: application/json");
 header("Access-Control-Allow-Origin: *"); 
 
 // Include database config
-require_once "db_config.php";
+require_once "../db_config.php";
 
 if ($conn->connect_error) {
     die(json_encode(["error" => "Database connection failed"]));
@@ -21,7 +21,7 @@ else {
 }
 
 // Fetch songs
-$sql_songs = "SELECT id, title, lyrics, lyrics_short, author, keywords, tabfilename, mp3filename, mp3filename2 FROM songs" . $sqladd . " ORDER BY id";
+$sql_songs = "SELECT id, title, lyrics, lyrics_short, lyrics_paged, author, keywords, tabfilename, mp3filename, mp3filename2 FROM songs" . $sqladd . " ORDER BY id";
 $result_songs = $conn->query($sql_songs);
 $songs = [];
 if ($result_songs->num_rows > 0) {

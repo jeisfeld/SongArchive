@@ -81,14 +81,14 @@ if ($is_valid_id) {
 if ($query === "*" || $query === "") {
 	$sql = "SELECT id, title, tabfilename, mp3filename, mp3filename2, author FROM songs";
 	if ($applyIdFilter) {
-		$sql .= " where id not like 'X%'";
+		$sql .= " where id NOT REGEXP '^[XY]'";
 	}
 	$sql .= " order by id";
 }
 else if ($query === "@@shuffle@@") {
 	$sql = "SELECT id, title, tabfilename, mp3filename, mp3filename2, author FROM songs";
 	if ($applyIdFilter) {
-		$sql .= " where id not like 'X%'";
+		$sql .= " where id NOT REGEXP '^[XY]'";
 	}
 	$sql .= " order by RAND()";
 }
@@ -97,7 +97,7 @@ else if ($isSingleLetter) {
             WHERE (title REGEXP CONCAT('(^| )', ?, '.*')
                OR lyrics REGEXP CONCAT('(^| )', ?, '.*'))";
 	if ($applyIdFilter) {
-		$sql .= " AND id not like 'X%'";
+		$sql .= " AND id NOT REGEXP '^[XY]'";
 	}
 	$sql .= "
             ORDER BY CASE WHEN title REGEXP CONCAT('(^| )', ?, '.*') THEN 1 ELSE 2 END, CAST(id AS UNSIGNED) ASC";
@@ -118,7 +118,7 @@ else {
 	$words = explode ( " ", $normalizedQuery );
 	$conditions = [ ];
 	if ($applyIdFilter) {
-		$conditions [] = "id not like 'X%'";
+		$conditions [] = "id NOT REGEXP '^[XY]'";
 	}
 	$titleMatch = [ ];
 	$lyricsMatch = [ ];
