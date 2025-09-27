@@ -503,7 +503,9 @@ function renderFilenameNote(array $matching, array $options, $prefix, $directory
 	}
 }
 
-$id = isset ( $_GET ['id'] ) ? trim ( $_GET ['id'] ) : '';
+$originalSongId = isset ( $_GET ['id'] ) ? trim ( ( string ) $_GET ['id'] ) : '';
+$id = $originalSongId;
+$requestedSongId = $id;
 $successMessage = '';
 $errorMessage = '';
 $updateSuccess = false;
@@ -511,9 +513,12 @@ $formValues = null;
 $requestedMeaningIds = [ ];
 $songMeaningIdsFromDatabase = [ ];
 $allMeanings = [ ];
+$canUpdateSongIdRequest = false;
 
 if ($_SERVER ['REQUEST_METHOD'] === 'POST') {
-	$id = isset ( $_POST ['id'] ) ? trim ( $_POST ['id'] ) : $id;
+	$originalSongId = isset ( $_POST ['original_id'] ) ? trim ( ( string ) $_POST ['original_id'] ) : $originalSongId;
+	$id = $originalSongId;
+	$requestedSongId = isset ( $_POST ['new_id'] ) ? trim ( ( string ) $_POST ['new_id'] ) : $requestedSongId;
 	$title = isset ( $_POST ['title'] ) ? trim ( $_POST ['title'] ) : '';
 	$lyrics = isset ( $_POST ['lyrics'] ) ? $_POST ['lyrics'] : '';
 	$lyricsShortInput = isset ( $_POST ['lyrics_short'] ) ? $_POST ['lyrics_short'] : '';
@@ -536,7 +541,7 @@ if ($_SERVER ['REQUEST_METHOD'] === 'POST') {
 	$requestedMeaningIds = parseMeaningIdsFromInput ( $meaningIdsInput );
 
 	$formValues = [ 
-			'id' => $id,
+			'id' => $requestedSongId,
 			'title' => $title,
 			'lyrics' => $lyrics,
 			'lyrics_short' => $lyricsShortInput,
@@ -553,52 +558,87 @@ if ($_SERVER ['REQUEST_METHOD'] === 'POST') {
 		$errorMessage = 'Missing song ID.';
 	}
 	else {
-		$updateSql = "UPDATE songs SET title = ?, lyrics = ?, lyrics_short = ?, lyrics_paged = ?, tabfilename = ?, mp3filename = ?, mp3filename2 = ?, author = ?, keywords = ? WHERE id = ?";
-		$updateStmt = $conn->prepare ( $updateSql );
+		$songFromDatabase = fetchSong ( $conn, $id );
 
-		if (! $updateStmt) {
-			error_log ( 'Failed to prepare update statement: ' . $conn->error );
-			$errorMessage = 'Unable to update the song at this time.';
+		if (! $songFromDatabase) {
+			$errorMessage = 'Song not found.';
 		}
 		else {
-			$updateStmt->bind_param ( 'ssssssssss', $title, $lyrics, $lyrics_short, $lyrics_paged, $tabfilename, $mp3filename, $mp3filename2, $author, $keywords, $id );
+			$songMeaningIdsFromDatabase = fetchSongMeaningIds ( $conn, $id );
 
-			$transactionStarted = $conn->begin_transaction ();
-			if (! $transactionStarted) {
-				error_log ( 'Failed to begin transaction for song update: ' . $conn->error );
+			$filenamesEmptyAfterUpdate = $tabfilename === null && $mp3filename === null && $mp3filename2 === null;
+			$noMeaningsLinkedInDatabase = empty ( $songMeaningIdsFromDatabase );
+
+			$canUpdateSongIdRequest = $filenamesEmptyAfterUpdate && $noMeaningsLinkedInDatabase;
+
+			if ($requestedSongId === '') {
+				$requestedSongId = $id;
 			}
 
-			if ($updateStmt->execute ()) {
-				$relationshipsUpdated = updateSongMeaningRelationships ( $conn, $id, $requestedMeaningIds );
+			$targetSongId = $id;
 
-				if ($relationshipsUpdated) {
-					if ($transactionStarted) {
-						$conn->commit ();
-					}
-
-					$updateSuccess = true;
-					$successMessage = 'Song updated successfully.';
+			if ($requestedSongId !== $id) {
+				if ($canUpdateSongIdRequest) {
+					$targetSongId = $requestedSongId;
 				}
 				else {
-					if ($transactionStarted) {
-						$conn->rollback ();
+					$errorMessage = 'The song ID cannot be changed while files or meanings are associated.';
+				}
+			}
+
+			if ($errorMessage === '') {
+				$updateSql = "UPDATE songs SET id = ?, title = ?, lyrics = ?, lyrics_short = ?, lyrics_paged = ?, tabfilename = ?, mp3filename = ?, mp3filename2 = ?, author = ?, keywords = ? WHERE id = ?";
+				$updateStmt = $conn->prepare ( $updateSql );
+
+				if (! $updateStmt) {
+					error_log ( 'Failed to prepare update statement: ' . $conn->error );
+					$errorMessage = 'Unable to update the song at this time.';
+				}
+				else {
+					$updateStmt->bind_param ( 'sssssssssss', $targetSongId, $title, $lyrics, $lyrics_short, $lyrics_paged, $tabfilename, $mp3filename, $mp3filename2, $author, $keywords, $id );
+
+					$transactionStarted = $conn->begin_transaction ();
+					if (! $transactionStarted) {
+						error_log ( 'Failed to begin transaction for song update: ' . $conn->error );
 					}
 
-					$successMessage = '';
-					$errorMessage = 'Failed to update song meanings.';
+					if ($updateStmt->execute ()) {
+						$relationshipsUpdated = updateSongMeaningRelationships ( $conn, $targetSongId, $requestedMeaningIds );
+
+						if ($relationshipsUpdated) {
+							if ($transactionStarted) {
+								$conn->commit ();
+							}
+
+							$updateSuccess = true;
+							$successMessage = 'Song updated successfully.';
+							$id = $targetSongId;
+							$requestedSongId = $targetSongId;
+							$songFromDatabase = fetchSong ( $conn, $id );
+							$songMeaningIdsFromDatabase = fetchSongMeaningIds ( $conn, $id );
+						}
+						else {
+							if ($transactionStarted) {
+								$conn->rollback ();
+							}
+
+							$successMessage = '';
+							$errorMessage = 'Failed to update song meanings.';
+						}
+					}
+					else {
+						error_log ( 'Failed to execute update statement: ' . $updateStmt->error );
+
+						if ($transactionStarted) {
+							$conn->rollback ();
+						}
+
+						$errorMessage = 'Failed to update the song.';
+					}
+
+					$updateStmt->close ();
 				}
 			}
-			else {
-				error_log ( 'Failed to execute update statement: ' . $updateStmt->error );
-
-				if ($transactionStarted) {
-					$conn->rollback ();
-				}
-
-				$errorMessage = 'Failed to update the song.';
-			}
-
-			$updateStmt->close ();
 		}
 	}
 }
@@ -743,13 +783,33 @@ $mp3FilenameOptions = $mp3Suggestions ['options'];
 $matchingMp3Filenames = $mp3Suggestions ['matching'];
 $mp3DirectoryExists = $mp3Suggestions ['directoryExists'];
 
-$songIdValue = '';
+$tabValueForIdCheck = null;
+$mp3ValueForIdCheck = null;
+$mp3Value2ForIdCheck = null;
+
+$attachmentSource = is_array ( $songFromDatabase ) ? $songFromDatabase : $songData;
+
+if (is_array ( $attachmentSource )) {
+	$tabValueForIdCheck = $attachmentSource ['tabfilename'] ?? null;
+	$mp3ValueForIdCheck = $attachmentSource ['mp3filename'] ?? null;
+	$mp3Value2ForIdCheck = $attachmentSource ['mp3filename2'] ?? null;
+}
+
+$tabValueForIdCheck = nullIfEmpty ( $tabValueForIdCheck );
+$mp3ValueForIdCheck = nullIfEmpty ( $mp3ValueForIdCheck );
+$mp3Value2ForIdCheck = nullIfEmpty ( $mp3Value2ForIdCheck );
+
+$idFieldIsEditable = $tabValueForIdCheck === null && $mp3ValueForIdCheck === null && $mp3Value2ForIdCheck === null && empty ( $songMeaningIdsFromDatabase );
+
+$songIdValueForDisplay = '';
 if (is_array ( $songData ) && array_key_exists ( 'id', $songData )) {
-	$songIdValue = ( string ) $songData ['id'];
+	$songIdValueForDisplay = ( string ) $songData ['id'];
 }
 else {
-	$songIdValue = ( string ) $id;
+	$songIdValueForDisplay = ( string ) $requestedSongId;
 }
+
+$currentSongIdValue = ( string ) $id;
 
 ?>
 <!DOCTYPE html>
@@ -757,7 +817,7 @@ else {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Edit Song <?php echo escapeHtml($songIdValue); ?></title>
+<title>Edit Song <?php echo escapeHtml($currentSongIdValue); ?></title>
 <style>
 body {
 	font-family: Arial, sans-serif;
@@ -1298,7 +1358,7 @@ h1 {
 </head>
 <body>
 	<div class="edit-song-container">
-		<h1>Edit Song <?php echo escapeHtml($songIdValue); ?></h1>
+		<h1>Edit Song <?php echo escapeHtml($currentSongIdValue); ?></h1>
 
         <?php if ($successMessage): ?>
             <div class="alert alert-success"><?php echo escapeHtml($successMessage); ?></div>
@@ -1310,12 +1370,17 @@ h1 {
 
         <?php if ($songData): ?>
             <form method="post" id="edit-song-form">
-			<input type="hidden" name="id" value="<?php echo escapeHtml($songIdValue); ?>">
+			<input type="hidden" name="original_id" value="<?php echo escapeHtml($currentSongIdValue); ?>">
 
 			<div class="form-group">
-				<label for="song-id">ID</label> <input type="text" id="song-id" class="readonly-input"
-					value="<?php echo escapeHtml($songIdValue); ?>" readonly>
-			</div>
+				<label for="song-id">ID</label> <input type="text" id="song-id" name="new_id"
+					class="song-id-input<?php echo $idFieldIsEditable ? '' : ' readonly-input'; ?>"
+					value="<?php echo escapeHtml($songIdValueForDisplay); ?>" <?php echo $idFieldIsEditable ? '' : 'readonly'; ?>>
+                                <?php if (! $idFieldIsEditable): ?>
+                                        <div class="form-note">The song ID can only be changed when no files or meanings
+					are linked.</div>
+                                <?php endif; ?>
+                        </div>
 
 			<div class="form-group">
 				<label for="song-title">Title</label> <input type="text" id="song-title" name="title"
@@ -1395,7 +1460,7 @@ h1 {
 
 			<div class="button-row">
 				<button type="button" class="cancel-btn" id="cancel-edit">Cancel</button>
-                    <?php if ($songData && $songIdValue !== ''): ?>
+                    <?php if ($songData && $currentSongIdValue !== ''): ?>
                         <button type="button" class="delete-btn" id="delete-song">Delete</button>
                     <?php endif; ?>
                     <button type="submit" class="save-btn">Save</button>
@@ -1462,7 +1527,7 @@ h1 {
 
             var deleteButton = document.getElementById('delete-song');
             if (deleteButton) {
-                var deleteUrl = <?php echo json_encode('deletesong.php?id=' . rawurlencode($songIdValue)); ?>;
+                var deleteUrl = <?php echo json_encode('deletesong.php?id=' . rawurlencode($currentSongIdValue)); ?>;
                 deleteButton.addEventListener('click', function() {
                     window.location.href = deleteUrl;
                 });
