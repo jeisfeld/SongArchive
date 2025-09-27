@@ -197,10 +197,10 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
                 try {
                     val sanitizedSong = buildLocalSong(songId, title, lyrics, lyricsPaged, localTabUri)
                     val existingSong = songDao.getSongById(songId)
-                    val preservedRemoteTab = existingSong?.tabfilename?.takeIf { tab -> !LocalTabUtils.isLocalTab(tab) }
-                    val mergedTabFilename = sanitizedSong.tabfilename ?: preservedRemoteTab
-                    val finalLyricsShort = sanitizedSong.lyricsShort ?: existingSong?.lyricsShort
-                    val finalLyricsPaged = sanitizedSong.lyricsPaged ?: existingSong?.lyricsPaged
+                    val finalLyricsShort = sanitizedSong.lyricsShort ?: existingSong?.lyricsShort?.trim()
+                    val finalLyricsPaged = sanitizedSong.lyricsPaged ?: existingSong?.lyricsPaged?.trim()
+                    val finalAuthor = existingSong?.author?.trim()
+                    val finalKeywords = existingSong?.keywords?.trim()
 
                     val formBodyBuilder = FormBody.Builder()
                         .add("id", songId)
@@ -213,19 +213,10 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
                     finalLyricsPaged?.takeIf { it.isNotBlank() }?.let {
                         formBodyBuilder.add("lyrics_paged", it)
                     }
-                    mergedTabFilename?.takeIf { it.isNotBlank() && !LocalTabUtils.isLocalTab(it) }?.let {
-                        formBodyBuilder.add("tabfilename", it)
-                    }
-                    existingSong?.mp3filename?.takeIf { it.isNotBlank() }?.let {
-                        formBodyBuilder.add("mp3filename", it)
-                    }
-                    existingSong?.mp3filename2?.takeIf { it.isNotBlank() }?.let {
-                        formBodyBuilder.add("mp3filename2", it)
-                    }
-                    existingSong?.author?.takeIf { it.isNotBlank() }?.let {
+                    finalAuthor?.takeIf { it.isNotBlank() }?.let {
                         formBodyBuilder.add("author", it)
                     }
-                    existingSong?.keywords?.takeIf { it.isNotBlank() }?.let {
+                    finalKeywords?.takeIf { it.isNotBlank() }?.let {
                         formBodyBuilder.add("keywords", it)
                     }
 

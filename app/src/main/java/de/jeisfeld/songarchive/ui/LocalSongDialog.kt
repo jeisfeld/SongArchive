@@ -60,6 +60,7 @@ fun LocalSongDialog(
     onConfirm: (String, String, String?, String?) -> Unit,
     onDelete: (() -> Unit)? = null,
     onUpload: ((String, String, String?, String?) -> Unit)? = null,
+    uploadEnabled: Boolean = false,
 ) {
     var title by remember { mutableStateOf(TextFieldValue(initialTitle)) }
     var lyrics by remember { mutableStateOf(TextFieldValue(initialLyrics)) }
@@ -201,7 +202,7 @@ fun LocalSongDialog(
         )
     }
 
-    if (showUploadConfirmation) {
+    if (showUploadConfirmation && uploadEnabled) {
         AlertDialog(
             onDismissRequest = { showUploadConfirmation = false },
             title = { Text(text = stringResource(id = R.string.upload_song_title)) },
@@ -210,7 +211,7 @@ fun LocalSongDialog(
                 TextButton(
                     onClick = {
                         showUploadConfirmation = false
-                        if (trimmedTitle.isNotEmpty() && trimmedLyrics.isNotEmpty()) {
+                        if (uploadEnabled && trimmedTitle.isNotEmpty() && trimmedLyrics.isNotEmpty()) {
                             onUpload?.invoke(
                                 trimmedTitle,
                                 trimmedLyrics,
@@ -237,11 +238,11 @@ fun LocalSongDialog(
         onDismissRequest = onDismiss,
         title = {
             val titleText = stringResource(id = if (isEditing) R.string.edit_song else R.string.add_song)
-            val titleModifier = if (isEditing && onUpload != null) {
-                Modifier.pointerInput(trimmedTitle, trimmedLyrics) {
+            val titleModifier = if (isEditing && onUpload != null && uploadEnabled) {
+                Modifier.pointerInput(trimmedTitle, trimmedLyrics, uploadEnabled) {
                     detectTapGestures(
                         onLongPress = {
-                            if (trimmedTitle.isNotEmpty() && trimmedLyrics.isNotEmpty()) {
+                            if (uploadEnabled && trimmedTitle.isNotEmpty() && trimmedLyrics.isNotEmpty()) {
                                 showUploadConfirmation = true
                             }
                         }
