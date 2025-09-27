@@ -31,6 +31,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -179,6 +180,16 @@ fun LocalSongDialog(
     val trimmedLyricsPaged = trimmedLyricsPagedText.ifEmpty { null }
     val tabUriForSaving = if (allowTabSelection) selectedTabUri else null
 
+    val currentUploadEnabled by rememberUpdatedState(uploadEnabled)
+    val currentTrimmedTitle by rememberUpdatedState(trimmedTitle)
+    val currentTrimmedLyrics by rememberUpdatedState(trimmedLyrics)
+
+    LaunchedEffect(uploadEnabled) {
+        if (!uploadEnabled) {
+            showUploadConfirmation = false
+        }
+    }
+
     if (showDeleteConfirmation) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirmation = false },
@@ -202,7 +213,7 @@ fun LocalSongDialog(
         )
     }
 
-    if (showUploadConfirmation && uploadEnabled) {
+    if (showUploadConfirmation && currentUploadEnabled) {
         AlertDialog(
             onDismissRequest = { showUploadConfirmation = false },
             title = { Text(text = stringResource(id = R.string.upload_song_title)) },
@@ -211,7 +222,7 @@ fun LocalSongDialog(
                 TextButton(
                     onClick = {
                         showUploadConfirmation = false
-                        if (uploadEnabled && trimmedTitle.isNotEmpty() && trimmedLyrics.isNotEmpty()) {
+                        if (currentUploadEnabled && trimmedTitle.isNotEmpty() && trimmedLyrics.isNotEmpty()) {
                             onUpload?.invoke(
                                 trimmedTitle,
                                 trimmedLyrics,
@@ -238,11 +249,15 @@ fun LocalSongDialog(
         onDismissRequest = onDismiss,
         title = {
             val titleText = stringResource(id = if (isEditing) R.string.edit_song else R.string.add_song)
-            val titleModifier = if (isEditing && onUpload != null && uploadEnabled) {
-                Modifier.pointerInput(trimmedTitle, trimmedLyrics, uploadEnabled) {
+            val titleModifier = if (isEditing && onUpload != null) {
+                Modifier.pointerInput(Unit) {
                     detectTapGestures(
                         onLongPress = {
-                            if (uploadEnabled && trimmedTitle.isNotEmpty() && trimmedLyrics.isNotEmpty()) {
+                            if (
+                                currentUploadEnabled &&
+                                currentTrimmedTitle.isNotEmpty() &&
+                                currentTrimmedLyrics.isNotEmpty()
+                            ) {
                                 showUploadConfirmation = true
                             }
                         }
