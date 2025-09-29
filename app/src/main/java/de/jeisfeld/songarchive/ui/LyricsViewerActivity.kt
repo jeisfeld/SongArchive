@@ -23,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -33,6 +34,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextStyle
@@ -182,6 +184,13 @@ fun LyricsViewerScreen(
     var startPadding = if (isLandscape) 0f else 8f
 
     val textMeasurer = TextMeasurer()
+    val context = LocalContext.current
+    val pluginVerifiedState = viewModel?.pluginVerified?.observeAsState(false)
+    val pluginVerified = pluginVerifiedState?.value ?: false
+
+    LaunchedEffect(viewModel, context) {
+        viewModel?.sendPluginVerificationBroadcast(context)
+    }
 
     var fontSize by remember { mutableStateOf(24f) }
     var lineHeight by remember { mutableStateOf(1.3f) }
@@ -406,7 +415,8 @@ fun LyricsViewerScreen(
                     updatedLyricsPaged,
                     updatedTabUri
                 )
-            }
+            },
+            isPluginVerified = pluginVerified
         )
     }
 }

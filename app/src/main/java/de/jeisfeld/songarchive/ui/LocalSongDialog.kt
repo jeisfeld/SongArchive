@@ -60,6 +60,7 @@ fun LocalSongDialog(
     onConfirm: (String, String, String?, String?) -> Unit,
     onDelete: (() -> Unit)? = null,
     onUpload: ((String, String, String?, String?) -> Unit)? = null,
+    isPluginVerified: Boolean = false,
 ) {
     var title by remember { mutableStateOf(TextFieldValue(initialTitle)) }
     var lyrics by remember { mutableStateOf(TextFieldValue(initialLyrics)) }
@@ -84,6 +85,12 @@ fun LocalSongDialog(
     var showDeleteConfirmation by remember { mutableStateOf(false) }
     var showUploadConfirmation by remember { mutableStateOf(false) }
     var pendingCameraUri by remember { mutableStateOf<Uri?>(null) }
+
+    LaunchedEffect(isPluginVerified) {
+        if (!isPluginVerified) {
+            showUploadConfirmation = false
+        }
+    }
 
     val coroutineScope = rememberCoroutineScope()
     val cloudVisionClient = remember { FirebaseCloudVisionClient() }
@@ -201,7 +208,7 @@ fun LocalSongDialog(
         )
     }
 
-    if (showUploadConfirmation) {
+    if (showUploadConfirmation && isPluginVerified) {
         AlertDialog(
             onDismissRequest = { showUploadConfirmation = false },
             title = { Text(text = stringResource(id = R.string.upload_song_title)) },
@@ -237,7 +244,7 @@ fun LocalSongDialog(
         onDismissRequest = onDismiss,
         title = {
             val titleText = stringResource(id = if (isEditing) R.string.edit_song else R.string.add_song)
-            val titleModifier = if (isEditing && onUpload != null) {
+            val titleModifier = if (isEditing && onUpload != null && isPluginVerified) {
                 Modifier.pointerInput(trimmedTitle, trimmedLyrics) {
                     detectTapGestures(
                         onLongPress = {
