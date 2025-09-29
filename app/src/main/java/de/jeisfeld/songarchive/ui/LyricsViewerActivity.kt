@@ -20,10 +20,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -36,6 +36,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -44,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.Observer
 import de.jeisfeld.songarchive.db.AppDatabase
 import de.jeisfeld.songarchive.db.Song
 import de.jeisfeld.songarchive.db.SongViewModel
@@ -185,8 +187,20 @@ fun LyricsViewerScreen(
 
     val textMeasurer = TextMeasurer()
     val context = LocalContext.current
-    val pluginVerifiedState = viewModel?.pluginVerified?.observeAsState(false)
-    val pluginVerified = pluginVerifiedState?.value ?: false
+    var pluginVerified by remember { mutableStateOf(viewModel?.pluginVerified?.value ?: false) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    DisposableEffect(viewModel, lifecycleOwner) {
+        pluginVerified = viewModel?.pluginVerified?.value ?: false
+        val observer = Observer<Boolean> { verified ->
+            pluginVerified = verified ?: false
+        }
+        val liveData = viewModel?.pluginVerified
+        liveData?.observe(lifecycleOwner, observer)
+        onDispose {
+            liveData?.removeObserver(observer)
+        }
+    }
 
     LaunchedEffect(viewModel, context) {
         viewModel?.sendPluginVerificationBroadcast(context)
