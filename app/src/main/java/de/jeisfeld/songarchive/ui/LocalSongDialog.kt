@@ -60,6 +60,7 @@ fun LocalSongDialog(
     onConfirm: (String, String, String?, String?) -> Unit,
     onDelete: (() -> Unit)? = null,
     onUpload: ((String, String, String?, String?) -> Unit)? = null,
+    isPluginVerified: Boolean = false,
 ) {
     var title by remember { mutableStateOf(TextFieldValue(initialTitle)) }
     var lyrics by remember { mutableStateOf(TextFieldValue(initialLyrics)) }
@@ -237,11 +238,11 @@ fun LocalSongDialog(
         onDismissRequest = onDismiss,
         title = {
             val titleText = stringResource(id = if (isEditing) R.string.edit_song else R.string.add_song)
-            val titleModifier = if (isEditing && onUpload != null) {
-                Modifier.pointerInput(trimmedTitle, trimmedLyrics) {
+            val titleModifier = if (isEditing && onUpload != null && isPluginVerified) {
+                Modifier.pointerInput(trimmedTitle, trimmedLyrics, isPluginVerified) {
                     detectTapGestures(
                         onLongPress = {
-                            if (trimmedTitle.isNotEmpty() && trimmedLyrics.isNotEmpty()) {
+                            if (trimmedTitle.isNotEmpty() && trimmedLyrics.isNotEmpty() && isPluginVerified) {
                                 showUploadConfirmation = true
                             }
                         }

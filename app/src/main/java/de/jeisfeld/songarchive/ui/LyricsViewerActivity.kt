@@ -22,6 +22,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -33,6 +34,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextStyle
@@ -155,6 +157,7 @@ fun LyricsViewerScreen(
 ) {
     val configuration = LocalConfiguration.current
     val density = LocalDensity.current
+    val context = LocalContext.current
     val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
 
     var currentSong by remember { mutableStateOf(song) }
@@ -193,6 +196,14 @@ fun LyricsViewerScreen(
     var showEditDialog by remember { mutableStateOf(false) }
     var showCloneDialog by remember { mutableStateOf(false) }
     var songForClone by remember { mutableStateOf<Song?>(null) }
+
+    val isPluginVerified = viewModel?.pluginVerified?.observeAsState()?.value ?: false
+
+    LaunchedEffect(showEditDialog) {
+        if (showEditDialog) {
+            viewModel?.sendPluginVerificationBroadcast(context)
+        }
+    }
 
     LaunchedEffect(
         lyricsPageOverride,
@@ -406,7 +417,8 @@ fun LyricsViewerScreen(
                     updatedLyricsPaged,
                     updatedTabUri
                 )
-            }
+            },
+            isPluginVerified = isPluginVerified
         )
     }
 }
