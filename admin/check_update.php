@@ -22,7 +22,7 @@ if ($result) {
 }
 $conn->close();
 
-$zipPath = 'chords.zip';
+$zipPath = '../chords.zip';
 if (file_exists($zipPath)) {
 	$response['chords_zip_size'] = filesize($zipPath);
 }
