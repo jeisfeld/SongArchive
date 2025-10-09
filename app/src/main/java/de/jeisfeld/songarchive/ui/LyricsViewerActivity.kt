@@ -210,7 +210,7 @@ fun LyricsViewerScreen(
         for (i in 1..3) {
             testFontSize *= (screenWidth - 8) / textMeasurer.measureWidth(longestLine, testFontSize)
         }
-        while (screenWidth - 8 < textMeasurer.measureWidth(longestLine, testFontSize)) {
+        while (testFontSize > 0 && screenWidth - 8 < textMeasurer.measureWidth(longestLine, testFontSize)) {
             testFontSize -= 1f
         }
 
