@@ -124,7 +124,12 @@ class LyricsViewerActivity : AppCompatActivity() {
         val displayLyrics = song?.lyrics?.replace("|", "")?.trim() ?: lyrics ?: " "
         val displayLyricsShort = song?.lyricsShort?.replace("|", "")?.trim() ?: lyricsShort ?: displayLyrics
         var setLyricsPaged: ((String?) -> Unit)? = null
-        val songViewModel = ViewModelProvider(this)[SongViewModel::class.java]
+        val isInteractiveStyle = displayStyle == DisplayStyle.STANDARD || displayStyle == DisplayStyle.LOCAL_PREVIEW
+        val songViewModel = if (isInteractiveStyle) {
+            ViewModelProvider(this)[SongViewModel::class.java]
+        } else {
+            null
+        }
 
         setContent {
             MaterialTheme {

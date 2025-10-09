@@ -47,8 +47,11 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
     private var hasEmittedInitialSongs = false
 
     init {
-        viewModelScope.launch {
-            _songs.value = songDao.getAllSongs()
+        viewModelScope.launch(Dispatchers.IO) {
+            val initialSongs = songDao.getAllSongs()
+            withContext(Dispatchers.Main) {
+                _songs.value = initialSongs
+            }
         }
         searchSongs(searchQuery.value)
     }
