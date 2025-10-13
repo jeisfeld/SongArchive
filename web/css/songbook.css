@@ -1,0 +1,452 @@
+:root {
+	--outer-color: #F7F5C4;
+	--inner-color: #F9F8E1;
+	--inner-color-shaded: #F2F1D6;
+	--text-color: #4D4313;
+	--text-color-link: #4D4393;
+	--text-color-light: #877522;
+}
+
+body {
+	font-family: Arial, sans-serif;
+	padding: 20px;
+	background: var(--outer-color);
+	color: var(--text-color);
+}
+
+.container {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	width: 100%;
+	max-width: 1024px;
+	margin: 0 auto;
+}
+
+.page-heading {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+}
+
+/* Style for icons */
+.heading-icon {
+	width: 36px;
+	height: auto;
+}
+
+/* Search Box with Icon (Same Width as Table) */
+.search-container {
+	display: flex;
+	align-items: center;
+	width: 100%;
+	max-width: 1024px;
+	margin-bottom: 10px;
+	border: 1px solid white;
+	border-color: var(--text-color-light);
+	border-radius: 8px;
+	background: white;
+	padding-left: 10px; /* Ensure icon spacing */
+	box-sizing: border-box; /* Ensure padding does not exceed width */
+	position: relative; /* Required for clear button positioning */
+}
+
+/* Search Icon (PNG or SVG) */
+.search-container img {
+	width: 20px;
+	height: 20px;
+}
+
+/* Style the Search Input (Full Width Inside Container) */
+.search-container input {
+	flex: 1; /* Take remaining space */
+	padding: 8px;
+	font-size: 16px;
+	border: none;
+	outline: none;
+	text-align: left;
+	width: 100%;
+	padding-right: 30px; /* Prevent text from overlapping the clear button */
+}
+
+input::placeholder {
+	color: var(--text-color-light);
+}
+
+/* "X" Clear Button */
+#clearButton {
+	position: absolute;
+	right: 10px;
+	background: none;
+	border: none;
+	font-size: 16px;
+	cursor: pointer;
+	color: var(--text-color-light);
+	display: none; /* Initially hidden */
+}
+
+/* Show "X" Button When Needed */
+#clearButton.visible {
+	display: block;
+}
+
+/* Table Styling (Same Width as Search Box) */
+table {
+	width: 100%;
+	max-width: 1024px;
+	border-collapse: collapse;
+}
+
+th, td {
+	padding: 8px;
+	border: 1px solid white;
+	border-color: var(--text-color-light);
+	text-align: left;
+}
+
+th {
+	background: var(--inner-color-shaded);
+}
+
+td {
+	background: var(--inner-color);
+}
+
+.unformatted-link {
+	color: inherit;
+	text-decoration: none;
+	font: inherit;
+}
+
+/* Ensure Actions Stay in One Line */
+.actions {
+	height: 100%;
+	padding: 0;
+}
+
+/* Flex Container Inside Actions Cell */
+.actions-container {
+	display: flex;
+	align-items: center; /* Center icons vertically */
+	justify-content: center; /* Center icons horizontally */
+	gap: 5px; /* Adds spacing between icons */
+	width: 100%;
+	height: 100%;
+}
+
+/* Ensure Icons Scale Properly */
+.actions img {
+	height: 24px;
+	width: auto;
+	cursor: pointer;
+}
+
+/* Increase Button Spacing on Larger Screens */
+@media ( min-width : 1024px) {
+	.actions-container {
+		gap: 15px; /* Larger spacing for wide screens */
+	}
+}
+
+.icon-btn {
+	cursor: pointer;
+	width: 24px;
+	height: 24px;
+}
+
+/* Prevent scrolling on body when popup is open */
+body.no-scroll {
+	overflow: hidden;
+}
+
+/* Fullscreen Popup */
+.popup {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100vw;
+	height: 100vh;
+	background: white;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 998;
+}
+
+#popup2 {
+	z-index: 999;
+}
+
+/* Text Popup Content (Fills Entire Screen, Scrollbar at Edge) */
+.lyrics-popup-content {
+	width: 100vw; /* Take full screen width */
+	height: 100vh; /* Take full screen height */
+	display: flex;
+	flex-direction: column;
+	overflow: hidden; /* Prevent unwanted scrolling */
+	align-items: center;
+}
+
+.lyrics-content {
+	font-size: min(5vw, 36px);
+	line-height: 1.5;
+	text-align: left;
+	max-width: 80ch;
+	width: 100%;
+	overflow-y: auto;
+	padding: 5vw;
+	box-sizing: border-box;
+	transition: text-align 0.3s ease-in-out; /* Smooth transition */
+}
+
+/* Centered Text */
+.text-centered {
+	text-align: center !important;
+}
+
+/* Font & Spacing Controls */
+.font-controls {
+	display: flex;
+	justify-content: center;
+	position: absolute;
+	top: 10px;
+	left: 50%;
+	transform: translateX(-50%);
+	background: rgba(255, 255, 255, 0.8);
+	padding: 8px;
+	transition: opacity 0.3s ease-in-out;
+	z-index: 10;
+}
+
+.font-controls.hidden {
+	opacity: 0;
+	pointer-events: none;
+}
+
+/* Control Buttons */
+.control-btn-grp {
+	margin: 0 5px;
+	display: flex;
+}
+
+.control-btn {
+	padding: 5px 10px;
+	cursor: pointer;
+	font-size: 1.2rem;
+	background: var(--inner-color);
+	color: var(--text-color);
+	border: 1px solid white;
+	border-color: var(--text-color);
+	border-radius: 8px;
+	display: flex; /* Flex ensures perfect centering */
+	align-items: center; /* Vertical centering */
+	justify-content: center; /* Horizontal centering */
+	width: 40px; /* Ensures all buttons have the same width */
+	height: 40px; /* Ensures all buttons have the same height */
+}
+
+/* Ensure SVG Icons Are Properly Sized */
+.control-btn svg {
+	width: 24px; /* Icon size */
+	height: 24px;
+	display: block;
+	border-color: var(--text-color-light);
+	fill: var(--text-color); /* Ensures consistent color */
+}
+
+/* Circular Close Button */
+.popup-close {
+	position: absolute;
+	top: 10px;
+	right: 10px;
+	cursor: pointer;
+	font-size: 24px;
+	color: var(--text-color);
+	background: rgba(255, 255, 255, 0.7);
+	border: none;
+	padding: 10px;
+	border-radius: 50%;
+	width: 20px;
+	height: 20px;
+	display: flex;
+	z-index: 1000;
+	align-items: center;
+	justify-content: center;
+}
+
+/* Image Display - Fullscreen with Pinch & Drag Support */
+.popup img#popup-image {
+	width: 100vw;
+	height: 100vh;
+	object-fit: contain;
+	transition: transform 0.2s ease;
+	touch-action: none; /* Disable default touch scrolling */
+}
+
+/* Styles for the Play-Audio popup */
+.audio-container {
+	width: 600px; /* Default width */
+	max-width: 100vw;
+	margin: 10px auto;
+	text-align: center;
+	position: relative;
+	z-index: 2; /* Keeps audio in foreground */
+}
+
+.audio-container audio {
+	width: 100%; /* Expands to match container width */
+}
+
+.audio-info {
+	text-align: center;
+	margin-bottom: 5px;
+	font-size: 1rem;
+}
+
+#audio-btns {
+	text-align: center;
+}
+
+.open-audio-btn {
+	display: inline-block;
+	margin: 10px auto;
+	padding: 8px 12px;
+	cursor: pointer;
+	border: none;
+	background: none;
+}
+
+.audio-icon {
+	width: 30px;
+	height: 30px;
+}
+
+.author-col a {
+	text-decoration: none;
+	color: var(--text-color-link);
+}
+
+.author-col a:hover {
+	color: blue;
+}
+
+/* Ensure Text Stays Large Enough on Mobile */
+@media ( max-width : 768px) {
+	body {
+		font-family: Arial, sans-serif;
+		padding: 10px;
+	}
+	.text-popup-content {
+		padding: 3vw;
+	}
+	.popup-close {
+		top: 5px;
+		right: 5px;
+		width: 15px;
+		height: 15px;
+	}
+	.text-content {
+		font-size: min(6vw, 22px);
+		max-width: 100%;
+		margin-top: 60px; /* Increase spacing for better alignment */
+	}
+	.author-col {
+		display: none;
+	}
+	.close-audio-chords-btn {
+		top: -0px;
+	}
+	.control-btn {
+		width: 35px;
+		height: 35px;
+		padding: 7px;
+	}
+}
+
+/* Impressum related stuff */
+.impressum {
+	position: fixed; /* Fix the element relative to the viewport */
+	bottom: 10px;
+	right: 10px;
+	font-size: 1em;
+	z-index: 500; /* Ensure it appears above other elements */
+	transition: color 0.3s;
+	text-decoration: none;
+	display: inline-block;
+	margin: 5px 20px;
+	color: var(--text-color);
+}
+
+.androidapp {
+	position: fixed; /* Fix the element relative to the viewport */
+	top: 10px;
+	left: 50%; /* Move to the center horizontally */
+	transform: translateX(-50%); /* Adjust position to truly center */
+	font-size: 1em;
+	z-index: 500; /* Ensure it appears above other elements */
+	transition: color 0.3s;
+	text-decoration: none;
+	display: none;
+	color: #006AC8;
+}
+
+.modal {
+	display: none; /* Hidden by default */
+	position: fixed;
+	z-index: 1001; /* Above other elements */
+	left: 0;
+	top: 0;
+	width: 100%;
+	height: 100%;
+	overflow: auto; /* Enable scrolling if needed */
+	background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent background */
+}
+
+.modal-content {
+	background-color: #fff;
+	margin: 4% auto; /* Centered on the page */
+	padding: 20px;
+	border: 1px solid #888;
+	width: 80%;
+	border-radius: 8px;
+	position: relative;
+}
+
+.modal-content h1, .modal-content h2, .modal-content h3, .modal-content a {
+	text-shadow: none;
+	color: var(--text-color);
+}
+
+.modal-content a {
+	font-size: 1em;
+	margin: 0px;
+}
+
+.modal-content h2 {
+	margin: 0px
+}
+
+.modal-close {
+        position: absolute;
+        right: 10px;
+        top: 10px;
+        font-size: 28px;
+        color: #333;
+        cursor: pointer;
+}
+
+.modal-content .modal-iframe {
+        width: 100%;
+        height: 75vh;
+        border: none;
+        border-radius: 4px;
+        background-color: #fff;
+}
+
+.modal-loading {
+        text-align: center;
+        font-size: 1em;
+        margin-bottom: 10px;
+        color: var(--text-color);
+}
