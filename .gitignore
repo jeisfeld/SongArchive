@@ -16,3 +16,6 @@ local.properties
 /app-release.aab
 app/firebase.properties
 app/auth.properties
+/web/admin/.htpasswd
+/web/chords.zip
+/web/db_config.php

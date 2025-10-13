@@ -1,0 +1,4 @@
+AuthType Basic
+AuthName "Heilsame Lieder Admin"
+AuthUserFile /mnt/web406/d1/55/592655/htdocs/heilsame-lieder/admin/.htpasswd
+Require valid-user
