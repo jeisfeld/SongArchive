@@ -19,3 +19,6 @@ app/auth.properties
 /web/admin/.htpasswd
 /web/chords.zip
 /web/db_config.php
+/util
+/.well-known
+/.settings
