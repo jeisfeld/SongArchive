@@ -144,7 +144,15 @@ interface SongDao {
     @Query("DELETE FROM meaning")
     suspend fun clearMeanings()
 
-    @Query("SELECT * FROM songs")
+    @Query(
+        """
+        SELECT * FROM songs
+        ORDER BY
+            CASE WHEN id LIKE '0%' THEN 0 ELSE 1 END,
+            CASE WHEN id LIKE '0%' THEN id END DESC,
+            CASE WHEN id LIKE '0%' THEN NULL ELSE id END ASC
+        """
+    )
     suspend fun getAllSongs(): List<Song>
 
     @Query("SELECT id FROM songs WHERE id LIKE 'Y%' ORDER BY id")

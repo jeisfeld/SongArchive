@@ -67,12 +67,21 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
     fun searchSongs(input: String) {
         searchJob?.cancel()
         searchJob = viewModelScope.launch {
-            val searchArgs = buildSearchArguments(input)
-            songDao.searchSongsForArgs(searchArgs).collectLatest { results ->
-                _songs.value = results
+            if (input.isEmpty()) {
+                _songs.value = songDao.getAllSongs()
                 if (!hasEmittedInitialSongs) {
                     hasEmittedInitialSongs = true
                     initState.postValue(1)
+                }
+            }
+            else {
+                val searchArgs = buildSearchArguments(input)
+                songDao.searchSongsForArgs(searchArgs).collectLatest { results ->
+                    _songs.value = results
+                    if (!hasEmittedInitialSongs) {
+                        hasEmittedInitialSongs = true
+                        initState.postValue(1)
+                    }
                 }
             }
         }
@@ -461,7 +470,7 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
             // Step 1: Download ZIP
             val request = Request.Builder().url(url).build()
             val response = client.newCall(request).execute()
-            val body = response.body ?: return false
+            val body = response.body
 
             FileOutputStream(zipFile).use { output ->
                 body.byteStream().copyTo(output)

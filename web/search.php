@@ -83,7 +83,10 @@ if ($query === "*" || $query === "") {
 	if ($applyIdFilter) {
 		$sql .= " where id NOT REGEXP '^[XY]'";
 	}
-	$sql .= " order by id";
+	$sql .= " ORDER BY
+            CASE WHEN id LIKE '0%' THEN 0 ELSE 1 END,
+            CASE WHEN id LIKE '0%' THEN id END DESC,
+            CASE WHEN id LIKE '0%' THEN NULL ELSE id END ASC";
 }
 else if ($query === "@@shuffle@@") {
 	$sql = "SELECT id, title, tabfilename, mp3filename, mp3filename2, author FROM songs";
