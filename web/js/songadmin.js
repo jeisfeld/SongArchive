@@ -196,7 +196,8 @@
                 renderActionButtons,
                 updateClearButton,
                 openEditModal,
-                openAddModal
+                openAddModal,
+                parseAuthorParts: typeof parseAuthorParts === 'function' ? parseAuthorParts : null
         };
 
         if (window.songbookReady) {

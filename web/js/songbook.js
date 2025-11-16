@@ -146,24 +146,49 @@ function shuffleSongs() {
 }
 
 
+function parseAuthorParts(authorStr) {
+        if (!authorStr || !authorStr.trim()) {
+                return [];
+        }
+
+        const parts = authorStr.split(',');
+
+        return parts.map((rawPart, index) => {
+                let trimmed = rawPart.trim();
+                let useAmpersand = false;
+
+                if (trimmed.endsWith('&')) {
+                        useAmpersand = true;
+                        trimmed = trimmed.slice(0, -1).trimEnd();
+                }
+
+                return {
+                        value: trimmed,
+                        separator: index < parts.length - 1 ? (useAmpersand ? ' & ' : ', ') : ''
+                };
+        });
+}
+
+if (typeof window !== "undefined") {
+        window.parseAuthorParts = parseAuthorParts;
+}
+
 function formatAuthors(authorStr) {
-	if (!authorStr.trim()) return "";
+        const authorParts = parseAuthorParts(authorStr);
 
-	return authorStr.split(',')
-		.map(part => {
-			const trimmed = part.trim();
+        return authorParts
+                .map((part) => {
+                        const urlMatch = part.value.match(/^(.+?)\s*\[(https?:\/\/)?([^\]]+)\]$/);
+                        if (urlMatch) {
+                                const name = urlMatch[1].trim();
+                                const url = (urlMatch[2] ? urlMatch[2] : "https://") + urlMatch[3].trim();
+                                return `<a href="${url}" target="_blank" rel="noopener noreferrer">${name}</a>${part.separator}`;
+                        }
 
-			const urlMatch = trimmed.match(/^(.+?)\s*\[(https?:\/\/)?([^\]]+)\]$/);
-			if (urlMatch) {
-				const name = urlMatch[1].trim();
-				const url = (urlMatch[2] ? urlMatch[2] : "https://") + urlMatch[3].trim();
-				return `<a href="${url}" target="_blank" rel="noopener noreferrer">${name}</a>`;
-			}
-
-			// Just a name
-			return trimmed;
-		})
-		.join(', ');
+                        // Just a name
+                        return `${part.value}${part.separator}`;
+                })
+                .join('');
 }
 
 // functions related to audio popup

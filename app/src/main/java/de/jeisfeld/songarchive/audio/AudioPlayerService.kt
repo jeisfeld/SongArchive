@@ -131,16 +131,18 @@ class AudioPlayerService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val pendingIntent = PendingIntent.getActivity(this, 0,
+        val pendingIntent = PendingIntent.getActivity(
+            this, 0,
             Intent(this, MainActivity::class.java).apply {
                 putExtra("SONG", song)
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             },
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
 
         return NotificationCompat.Builder(this, "AUDIO_PLAYER_CHANNEL")
             .setContentTitle(song?.title ?: "Playing Audio")
-            .setContentText(if (song?.author == null) "" else parseAuthors(song?.author?:""))
+            .setContentText(if (song?.author == null) "" else parseAuthors(song?.author ?: ""))
             .setSmallIcon(R.drawable.ic_launcher_white)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOnlyAlertOnce(true)
@@ -206,8 +208,13 @@ class AudioPlayerService : Service() {
         val parts = authors.split(",")
         val builder = StringBuilder()
 
-        parts.forEachIndexed { index, part ->
-            val trimmed = part.trim()
+        parts.forEachIndexed { index, rawPart ->
+            var trimmed = rawPart.trim()
+            val useAmpersand = trimmed.endsWith("&") && index < parts.lastIndex
+
+            if (trimmed.endsWith("&")) {
+                trimmed = trimmed.dropLast(1).trimEnd()
+            }
 
             val fullRegex = Regex("(.+?)\\s*\\[(https?://)?([^]]+)]")
 
@@ -217,12 +224,13 @@ class AudioPlayerService : Service() {
                     val name = match.groupValues[1].trim()
                     builder.append(name)
                 }
+
                 else -> {
                     builder.append(trimmed)
                 }
             }
 
-            if (index < parts.size - 1) builder.append(", ")
+            if (index < parts.size - 1) builder.append(if (useAmpersand) " & " else ", ")
         }
 
         return builder.toString()
