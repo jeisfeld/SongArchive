@@ -206,8 +206,13 @@ class AudioPlayerService : Service() {
         val parts = authors.split(",")
         val builder = StringBuilder()
 
-        parts.forEachIndexed { index, part ->
-            val trimmed = part.trim()
+        parts.forEachIndexed { index, rawPart ->
+            var trimmed = rawPart.trim()
+            val useAmpersand = trimmed.endsWith("&") && index < parts.lastIndex
+
+            if (trimmed.endsWith("&")) {
+                trimmed = trimmed.dropLast(1).trimEnd()
+            }
 
             val fullRegex = Regex("(.+?)\\s*\\[(https?://)?([^]]+)]")
 
@@ -222,7 +227,7 @@ class AudioPlayerService : Service() {
                 }
             }
 
-            if (index < parts.size - 1) builder.append(", ")
+            if (index < parts.size - 1) builder.append(if (useAmpersand) " & " else ", ")
         }
 
         return builder.toString()
