@@ -2,6 +2,8 @@ package de.jeisfeld.songarchive.network
 
 import android.content.Context
 import android.content.Intent
+import android.os.Handler
+import android.os.Looper
 import android.os.PowerManager
 import android.util.Log
 import android.widget.Toast
@@ -28,10 +30,13 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
     private val TAG = "NearbyConnection"
     private val SERVICE_ID = "de.jeisfeld.songarchive.NEARBY_SERVICE"
     private val STRATEGY = Strategy.P2P_STAR
+    private val RECONNECT_DELAY_MS = 2000L
     private val connectionsClient = Nearby.getConnectionsClient(context)
+    private val handler = Handler(Looper.getMainLooper())
 
     private var type = PeerConnectionMode.DISABLED
     private val connectedEndpoints = mutableSetOf<String>()
+    private var reconnectRunnable: Runnable? = null
 
     override fun startServer() {
         type = PeerConnectionMode.SERVER
@@ -70,7 +75,7 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
     private val gson = Gson()
 
     fun sendCommandToClient(endpointId: String, command: NetworkCommand, params: Map<String, String?> = emptyMap()) {
-        val message = Message(command.name, params.filterValues { it != null } .mapValues { it.value!! })
+        val message = Message(command.name, params.filterValues { it != null }.mapValues { it.value!! })
         val json = gson.toJson(message)
         val payload = Payload.fromBytes(json.toByteArray(StandardCharsets.UTF_8))
         connectionsClient.sendPayload(endpointId, payload)
@@ -106,16 +111,21 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
                         Toast.makeText(context, context.getString(R.string.toast_connected_as_client), Toast.LENGTH_SHORT).show()
                         updateNotification(PeerConnectionAction.CLIENT_CONNECTED)
                     }
+
                     PeerConnectionMode.SERVER -> {
                         Log.d(TAG, "Client connected")
-                        Toast.makeText(context, context.getString(R.string.toast_client_connected, connectedEndpoints.size), Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.toast_client_connected, connectedEndpoints.size), Toast.LENGTH_SHORT)
+                            .show()
                         updateNotification(PeerConnectionAction.CLIENTS_CONNECTED)
                         PeerConnectionViewModel.connectedDevices = connectedEndpoints.size
-                        sendCommandToClient(endpointId, NetworkCommand.DISPLAY_TEXT, mapOf(
-                            "style" to DisplayStyle.REMOTE_BLACK.toString()
-                        ))
+                        sendCommandToClient(
+                            endpointId, NetworkCommand.DISPLAY_TEXT, mapOf(
+                                "style" to DisplayStyle.REMOTE_BLACK.toString()
+                            )
+                        )
                     }
-                    PeerConnectionMode.DISABLED -> { }
+
+                    PeerConnectionMode.DISABLED -> {}
                 }
             }
         }
@@ -127,14 +137,17 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
                     Log.d(TAG, "Disconnected as client")
                     Toast.makeText(context, context.getString(R.string.toast_disconnected_as_client), Toast.LENGTH_SHORT).show()
                     updateNotification(PeerConnectionAction.CLIENT_DISCONNECTED)
+                    scheduleClientReconnect()
                 }
+
                 PeerConnectionMode.SERVER -> {
                     Log.d(TAG, "Client connected")
                     Toast.makeText(context, context.getString(R.string.toast_client_disconnected, connectedEndpoints.size), Toast.LENGTH_SHORT).show()
                     updateNotification(PeerConnectionAction.CLIENTS_CONNECTED)
                     PeerConnectionViewModel.connectedDevices = connectedEndpoints.size
                 }
-                PeerConnectionMode.DISABLED -> { }
+
+                PeerConnectionMode.DISABLED -> {}
             }
         }
     }
@@ -145,7 +158,9 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
         }
 
         override fun onEndpointLost(endpointId: String) {
-            // Handle if needed
+            if (type == PeerConnectionMode.CLIENT) {
+                scheduleClientReconnect()
+            }
         }
     }
 
@@ -175,10 +190,12 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
                 val lyrics = message.params.get("lyrics") ?: ""
                 val lyricsShort = message.params.get("lyricsShort") ?: ""
                 val intent = Intent().apply {
-                    setClass(context, when (PeerConnectionViewModel.clientMode) {
-                        ClientMode.LYRICS_BS,  ClientMode.LYRICS_BW, ClientMode.LYRICS_WB -> LyricsViewerActivity::class.java
-                        ClientMode.CHORDS -> if (songId.isEmpty()) LyricsViewerActivity::class.java else ChordsViewerActivity::class.java
-                    })
+                    setClass(
+                        context, when (PeerConnectionViewModel.clientMode) {
+                            ClientMode.LYRICS_BS, ClientMode.LYRICS_BW, ClientMode.LYRICS_WB -> LyricsViewerActivity::class.java
+                            ClientMode.CHORDS -> if (songId.isEmpty()) LyricsViewerActivity::class.java else ChordsViewerActivity::class.java
+                        }
+                    )
                     putExtra("STYLE", style)
                     if (songId.isNotEmpty()) putExtra("SONG_ID", songId)
                     if (lyrics.isNotEmpty()) putExtra("LYRICS", lyrics)
@@ -201,6 +218,7 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
                     context.startActivity(intent)
                 }
             }
+
             NetworkCommand.SHARE_FAVORITE_LIST -> {
                 val name = message.params?.get("name") ?: return
                 val ids = message.params?.get("songIds") ?: return
@@ -211,6 +229,7 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
                 }
                 context.startActivity(intent)
             }
+
             NetworkCommand.CLIENT_DISCONNECT -> {
                 PeerConnectionViewModel.peerConnectionMode = PeerConnectionMode.DISABLED
                 updateNotification(PeerConnectionAction.CONNECTION_DISABLE)
@@ -226,6 +245,25 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
             putExtra("CLIENTS", connectedEndpoints.size)
         }
         context.startForegroundService(serviceIntent)
+    }
+
+    private fun scheduleClientReconnect() {
+        if (type != PeerConnectionMode.CLIENT) {
+            return
+        }
+
+        reconnectRunnable?.let { handler.removeCallbacks(it) }
+        val reconnectAction = Runnable {
+            if (type == PeerConnectionMode.CLIENT && connectedEndpoints.isEmpty()) {
+                Log.d(TAG, "Attempting to restart discovery after disconnect")
+                connectionsClient.stopDiscovery()
+                connectionsClient.stopAllEndpoints()
+                startClient()
+            }
+        }
+
+        reconnectRunnable = reconnectAction
+        handler.postDelayed(reconnectAction, RECONNECT_DELAY_MS)
     }
 }
 
