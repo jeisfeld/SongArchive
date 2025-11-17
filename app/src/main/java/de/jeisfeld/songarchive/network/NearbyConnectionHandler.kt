@@ -1,10 +1,13 @@
 package de.jeisfeld.songarchive.network
 
+import android.app.AlarmManager
+import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
+import android.os.SystemClock
 import android.util.Log
 import android.widget.Toast
 import androidx.core.content.ContextCompat.getSystemService
@@ -37,6 +40,7 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
     private var type = PeerConnectionMode.DISABLED
     private val connectedEndpoints = mutableSetOf<String>()
     private var reconnectRunnable: Runnable? = null
+    private var reconnectPendingIntent: PendingIntent? = null
 
     override fun startServer() {
         type = PeerConnectionMode.SERVER
@@ -268,6 +272,7 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
         }
 
         reconnectRunnable?.let { handler.removeCallbacks(it) }
+        scheduleDozeAwareReconnect()
         val reconnectAction = Runnable {
             if (type == PeerConnectionMode.CLIENT && connectedEndpoints.isEmpty()) {
                 Log.d(TAG, "Attempting to restart discovery after disconnect")
@@ -284,7 +289,44 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
 
     private fun clearReconnectSchedule() {
         reconnectRunnable?.let { handler.removeCallbacks(it) }
+        cancelDozeAwareReconnect()
         reconnectRunnable = null
+    }
+
+    private fun scheduleDozeAwareReconnect() {
+        val powerManager = getSystemService(context, PowerManager::class.java) as PowerManager? ?: return
+        if (!powerManager.isDeviceIdleMode) {
+            cancelDozeAwareReconnect()
+            return
+        }
+
+        val alarmManager = getSystemService(context, AlarmManager::class.java) as AlarmManager? ?: return
+        val intent = Intent(context, PeerConnectionService::class.java).apply {
+            setAction(PeerConnectionAction.START_CLIENT.toString())
+            putExtra("ACTION", PeerConnectionAction.START_CLIENT)
+        }
+        val pendingIntent = PendingIntent.getService(
+            context,
+            1001,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        reconnectPendingIntent = pendingIntent
+        alarmManager.setAndAllowWhileIdle(
+            AlarmManager.ELAPSED_REALTIME_WAKEUP,
+            SystemClock.elapsedRealtime() + RECONNECT_DELAY_MS,
+            pendingIntent
+        )
+    }
+
+    private fun cancelDozeAwareReconnect() {
+        val alarmManager = getSystemService(context, AlarmManager::class.java) as AlarmManager?
+        reconnectPendingIntent?.let {
+            alarmManager?.cancel(it)
+            it.cancel()
+        }
+        reconnectPendingIntent = null
     }
 }
 
