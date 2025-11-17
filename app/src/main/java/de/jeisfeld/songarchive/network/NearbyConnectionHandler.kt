@@ -118,11 +118,16 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
                             .show()
                         updateNotification(PeerConnectionAction.CLIENTS_CONNECTED)
                         PeerConnectionViewModel.connectedDevices = connectedEndpoints.size
-                        sendCommandToClient(
-                            endpointId, NetworkCommand.DISPLAY_TEXT, mapOf(
-                                "style" to DisplayStyle.REMOTE_BLACK.toString()
+                        val lastSentCommand = PeerConnectionViewModel.lastSentCommand
+                        if (lastSentCommand == null) {
+                            sendCommandToClient(
+                                endpointId, NetworkCommand.DISPLAY_TEXT, mapOf(
+                                    "style" to DisplayStyle.REMOTE_BLACK.toString()
+                                )
                             )
-                        )
+                        } else {
+                            sendCommandToClient(endpointId, lastSentCommand.command, lastSentCommand.params)
+                        }
                     }
 
                     PeerConnectionMode.DISABLED -> {}

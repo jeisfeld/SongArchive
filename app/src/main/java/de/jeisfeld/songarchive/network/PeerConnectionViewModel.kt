@@ -9,6 +9,7 @@ object PeerConnectionViewModel : ViewModel() {
     var peerConnectionMode = PeerConnectionMode.DISABLED
     var clientMode = ClientMode.LYRICS_BS
     var connectedDevices = 0
+    var lastSentCommand: LastSentCommand? = null
 
     val stopRemoteActivity = MutableLiveData(false)
 
@@ -25,6 +26,11 @@ object PeerConnectionViewModel : ViewModel() {
         context.startForegroundService(serviceIntent)
     }
 }
+
+data class LastSentCommand(
+    val command: NetworkCommand,
+    val params: Map<String, String?> = emptyMap()
+)
 
 
 enum class PeerConnectionMode {

@@ -39,6 +39,7 @@ class PeerConnectionService : Service() {
         when (action) {
             PeerConnectionAction.CONNECTION_DISABLE -> {
                 mode = PeerConnectionMode.DISABLED
+                PeerConnectionViewModel.lastSentCommand = null
                 Log.d(TAG, "❌ Stopping Peer Connection Service")
                 peerConnectionHandler.stopEndpoint()
                 startNotification(intent, action)
@@ -70,12 +71,14 @@ class PeerConnectionService : Service() {
                     else -> NetworkCommand.DISPLAY_SONG
                 }
                 if (songId != null || lyrics != null) {
-                    peerConnectionHandler.sendCommandToClients(networkCommand, mapOf(
+                    val params = mapOf(
                         "songId" to songId,
                         "style" to style.toString(),
                         "lyrics" to lyrics,
                         "lyricsShort" to lyricsShort
-                    ))
+                    )
+                    PeerConnectionViewModel.lastSentCommand = LastSentCommand(networkCommand, params)
+                    peerConnectionHandler.sendCommandToClients(networkCommand, params)
                 }
             }
             PeerConnectionAction.DISPLAY_CHORDS -> {
@@ -83,20 +86,24 @@ class PeerConnectionService : Service() {
                 val style = (intent.getSerializableExtra("STYLE") as DisplayStyle?) ?: DisplayStyle.REMOTE_DEFAULT
                 val songId = intent.getStringExtra("SONG_ID")
                 if (songId != null) {
-                    peerConnectionHandler.sendCommandToClients(NetworkCommand.DISPLAY_CHORDS, mapOf(
+                    val params = mapOf(
                         "songId" to songId,
                         "style" to style.toString(),
-                    ))
+                    )
+                    PeerConnectionViewModel.lastSentCommand = LastSentCommand(NetworkCommand.DISPLAY_CHORDS, params)
+                    peerConnectionHandler.sendCommandToClients(NetworkCommand.DISPLAY_CHORDS, params)
                 }
             }
             PeerConnectionAction.SHARE_FAVORITE_LIST -> {
                 val listName = intent.getStringExtra("LIST_NAME")
                 val songIds = intent.getStringExtra("SONG_IDS")
                 if (listName != null && songIds != null) {
-                    peerConnectionHandler.sendCommandToClients(NetworkCommand.SHARE_FAVORITE_LIST, mapOf(
+                    val params = mapOf(
                         "name" to listName,
                         "songIds" to songIds
-                    ))
+                    )
+                    PeerConnectionViewModel.lastSentCommand = LastSentCommand(NetworkCommand.SHARE_FAVORITE_LIST, params)
+                    peerConnectionHandler.sendCommandToClients(NetworkCommand.SHARE_FAVORITE_LIST, params)
                 }
             }
             PeerConnectionAction.CLIENT_CONNECTED, PeerConnectionAction.CLIENT_DISCONNECTED,
@@ -111,6 +118,7 @@ class PeerConnectionService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         peerConnectionHandler.stopEndpoint()
+        PeerConnectionViewModel.lastSentCommand = null
         PeerConnectionViewModel.peerConnectionMode = PeerConnectionMode.DISABLED
         Log.d(TAG, "🛑 PeerConnectionService Stopped")
     }
