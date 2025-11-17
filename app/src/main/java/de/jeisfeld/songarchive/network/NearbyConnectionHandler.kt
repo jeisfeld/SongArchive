@@ -63,6 +63,7 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
             Log.d(TAG, "Discovery started")
         }.addOnFailureListener { e ->
             Log.e(TAG, "Discovery failed: ${e.message}", e)
+            scheduleClientReconnect()
         }
     }
 
@@ -92,6 +93,7 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
                 triggerClientDisconnect(endpointId)
             }
         }
+        clearReconnectSchedule()
         connectionsClient.stopAllEndpoints()
         connectedEndpoints.clear()
         type = PeerConnectionMode.DISABLED
@@ -105,6 +107,7 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
         override fun onConnectionResult(endpointId: String, result: ConnectionResolution) {
             if (result.status.isSuccess) {
                 connectedEndpoints.add(endpointId)
+                clearReconnectSchedule()
                 when (type) {
                     PeerConnectionMode.CLIENT -> {
                         Log.d(TAG, "Connected as client")
@@ -132,6 +135,9 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
 
                     PeerConnectionMode.DISABLED -> {}
                 }
+            } else if (type == PeerConnectionMode.CLIENT) {
+                Log.w(TAG, "Connection failed with status ${result.status}")
+                scheduleClientReconnect()
             }
         }
 
@@ -160,6 +166,10 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
     private val endpointDiscoveryCallback = object : EndpointDiscoveryCallback() {
         override fun onEndpointFound(endpointId: String, info: DiscoveredEndpointInfo) {
             connectionsClient.requestConnection(android.os.Build.MODEL, endpointId, connectionLifecycleCallback)
+                .addOnFailureListener { e ->
+                    Log.e(TAG, "Request connection failed: ${e.message}", e)
+                    scheduleClientReconnect()
+                }
         }
 
         override fun onEndpointLost(endpointId: String) {
@@ -264,11 +274,17 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
                 connectionsClient.stopDiscovery()
                 connectionsClient.stopAllEndpoints()
                 startClient()
+                reconnectRunnable?.let { handler.postDelayed(it, RECONNECT_DELAY_MS) }
             }
         }
 
         reconnectRunnable = reconnectAction
         handler.postDelayed(reconnectAction, RECONNECT_DELAY_MS)
+    }
+
+    private fun clearReconnectSchedule() {
+        reconnectRunnable?.let { handler.removeCallbacks(it) }
+        reconnectRunnable = null
     }
 }
 
