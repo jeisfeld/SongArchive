@@ -24,6 +24,7 @@ class PeerConnectionService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         @Suppress("DEPRECATION")
         val action: PeerConnectionAction? = intent?.getSerializableExtra("ACTION") as PeerConnectionAction?
+        val fromReconnect = intent?.getBooleanExtra("FROM_RECONNECT", false) == true
         Log.d(TAG, "Received message for action " + action)
 
         if (action == null) {
@@ -58,6 +59,9 @@ class PeerConnectionService : Service() {
                 Log.d(TAG, "🔄 Starting in CLIENT mode")
                 startNotification(intent, action)
                 peerConnectionHandler.startClient() // Use correct IP
+                if (fromReconnect) {
+                    peerConnectionHandler.scheduleClientReconnect()
+                }
             }
             PeerConnectionAction.DISPLAY_LYRICS, PeerConnectionAction.DISPLAY_TEXT, PeerConnectionAction.DISPLAY_SONG -> {
                 @Suppress("DEPRECATION")

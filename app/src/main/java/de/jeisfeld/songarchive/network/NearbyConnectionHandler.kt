@@ -266,7 +266,7 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
         context.startForegroundService(serviceIntent)
     }
 
-    private fun scheduleClientReconnect() {
+    fun scheduleClientReconnect() {
         if (type != PeerConnectionMode.CLIENT) {
             return
         }
@@ -304,6 +304,7 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
         val intent = Intent(context, PeerConnectionService::class.java).apply {
             setAction(PeerConnectionAction.START_CLIENT.toString())
             putExtra("ACTION", PeerConnectionAction.START_CLIENT)
+            putExtra("FROM_RECONNECT", true)
         }
         val pendingIntent = PendingIntent.getService(
             context,
@@ -313,7 +314,7 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
         )
 
         reconnectPendingIntent = pendingIntent
-        alarmManager.setAndAllowWhileIdle(
+        alarmManager.setExactAndAllowWhileIdle(
             AlarmManager.ELAPSED_REALTIME_WAKEUP,
             SystemClock.elapsedRealtime() + RECONNECT_DELAY_MS,
             pendingIntent
