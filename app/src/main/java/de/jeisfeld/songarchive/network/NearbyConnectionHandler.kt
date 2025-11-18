@@ -4,6 +4,7 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -11,6 +12,7 @@ import android.os.PowerManager
 import android.os.SystemClock
 import android.util.Log
 import android.widget.Toast
+import android.provider.Settings
 import androidx.core.content.ContextCompat.getSystemService
 import com.google.android.gms.nearby.Nearby
 import com.google.android.gms.nearby.connection.AdvertisingOptions
@@ -37,6 +39,7 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
     private val RECONNECT_DELAY_MS = 2000L
     private val connectionsClient = Nearby.getConnectionsClient(context)
     private val handler = Handler(Looper.getMainLooper())
+    private var requestedBatteryOptimizationException = false
 
     private var type = PeerConnectionMode.DISABLED
     private val connectedEndpoints = mutableSetOf<String>()
@@ -272,6 +275,7 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
             return
         }
 
+        ensureBatteryOptimizationExemption()
         reconnectRunnable?.let { handler.removeCallbacks(it) }
         scheduleDozeAwareReconnect()
         val reconnectAction = Runnable {
@@ -292,6 +296,30 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
         reconnectRunnable?.let { handler.removeCallbacks(it) }
         cancelDozeAwareReconnect()
         reconnectRunnable = null
+    }
+
+    private fun ensureBatteryOptimizationExemption() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M || requestedBatteryOptimizationException) {
+            return
+        }
+
+        val powerManager = getSystemService(context, PowerManager::class.java) as PowerManager? ?: return
+        val packageName = context.packageName
+        if (powerManager.isIgnoringBatteryOptimizations(packageName)) {
+            requestedBatteryOptimizationException = true
+            return
+        }
+
+        requestedBatteryOptimizationException = true
+        val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+            data = android.net.Uri.parse("package:$packageName")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        try {
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            Log.w(TAG, "Unable to request battery optimization exemption", e)
+        }
     }
 
     private fun scheduleDozeAwareReconnect() {
