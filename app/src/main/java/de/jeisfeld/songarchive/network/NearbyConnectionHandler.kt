@@ -294,12 +294,6 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
     }
 
     private fun scheduleDozeAwareReconnect() {
-        val powerManager = getSystemService(context, PowerManager::class.java) as PowerManager? ?: return
-        if (!powerManager.isDeviceIdleMode) {
-            cancelDozeAwareReconnect()
-            return
-        }
-
         val alarmManager = getSystemService(context, AlarmManager::class.java) as AlarmManager? ?: return
         val intent = Intent(context, PeerConnectionService::class.java).apply {
             setAction(PeerConnectionAction.START_CLIENT.toString())
@@ -312,7 +306,7 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-
+        cancelDozeAwareReconnect()
         reconnectPendingIntent = pendingIntent
         alarmManager.setExactAndAllowWhileIdle(
             AlarmManager.ELAPSED_REALTIME_WAKEUP,
