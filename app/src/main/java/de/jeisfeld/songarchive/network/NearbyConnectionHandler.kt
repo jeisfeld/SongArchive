@@ -8,6 +8,7 @@ import android.net.wifi.WifiManager
 import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
+import android.os.SystemClock
 import android.util.Log
 import android.widget.Toast
 import com.google.android.gms.nearby.Nearby
@@ -35,6 +36,7 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
     private val RECONNECT_DELAY_MS = 2000L
     private val RECONNECT_WAKE_INTERVAL_MS = 30 * 1000L
     private val RECONNECT_LOCK_DURATION_MS = 60 * 60 * 1000L
+    private val STALE_CLIENT_TIMEOUT_MS = 90 * 1000L
     private val connectionsClient = Nearby.getConnectionsClient(context)
     private val handler = Handler(Looper.getMainLooper())
     private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
@@ -61,6 +63,7 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
     private var type = PeerConnectionMode.DISABLED
     private val connectedEndpoints = mutableSetOf<String>()
     private var reconnectRunnable: Runnable? = null
+    private var lastClientActivityElapsed = SystemClock.elapsedRealtime()
 
     override fun startServer() {
         type = PeerConnectionMode.SERVER
@@ -79,6 +82,7 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
 
     override fun startClient() {
         type = PeerConnectionMode.CLIENT
+        markClientActivity()
         connectionsClient.startDiscovery(
             SERVICE_ID,
             endpointDiscoveryCallback,
@@ -134,7 +138,8 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
         override fun onConnectionResult(endpointId: String, result: ConnectionResolution) {
             if (result.status.isSuccess) {
                 connectedEndpoints.add(endpointId)
-                clearReconnectSchedule()
+                markClientActivity()
+                releaseReconnectLocks()
                 when (type) {
                     PeerConnectionMode.CLIENT -> {
                         Log.d(TAG, "Connected as client")
@@ -193,6 +198,7 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
 
     private val endpointDiscoveryCallback = object : EndpointDiscoveryCallback() {
         override fun onEndpointFound(endpointId: String, info: DiscoveredEndpointInfo) {
+            markClientActivity()
             connectionsClient.requestConnection(android.os.Build.MODEL, endpointId, connectionLifecycleCallback)
                 .addOnFailureListener { e ->
                     Log.e(TAG, "Request connection failed: ${e.message}", e)
@@ -201,6 +207,7 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
         }
 
         override fun onEndpointLost(endpointId: String) {
+            connectedEndpoints.remove(endpointId)
             if (type == PeerConnectionMode.CLIENT) {
                 scheduleClientReconnect()
             }
@@ -212,6 +219,7 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
             payload.asBytes()?.let {
                 val json = String(it, StandardCharsets.UTF_8)
                 Log.d(TAG, "Processing payload " + json)
+                markClientActivity()
                 val message = gson.fromJson(json, Message::class.java)
                 processCommand(message)
             }
@@ -293,23 +301,41 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
             return
         }
 
-        reconnectRunnable?.let { handler.removeCallbacks(it) }
-        val reconnectAction = Runnable {
-            if (type == PeerConnectionMode.CLIENT && connectedEndpoints.isEmpty()) {
-                Log.d(TAG, "Attempting to restart discovery after disconnect")
+        val existingRunnable = reconnectRunnable
+        if (existingRunnable != null) {
+            handler.removeCallbacks(existingRunnable)
+        }
+
+        val reconnectAction = existingRunnable ?: Runnable {
+            if (type != PeerConnectionMode.CLIENT) {
+                return@Runnable
+            }
+
+            val now = SystemClock.elapsedRealtime()
+            val hasEndpoints = connectedEndpoints.isNotEmpty()
+            val isStaleConnection = hasEndpoints && now - lastClientActivityElapsed > STALE_CLIENT_TIMEOUT_MS
+
+            if (!hasEndpoints || isStaleConnection) {
+                if (isStaleConnection) {
+                    Log.w(TAG, "Stale client connection detected; forcing reconnect")
+                    connectedEndpoints.clear()
+                } else {
+                    Log.d(TAG, "Attempting to restart discovery after disconnect")
+                }
+
                 connectionsClient.stopDiscovery()
                 connectionsClient.stopAllEndpoints()
-                startClient()
-                scheduleReconnectWakeUp()
                 acquireReconnectLocks()
-                reconnectRunnable?.let { handler.postDelayed(it, RECONNECT_DELAY_MS) }
+                startClient()
             }
+
+            scheduleReconnectWakeUp()
+            reconnectRunnable?.let { handler.postDelayed(it, RECONNECT_WAKE_INTERVAL_MS) }
         }
 
         reconnectRunnable = reconnectAction
         handler.postDelayed(reconnectAction, RECONNECT_DELAY_MS)
         scheduleReconnectWakeUp()
-        acquireReconnectLocks()
     }
 
     private fun clearReconnectSchedule() {
@@ -375,6 +401,10 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
         if (reconnectWifiLock.isHeld) {
             reconnectWifiLock.release()
         }
+    }
+
+    private fun markClientActivity() {
+        lastClientActivityElapsed = SystemClock.elapsedRealtime()
     }
 }
 
