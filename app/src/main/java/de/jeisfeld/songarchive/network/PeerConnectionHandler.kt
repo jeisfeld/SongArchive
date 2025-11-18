@@ -10,6 +10,7 @@ interface PeerConnectionHandler {
     fun startClient()
     fun stopEndpoint()
     fun sendCommandToClients(command: NetworkCommand, params: Map<String, String?> = emptyMap())
+    fun scheduleClientReconnect()
 }
 
 enum class NetworkCommand {

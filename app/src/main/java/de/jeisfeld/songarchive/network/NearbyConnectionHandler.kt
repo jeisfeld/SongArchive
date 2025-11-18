@@ -266,7 +266,7 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
         context.startForegroundService(serviceIntent)
     }
 
-    fun scheduleClientReconnect() {
+    override fun scheduleClientReconnect() {
         if (type != PeerConnectionMode.CLIENT) {
             return
         }
