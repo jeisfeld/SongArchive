@@ -33,7 +33,7 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
     private val SERVICE_ID = "de.jeisfeld.songarchive.NEARBY_SERVICE"
     private val STRATEGY = Strategy.P2P_STAR
     private val RECONNECT_DELAY_MS = 2000L
-    private val RECONNECT_WAKE_INTERVAL_MS = 5 * 60 * 1000L
+    private val RECONNECT_WAKE_INTERVAL_MS = 30 * 1000L
     private val connectionsClient = Nearby.getConnectionsClient(context)
     private val handler = Handler(Looper.getMainLooper())
     private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
