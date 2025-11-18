@@ -34,7 +34,7 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
     private val STRATEGY = Strategy.P2P_STAR
     private val RECONNECT_DELAY_MS = 2000L
     private val RECONNECT_WAKE_INTERVAL_MS = 30 * 1000L
-    private val RECONNECT_LOCK_DURATION_MS = 10 * 60 * 1000L
+    private val RECONNECT_LOCK_DURATION_MS = 60 * 60 * 1000L
     private val connectionsClient = Nearby.getConnectionsClient(context)
     private val handler = Handler(Looper.getMainLooper())
     private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
@@ -325,11 +325,36 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
         }
 
         val triggerAtMillis = System.currentTimeMillis() + RECONNECT_WAKE_INTERVAL_MS
-        alarmManager.setExactAndAllowWhileIdle(
-            AlarmManager.RTC_WAKEUP,
-            triggerAtMillis,
-            reconnectPendingIntent
-        )
+        try {
+            val canScheduleExactAlarm = android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S ||
+                    alarmManager.canScheduleExactAlarms()
+
+            if (canScheduleExactAlarm) {
+                alarmManager.setExactAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    triggerAtMillis,
+                    reconnectPendingIntent
+                )
+            } else {
+                alarmManager.setAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    triggerAtMillis,
+                    reconnectPendingIntent
+                )
+                Log.w(TAG, "Exact alarms not permitted; scheduling inexact reconnect alarm")
+            }
+        } catch (securityException: SecurityException) {
+            alarmManager.setAndAllowWhileIdle(
+                AlarmManager.RTC_WAKEUP,
+                triggerAtMillis,
+                reconnectPendingIntent
+            )
+            Log.w(
+                TAG,
+                "Exact alarm denied by SecurityException; used inexact reconnect alarm instead",
+                securityException
+            )
+        }
     }
 
     private fun acquireReconnectLocks() {
