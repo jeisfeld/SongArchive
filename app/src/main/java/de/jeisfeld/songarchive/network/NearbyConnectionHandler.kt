@@ -4,12 +4,12 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.net.wifi.WifiManager
 import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
 import android.util.Log
 import android.widget.Toast
-import androidx.core.content.ContextCompat.getSystemService
 import com.google.android.gms.nearby.Nearby
 import com.google.android.gms.nearby.connection.AdvertisingOptions
 import com.google.android.gms.nearby.connection.ConnectionInfo
@@ -34,9 +34,20 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
     private val STRATEGY = Strategy.P2P_STAR
     private val RECONNECT_DELAY_MS = 2000L
     private val RECONNECT_WAKE_INTERVAL_MS = 30 * 1000L
+    private val RECONNECT_LOCK_DURATION_MS = 2 * 60 * 1000L
     private val connectionsClient = Nearby.getConnectionsClient(context)
     private val handler = Handler(Looper.getMainLooper())
     private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+    private val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+    private val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+    private val reconnectWakeLock = powerManager.newWakeLock(
+        PowerManager.PARTIAL_WAKE_LOCK,
+        "CircleSongArchive:ReconnectPartialWakeLock"
+    )
+    private val reconnectWifiLock = wifiManager.createWifiLock(
+        WifiManager.WIFI_MODE_FULL_HIGH_PERF,
+        "CircleSongArchive:ReconnectWifiLock"
+    )
     private val reconnectPendingIntent = PendingIntent.getService(
         context,
         1001,
@@ -232,8 +243,6 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
                 }
 
                 context.startActivity(intent)
-                val powerManager = getSystemService(context, PowerManager::class.java) as PowerManager
-
                 if (!powerManager.isInteractive) {
                     val wakeLock = powerManager.newWakeLock(
                         PowerManager.FULL_WAKE_LOCK or
@@ -288,6 +297,7 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
                 connectionsClient.stopAllEndpoints()
                 startClient()
                 scheduleReconnectWakeUp()
+                acquireReconnectLocks()
                 reconnectRunnable?.let { handler.postDelayed(it, RECONNECT_DELAY_MS) }
             }
         }
@@ -295,12 +305,14 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
         reconnectRunnable = reconnectAction
         handler.postDelayed(reconnectAction, RECONNECT_DELAY_MS)
         scheduleReconnectWakeUp()
+        acquireReconnectLocks()
     }
 
     private fun clearReconnectSchedule() {
         reconnectRunnable?.let { handler.removeCallbacks(it) }
         reconnectRunnable = null
         alarmManager.cancel(reconnectPendingIntent)
+        releaseReconnectLocks()
     }
 
     private fun scheduleReconnectWakeUp() {
@@ -314,6 +326,26 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
             triggerAtMillis,
             reconnectPendingIntent
         )
+    }
+
+    private fun acquireReconnectLocks() {
+        if (!reconnectWakeLock.isHeld) {
+            reconnectWakeLock.acquire(RECONNECT_LOCK_DURATION_MS)
+        }
+
+        if (!reconnectWifiLock.isHeld) {
+            reconnectWifiLock.acquire()
+        }
+    }
+
+    private fun releaseReconnectLocks() {
+        if (reconnectWakeLock.isHeld) {
+            reconnectWakeLock.release()
+        }
+
+        if (reconnectWifiLock.isHeld) {
+            reconnectWifiLock.release()
+        }
     }
 }
 
