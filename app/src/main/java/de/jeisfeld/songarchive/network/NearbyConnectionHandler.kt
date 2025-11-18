@@ -1,5 +1,7 @@
 package de.jeisfeld.songarchive.network
 
+import android.app.AlarmManager
+import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Handler
@@ -31,8 +33,19 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
     private val SERVICE_ID = "de.jeisfeld.songarchive.NEARBY_SERVICE"
     private val STRATEGY = Strategy.P2P_STAR
     private val RECONNECT_DELAY_MS = 2000L
+    private val RECONNECT_WAKE_INTERVAL_MS = 5 * 60 * 1000L
     private val connectionsClient = Nearby.getConnectionsClient(context)
     private val handler = Handler(Looper.getMainLooper())
+    private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+    private val reconnectPendingIntent = PendingIntent.getService(
+        context,
+        1001,
+        Intent(context, PeerConnectionService::class.java).apply {
+            setAction(PeerConnectionAction.START_CLIENT.toString())
+            putExtra("ACTION", PeerConnectionAction.START_CLIENT)
+        },
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+    )
 
     private var type = PeerConnectionMode.DISABLED
     private val connectedEndpoints = mutableSetOf<String>()
@@ -274,17 +287,33 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
                 connectionsClient.stopDiscovery()
                 connectionsClient.stopAllEndpoints()
                 startClient()
+                scheduleReconnectWakeUp()
                 reconnectRunnable?.let { handler.postDelayed(it, RECONNECT_DELAY_MS) }
             }
         }
 
         reconnectRunnable = reconnectAction
         handler.postDelayed(reconnectAction, RECONNECT_DELAY_MS)
+        scheduleReconnectWakeUp()
     }
 
     private fun clearReconnectSchedule() {
         reconnectRunnable?.let { handler.removeCallbacks(it) }
         reconnectRunnable = null
+        alarmManager.cancel(reconnectPendingIntent)
+    }
+
+    private fun scheduleReconnectWakeUp() {
+        if (type != PeerConnectionMode.CLIENT) {
+            return
+        }
+
+        val triggerAtMillis = System.currentTimeMillis() + RECONNECT_WAKE_INTERVAL_MS
+        alarmManager.setExactAndAllowWhileIdle(
+            AlarmManager.RTC_WAKEUP,
+            triggerAtMillis,
+            reconnectPendingIntent
+        )
     }
 }
 
