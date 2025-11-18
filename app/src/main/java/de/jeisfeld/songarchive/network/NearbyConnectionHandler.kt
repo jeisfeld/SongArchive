@@ -4,6 +4,7 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
@@ -308,11 +309,23 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
         )
         cancelDozeAwareReconnect()
         reconnectPendingIntent = pendingIntent
-        alarmManager.setExactAndAllowWhileIdle(
-            AlarmManager.ELAPSED_REALTIME_WAKEUP,
-            SystemClock.elapsedRealtime() + RECONNECT_DELAY_MS,
-            pendingIntent
-        )
+        val triggerAt = SystemClock.elapsedRealtime() + RECONNECT_DELAY_MS
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) {
+            Log.w(TAG, "Exact alarms not permitted; scheduling inexact reconnect")
+            alarmManager.setAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, triggerAt, pendingIntent)
+            return
+        }
+
+        try {
+            alarmManager.setExactAndAllowWhileIdle(
+                AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                triggerAt,
+                pendingIntent
+            )
+        } catch (securityException: SecurityException) {
+            Log.w(TAG, "Exact reconnect alarm denied; using inexact scheduling", securityException)
+            alarmManager.setAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, triggerAt, pendingIntent)
+        }
     }
 
     private fun cancelDozeAwareReconnect() {
