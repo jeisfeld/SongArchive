@@ -34,7 +34,7 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
     private val STRATEGY = Strategy.P2P_STAR
     private val RECONNECT_DELAY_MS = 2000L
     private val RECONNECT_WAKE_INTERVAL_MS = 30 * 1000L
-    private val RECONNECT_LOCK_DURATION_MS = 2 * 60 * 1000L
+    private val RECONNECT_LOCK_DURATION_MS = 10 * 60 * 1000L
     private val connectionsClient = Nearby.getConnectionsClient(context)
     private val handler = Handler(Looper.getMainLooper())
     private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
@@ -85,6 +85,9 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
             DiscoveryOptions.Builder().setStrategy(STRATEGY).build()
         ).addOnSuccessListener {
             Log.d(TAG, "Discovery started")
+            if (connectedEndpoints.isEmpty()) {
+                scheduleClientReconnect()
+            }
         }.addOnFailureListener { e ->
             Log.e(TAG, "Discovery failed: ${e.message}", e)
             scheduleClientReconnect()
@@ -143,6 +146,7 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
                         Log.d(TAG, "Client connected")
                         Toast.makeText(context, context.getString(R.string.toast_client_connected, connectedEndpoints.size), Toast.LENGTH_SHORT)
                             .show()
+                        clearReconnectSchedule()
                         updateNotification(PeerConnectionAction.CLIENTS_CONNECTED)
                         PeerConnectionViewModel.connectedDevices = connectedEndpoints.size
                         val lastSentCommand = PeerConnectionViewModel.lastSentCommand
