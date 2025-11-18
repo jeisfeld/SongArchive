@@ -6,8 +6,13 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothManager
+import android.content.Context
 import android.os.IBinder
+import android.os.PowerManager
 import android.util.Log
+import android.net.wifi.WifiManager
 import de.jeisfeld.songarchive.R
 
 class PeerConnectionService : Service() {
@@ -15,6 +20,9 @@ class PeerConnectionService : Service() {
     private var mode = PeerConnectionMode.DISABLED
     private val TAG = "PeerconnectionService"
     private var isForegroundService = false
+    private var wakeLock: PowerManager.WakeLock? = null
+    private var wifiLock: WifiManager.WifiLock? = null
+    private var bluetoothAdapter: BluetoothAdapter? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -42,6 +50,7 @@ class PeerConnectionService : Service() {
                 PeerConnectionViewModel.lastSentCommand = null
                 Log.d(TAG, "❌ Stopping Peer Connection Service")
                 peerConnectionHandler.stopEndpoint()
+                releaseConnectionLocks()
                 startNotification(intent, action)
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
@@ -51,12 +60,14 @@ class PeerConnectionService : Service() {
                 mode = PeerConnectionMode.SERVER
                 Log.d(TAG, "🚀 Starting in SERVER mode")
                 startNotification(intent, action)
+                acquireConnectionLocks()
                 peerConnectionHandler.startServer()
             }
             PeerConnectionAction.START_CLIENT -> {
                 mode = PeerConnectionMode.CLIENT
                 Log.d(TAG, "🔄 Starting in CLIENT mode")
                 startNotification(intent, action)
+                acquireConnectionLocks()
                 peerConnectionHandler.startClient() // Use correct IP
             }
             PeerConnectionAction.DISPLAY_LYRICS, PeerConnectionAction.DISPLAY_TEXT, PeerConnectionAction.DISPLAY_SONG -> {
@@ -120,6 +131,7 @@ class PeerConnectionService : Service() {
         peerConnectionHandler.stopEndpoint()
         PeerConnectionViewModel.lastSentCommand = null
         PeerConnectionViewModel.peerConnectionMode = PeerConnectionMode.DISABLED
+        releaseConnectionLocks()
         Log.d(TAG, "🛑 PeerConnectionService Stopped")
     }
 
@@ -169,5 +181,46 @@ class PeerConnectionService : Service() {
             .setSmallIcon(R.drawable.ic_launcher_white)
             .addAction(android.R.drawable.ic_menu_close_clear_cancel, "STOP", stopPendingIntent)
             .build()
+    }
+
+    private fun acquireConnectionLocks() {
+        if (mode == PeerConnectionMode.DISABLED) return
+        if (wakeLock == null || wakeLock?.isHeld == false) {
+            val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+            wakeLock = powerManager.newWakeLock(
+                PowerManager.PARTIAL_WAKE_LOCK,
+                "CircleSongArchive:PeerConnectionWakeLock"
+            ).apply { setReferenceCounted(false); acquire() }
+        }
+
+        if (wifiLock == null) {
+            val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+            wifiLock = wifiManager.createWifiLock(
+                WifiManager.WIFI_MODE_FULL_HIGH_PERF,
+                "CircleSongArchive:PeerConnectionWifiLock"
+            ).apply { setReferenceCounted(false) }
+        }
+        if (wifiLock?.isHeld == false) {
+            wifiLock?.acquire()
+        }
+
+        if (bluetoothAdapter == null) {
+            val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+            bluetoothAdapter = bluetoothManager.adapter
+        }
+        bluetoothAdapter?.let {
+            if (!it.isEnabled) {
+                it.enable()
+            }
+        }
+    }
+
+    private fun releaseConnectionLocks() {
+        if (wakeLock?.isHeld == true) {
+            wakeLock?.release()
+        }
+        if (wifiLock?.isHeld == true) {
+            wifiLock?.release()
+        }
     }
 }
