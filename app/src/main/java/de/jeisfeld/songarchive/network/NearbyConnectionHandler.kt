@@ -219,8 +219,8 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
                 }
 
                 context.startActivity(intent)
-                val powerManager = getSystemService(context, PowerManager::class.java) as PowerManager
 
+                val powerManager = getSystemService(context, PowerManager::class.java) as PowerManager
                 if (!powerManager.isInteractive) {
                     val wakeLock = powerManager.newWakeLock(
                         PowerManager.FULL_WAKE_LOCK or
@@ -265,6 +265,17 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
     private fun scheduleClientReconnect() {
         if (type != PeerConnectionMode.CLIENT) {
             return
+        }
+
+        val powerManager = getSystemService(context, PowerManager::class.java) as PowerManager
+        if (!powerManager.isInteractive) {
+            val wakeLock = powerManager.newWakeLock(
+                PowerManager.FULL_WAKE_LOCK or
+                        PowerManager.ACQUIRE_CAUSES_WAKEUP or
+                        PowerManager.ON_AFTER_RELEASE,
+                "CircleSongArchive:clientReconnect"
+            )
+            wakeLock.acquire(30000)
         }
 
         reconnectRunnable?.let { handler.removeCallbacks(it) }
