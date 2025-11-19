@@ -99,6 +99,12 @@ class MainActivity : AppCompatActivity() {
         viewModel.sendPluginVerificationBroadcast(this)
     }
 
+    override fun onResume() {
+        super.onResume()
+        // Re-check plugin availability in case it was installed while the app was running
+        viewModel.sendPluginVerificationBroadcast(this)
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         unregisterReceiver(viewModel.pluginResponseReceiver)
