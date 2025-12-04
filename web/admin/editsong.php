@@ -33,6 +33,66 @@ function fetchSong($conn, $songId) {
 
 	return $song ?: null;
 }
+function songIdExists($conn, $songId) {
+	$sql = 'SELECT 1 FROM songs WHERE id = ? LIMIT 1';
+	$stmt = $conn->prepare ( $sql );
+
+	if (! $stmt) {
+		error_log ( 'Failed to prepare statement for checking song ID: ' . $conn->error );
+		return false;
+	}
+
+	$stmt->bind_param ( 's', $songId );
+	$stmt->execute ();
+
+	$result = $stmt->get_result ();
+	if (! $result) {
+		error_log ( 'Failed to execute song ID existence check: ' . $stmt->error );
+		$stmt->close ();
+		return false;
+	}
+
+	$exists = ( bool ) $result->fetch_row ();
+	$stmt->close ();
+
+	return $exists;
+}
+function buildCloneIdSuffix($index) {
+	$alphabet = 'abcdefghijklmnopqrstuvwxyz';
+	$suffix = '';
+	$currentIndex = ( int ) $index;
+
+	while ( $currentIndex >= 0 ) {
+		$remainder = $currentIndex % 26;
+		$suffix = $alphabet [$remainder] . $suffix;
+		$currentIndex = ( int ) ($currentIndex / 26) - 1;
+	}
+
+	return $suffix;
+}
+function generateCloneId($conn, $originalId) {
+	$originalId = ( string ) $originalId;
+
+	if ($originalId === '') {
+		return '';
+	}
+
+	$baseId = 'X' . substr ( $originalId, 1 );
+
+	if (! songIdExists ( $conn, $baseId )) {
+		return $baseId;
+	}
+
+	for($suffixIndex = 0; $suffixIndex < 1000; $suffixIndex ++) {
+		$candidateId = $baseId . buildCloneIdSuffix ( $suffixIndex );
+
+		if (! songIdExists ( $conn, $candidateId )) {
+			return $candidateId;
+		}
+	}
+
+	return '';
+}
 function fetchAllMeanings($conn) {
 	$sql = "SELECT id, title, meaning FROM meaning ORDER BY title, id";
 	$meanings = [ ];
@@ -514,11 +574,14 @@ $requestedMeaningIds = [ ];
 $songMeaningIdsFromDatabase = [ ];
 $allMeanings = [ ];
 $canUpdateSongIdRequest = false;
+$cloneIdSuggestion = '';
+$isCloneRequest = false;
 
 if ($_SERVER ['REQUEST_METHOD'] === 'POST') {
 	$originalSongId = isset ( $_POST ['original_id'] ) ? trim ( ( string ) $_POST ['original_id'] ) : $originalSongId;
 	$id = $originalSongId;
 	$requestedSongId = isset ( $_POST ['new_id'] ) ? trim ( ( string ) $_POST ['new_id'] ) : $requestedSongId;
+	$isCloneRequest = isset ( $_POST ['clone_mode'] ) && ( string ) $_POST ['clone_mode'] === '1';
 	$title = isset ( $_POST ['title'] ) ? trim ( $_POST ['title'] ) : '';
 	$lyrics = isset ( $_POST ['lyrics'] ) ? $_POST ['lyrics'] : '';
 	$lyricsShortInput = isset ( $_POST ['lyrics_short'] ) ? $_POST ['lyrics_short'] : '';
@@ -577,7 +640,7 @@ if ($_SERVER ['REQUEST_METHOD'] === 'POST') {
 
 			$targetSongId = $id;
 
-			if ($requestedSongId !== $id) {
+			if (! $isCloneRequest && $requestedSongId !== $id) {
 				if ($canUpdateSongIdRequest) {
 					$targetSongId = $requestedSongId;
 				}
@@ -587,56 +650,124 @@ if ($_SERVER ['REQUEST_METHOD'] === 'POST') {
 			}
 
 			if ($errorMessage === '') {
-				$updateSql = "UPDATE songs SET id = ?, title = ?, lyrics = ?, lyrics_short = ?, lyrics_paged = ?, tabfilename = ?, mp3filename = ?, mp3filename2 = ?, author = ?, keywords = ? WHERE id = ?";
-				$updateStmt = $conn->prepare ( $updateSql );
+				if ($isCloneRequest) {
+					$targetSongId = generateCloneId ( $conn, $id );
 
-				if (! $updateStmt) {
-					error_log ( 'Failed to prepare update statement: ' . $conn->error );
-					$errorMessage = 'Unable to update the song at this time.';
-				}
-				else {
-					$updateStmt->bind_param ( 'sssssssssss', $targetSongId, $title, $lyrics, $lyrics_short, $lyrics_paged, $tabfilename, $mp3filename, $mp3filename2, $author, $keywords, $id );
-
-					$transactionStarted = $conn->begin_transaction ();
-					if (! $transactionStarted) {
-						error_log ( 'Failed to begin transaction for song update: ' . $conn->error );
+					if ($targetSongId === '') {
+						$errorMessage = 'Unable to generate a new ID for the cloned song.';
 					}
+					else {
+						$insertSql = "INSERT INTO songs (id, title, lyrics, lyrics_short, lyrics_paged, tabfilename, mp3filename, mp3filename2, author, keywords) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+						$insertStmt = $conn->prepare ( $insertSql );
 
-					if ($updateStmt->execute ()) {
-						$relationshipsUpdated = updateSongMeaningRelationships ( $conn, $targetSongId, $requestedMeaningIds );
-
-						if ($relationshipsUpdated) {
-							if ($transactionStarted) {
-								$conn->commit ();
-							}
-
-							$updateSuccess = true;
-							$successMessage = 'Song updated successfully.';
-							$id = $targetSongId;
-							$requestedSongId = $targetSongId;
-							$songFromDatabase = fetchSong ( $conn, $id );
-							$songMeaningIdsFromDatabase = fetchSongMeaningIds ( $conn, $id );
+						if (! $insertStmt) {
+							error_log ( 'Failed to prepare insert statement for cloning: ' . $conn->error );
+							$errorMessage = 'Unable to clone the song at this time.';
 						}
 						else {
+							$insertStmt->bind_param ( 'ssssssssss', $targetSongId, $title, $lyrics, $lyrics_short, $lyrics_paged, $tabfilename, $mp3filename, $mp3filename2, $author, $keywords );
+
+							$transactionStarted = $conn->begin_transaction ();
+							if (! $transactionStarted) {
+								error_log ( 'Failed to begin transaction for song clone: ' . $conn->error );
+							}
+
+							if ($insertStmt->execute ()) {
+								$relationshipsUpdated = updateSongMeaningRelationships ( $conn, $targetSongId, $requestedMeaningIds );
+
+								if ($relationshipsUpdated) {
+									if ($transactionStarted) {
+										$conn->commit ();
+									}
+
+									$updateSuccess = true;
+									$successMessage = 'Song cloned successfully as ' . $targetSongId . '.';
+									$id = $targetSongId;
+									$requestedSongId = $targetSongId;
+									$originalSongId = $targetSongId;
+									$songFromDatabase = fetchSong ( $conn, $id );
+									$songMeaningIdsFromDatabase = fetchSongMeaningIds ( $conn, $id );
+								}
+								else {
+									if ($transactionStarted) {
+										$conn->rollback ();
+									}
+
+									$successMessage = '';
+									$errorMessage = 'Failed to clone song meanings.';
+								}
+							}
+							else {
+								error_log ( 'Failed to execute clone insert statement: ' . $insertStmt->error );
+
+								if ($transactionStarted) {
+									$conn->rollback ();
+								}
+
+								if ($insertStmt->errno === 1062) {
+									$errorMessage = 'The generated song ID is already in use. Please try again.';
+								}
+								else {
+									$errorMessage = 'Failed to clone the song.';
+								}
+							}
+
+							$insertStmt->close ();
+						}
+					}
+				}
+				else {
+					$updateSql = "UPDATE songs SET id = ?, title = ?, lyrics = ?, lyrics_short = ?, lyrics_paged = ?, tabfilename = ?, mp3filename = ?, mp3filename2 = ?, author = ?, keywords = ? WHERE id = ?";
+					$updateStmt = $conn->prepare ( $updateSql );
+
+					if (! $updateStmt) {
+						error_log ( 'Failed to prepare update statement: ' . $conn->error );
+						$errorMessage = 'Unable to update the song at this time.';
+					}
+					else {
+						$updateStmt->bind_param ( 'sssssssssss', $targetSongId, $title, $lyrics, $lyrics_short, $lyrics_paged, $tabfilename, $mp3filename, $mp3filename2, $author, $keywords, $id );
+
+						$transactionStarted = $conn->begin_transaction ();
+						if (! $transactionStarted) {
+							error_log ( 'Failed to begin transaction for song update: ' . $conn->error );
+						}
+
+						if ($updateStmt->execute ()) {
+							$relationshipsUpdated = updateSongMeaningRelationships ( $conn, $targetSongId, $requestedMeaningIds );
+
+							if ($relationshipsUpdated) {
+								if ($transactionStarted) {
+									$conn->commit ();
+								}
+
+								$updateSuccess = true;
+								$successMessage = 'Song updated successfully.';
+								$id = $targetSongId;
+								$requestedSongId = $targetSongId;
+								$songFromDatabase = fetchSong ( $conn, $id );
+								$songMeaningIdsFromDatabase = fetchSongMeaningIds ( $conn, $id );
+							}
+							else {
+								if ($transactionStarted) {
+									$conn->rollback ();
+								}
+
+								$successMessage = '';
+								$errorMessage = 'Failed to update song meanings.';
+							}
+						}
+						else {
+							error_log ( 'Failed to execute update statement: ' . $updateStmt->error );
+
 							if ($transactionStarted) {
 								$conn->rollback ();
 							}
 
-							$successMessage = '';
-							$errorMessage = 'Failed to update song meanings.';
-						}
-					}
-					else {
-						error_log ( 'Failed to execute update statement: ' . $updateStmt->error );
-
-						if ($transactionStarted) {
-							$conn->rollback ();
+							$errorMessage = 'Failed to update the song.';
 						}
 
-						$errorMessage = 'Failed to update the song.';
+						$updateStmt->close ();
 					}
-
-					$updateStmt->close ();
 				}
 			}
 		}
@@ -684,6 +815,8 @@ else {
 }
 
 $selectedMeaningIdsForView = array_values ( array_map ( 'intval', $selectedMeaningIdsForView ) );
+
+$cloneIdSuggestion = $id !== '' ? generateCloneId ( $conn, $id ) : '';
 
 $conn->close ();
 
@@ -1282,6 +1415,119 @@ h1 {
 	background-color: #45a049;
 }
 
+.clone-modal {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	display: none;
+	align-items: center;
+	justify-content: center;
+	z-index: 100;
+}
+
+.clone-modal.is-open {
+	display: flex;
+}
+
+.clone-modal__backdrop {
+	position: absolute;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.35);
+}
+
+.clone-modal__dialog {
+	position: relative;
+	background: #fff;
+	border-radius: 6px;
+	box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
+	width: 95%;
+	max-width: 520px;
+	z-index: 101;
+	overflow: hidden;
+}
+
+.clone-modal__header, .clone-modal__footer {
+	padding: 14px 18px;
+	background-color: #f7f7f7;
+	border-bottom: 1px solid #e1e1e1;
+}
+
+.clone-modal__header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.clone-modal__title {
+	margin: 0;
+	font-size: 1.2rem;
+}
+
+.clone-modal__close {
+	background: transparent;
+	border: none;
+	font-size: 1.4rem;
+	cursor: pointer;
+	line-height: 1;
+}
+
+.clone-modal__body {
+	padding: 16px 18px;
+}
+
+.clone-modal__footer {
+	display: flex;
+	justify-content: flex-end;
+	gap: 10px;
+	border-top: 1px solid #e1e1e1;
+	border-bottom: none;
+}
+
+.clone-modal__cancel, .clone-modal__confirm {
+	padding: 9px 18px;
+	border-radius: 4px;
+	border: 1px solid transparent;
+	cursor: pointer;
+	font-size: 1rem;
+}
+
+.clone-modal__cancel {
+	background-color: #f0f0f0;
+	border-color: #ccc;
+	color: #333;
+}
+
+.clone-modal__cancel:hover {
+	background-color: #e0e0e0;
+}
+
+.clone-modal__confirm {
+	background-color: #1c6dd0;
+	border-color: #1c6dd0;
+	color: #fff;
+}
+
+.clone-modal__confirm:hover {
+	background-color: #1559a6;
+}
+
+.clone-modal__feedback {
+	margin-top: 8px;
+	font-size: 0.95rem;
+}
+
+.clone-modal__feedback--error {
+	color: #a30000;
+}
+
+.clone-modal__note {
+	font-size: 0.95rem;
+	color: #555;
+	margin-top: 8px;
+}
+
 .short-textarea {
 	min-height: 80px;
 }
@@ -1319,6 +1565,12 @@ h1 {
 .button-row .save-btn {
 	background-color: #4CAF50;
 	border-color: #4CAF50;
+	color: #fff;
+}
+
+.button-row .clone-btn {
+	background-color: #1c6dd0;
+	border-color: #1c6dd0;
 	color: #fff;
 }
 
@@ -1370,7 +1622,8 @@ h1 {
 
         <?php if ($songData): ?>
             <form method="post" id="edit-song-form">
-			<input type="hidden" name="original_id" value="<?php echo escapeHtml($currentSongIdValue); ?>">
+			<input type="hidden" name="original_id" value="<?php echo escapeHtml($currentSongIdValue); ?>"> <input type="hidden"
+				name="clone_mode" id="clone-mode-input" value="0">
 
 			<div class="form-group">
 				<label for="song-id">ID</label> <input type="text" id="song-id" name="new_id"
@@ -1463,9 +1716,35 @@ h1 {
                     <?php if ($songData && $currentSongIdValue !== ''): ?>
                         <button type="button" class="delete-btn" id="delete-song">Delete</button>
                     <?php endif; ?>
-                    <button type="submit" class="save-btn">Save</button>
+                    <button type="button" class="clone-btn" id="clone-song"
+					<?php echo $cloneIdSuggestion === '' ? ' disabled' : ''; ?>>Clone</button>
+				<button type="submit" class="save-btn">Save</button>
 			</div>
 		</form>
+		<div class="clone-modal" id="clone-modal" aria-hidden="true" role="dialog" aria-labelledby="clone-modal-title">
+			<div class="clone-modal__backdrop" id="clone-modal-backdrop" data-clone-modal-dismiss="true"></div>
+			<div class="clone-modal__dialog">
+				<div class="clone-modal__header">
+					<h2 class="clone-modal__title" id="clone-modal-title">Clone Song</h2>
+					<button type="button" class="clone-modal__close" id="clone-modal-close" aria-label="Close clone dialog">&times;</button>
+				</div>
+				<div class="clone-modal__body">
+					<p>This will create a new song using a derived ID. The original song remains unchanged.</p>
+					<div class="form-group">
+						<label for="clone-new-id-input">New Song ID</label> <input type="text" id="clone-new-id-input"
+							value="<?php echo escapeHtml($cloneIdSuggestion); ?>" autocomplete="off"
+							<?php echo $cloneIdSuggestion === '' ? '' : 'readonly'; ?>>
+						<div class="clone-modal__note">The first character of the original ID is replaced with X. If that ID is taken, a
+							letter is appended to keep it unique.</div>
+					</div>
+					<div class="clone-modal__feedback" id="clone-modal-feedback" aria-live="polite" aria-hidden="true"></div>
+				</div>
+				<div class="clone-modal__footer">
+					<button type="button" class="clone-modal__cancel" id="clone-modal-cancel">Cancel</button>
+					<button type="button" class="clone-modal__confirm" id="clone-modal-confirm">Clone</button>
+				</div>
+			</div>
+		</div>
 		<div class="meaning-modal" id="meaning-modal" aria-hidden="true" role="dialog" aria-labelledby="meaning-modal-title">
 			<div class="meaning-modal__backdrop" data-meaning-modal-dismiss="true"></div>
 			<div class="meaning-modal__dialog">
@@ -1530,6 +1809,138 @@ h1 {
                 var deleteUrl = <?php echo json_encode('deletesong.php?id=' . rawurlencode($currentSongIdValue)); ?>;
                 deleteButton.addEventListener('click', function() {
                     window.location.href = deleteUrl;
+                });
+            }
+
+            var cloneModal = document.getElementById('clone-modal');
+            var cloneModalBackdrop = document.getElementById('clone-modal-backdrop');
+            var cloneModalClose = document.getElementById('clone-modal-close');
+            var cloneModalCancel = document.getElementById('clone-modal-cancel');
+            var cloneModalConfirm = document.getElementById('clone-modal-confirm');
+            var cloneIdInput = document.getElementById('clone-new-id-input');
+            var cloneFeedback = document.getElementById('clone-modal-feedback');
+            var cloneModeInput = document.getElementById('clone-mode-input');
+            var cloneButton = document.getElementById('clone-song');
+            var cloneIdSuggestion = <?php echo json_encode($cloneIdSuggestion); ?>;
+            var songIdInput = document.getElementById('song-id');
+
+            function setCloneFeedback(message, type) {
+                if (! cloneFeedback) {
+                    return;
+                }
+
+                cloneFeedback.textContent = message ? String(message) : '';
+                cloneFeedback.className = 'clone-modal__feedback';
+
+                if (! message) {
+                    cloneFeedback.setAttribute('aria-hidden', 'true');
+                    return;
+                }
+
+                if (type === 'error') {
+                    cloneFeedback.classList.add('clone-modal__feedback--error');
+                }
+
+                cloneFeedback.setAttribute('aria-hidden', 'false');
+            }
+
+            function closeCloneModal() {
+                if (cloneModal) {
+                    cloneModal.classList.remove('is-open');
+                    cloneModal.setAttribute('aria-hidden', 'true');
+                }
+
+                if (cloneModeInput) {
+                    cloneModeInput.value = '0';
+                }
+
+                setCloneFeedback('', '');
+            }
+
+            function openCloneModal() {
+                if (! cloneModal || ! cloneButton || cloneButton.disabled) {
+                    return;
+                }
+
+                var suggestedId = typeof cloneIdSuggestion === 'string' ? cloneIdSuggestion : '';
+                var fallbackId = songIdInput && typeof songIdInput.value === 'string' ? songIdInput.value : '';
+                var targetId = suggestedId || fallbackId;
+
+                if (cloneIdInput) {
+                    cloneIdInput.value = targetId;
+                }
+
+                setCloneFeedback('', '');
+                cloneModal.classList.add('is-open');
+                cloneModal.setAttribute('aria-hidden', 'false');
+
+                if (cloneIdInput && typeof cloneIdInput.focus === 'function') {
+                    cloneIdInput.focus();
+                }
+            }
+
+            function submitClone() {
+                if (! cloneIdInput || ! songIdInput) {
+                    return;
+                }
+
+                var newId = typeof cloneIdInput.value === 'string' ? cloneIdInput.value.trim() : '';
+
+                if (newId === '') {
+                    setCloneFeedback('Please provide a new song ID before cloning.', 'error');
+                    if (typeof cloneIdInput.focus === 'function') {
+                        cloneIdInput.focus();
+                    }
+                    return;
+                }
+
+                songIdInput.value = newId;
+
+                if (cloneModeInput) {
+                    cloneModeInput.value = '1';
+                }
+
+                var form = document.getElementById('edit-song-form');
+                if (form) {
+                    form.submit();
+                }
+            }
+
+            if (cloneModeInput) {
+                cloneModeInput.value = '0';
+            }
+
+            if (cloneButton) {
+                if (cloneButton.disabled && ! cloneIdSuggestion) {
+                    cloneButton.title = 'A new song ID cannot be generated right now.';
+                } else {
+                    cloneButton.addEventListener('click', function() {
+                        openCloneModal();
+                    });
+                }
+            }
+
+            if (cloneModalBackdrop) {
+                cloneModalBackdrop.addEventListener('click', function() {
+                    closeCloneModal();
+                });
+            }
+
+            if (cloneModalClose) {
+                cloneModalClose.addEventListener('click', function() {
+                    closeCloneModal();
+                });
+            }
+
+            if (cloneModalCancel) {
+                cloneModalCancel.addEventListener('click', function() {
+                    closeCloneModal();
+                });
+            }
+
+            if (cloneModalConfirm) {
+                cloneModalConfirm.addEventListener('click', function() {
+                    submitClone();
                 });
             }
 
