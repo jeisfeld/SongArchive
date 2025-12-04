@@ -1,3 +1,4 @@
+import org.gradle.api.Project
 import java.util.Properties
 
 plugins {
@@ -21,8 +22,14 @@ val authProperties = Properties()
 if (authPropertiesFile.exists()) {
     authPropertiesFile.inputStream().use(authProperties::load)
 }
-val basicAuthUsername = authProperties.getProperty("basicAuthUsername", "")
-val basicAuthPassword = authProperties.getProperty("basicAuthPassword", "")
+
+fun Project.getSecretProperty(key: String): String {
+    return (findProperty(key) as? String)
+        ?: authProperties.getProperty(key, "")
+}
+
+val basicAuthUsername = project.getSecretProperty("basicAuthUsername")
+val basicAuthPassword = project.getSecretProperty("basicAuthPassword")
 
 android {
     namespace = "de.jeisfeld.songarchive"
