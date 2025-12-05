@@ -14,14 +14,16 @@ $response = [];
 // Get flag
 $user = isset ( $_GET ['user'] ) ? trim ( $_GET ['user'] ) : "";
 if ($user == 'private') {
-	$sqladd = "";
+        $sqladd_songs = "";
+        $sqladd_song_meaning = "";
 }
 else {
-	$sqladd = " where id not like 'X%'";
+        $sqladd_songs = " where id not like 'X%'";
+        $sqladd_song_meaning = " where song_id not like 'X%'";
 }
 
 // Fetch songs
-$sql_songs = "SELECT id, title, lyrics, lyrics_short, lyrics_paged, author, keywords, tabfilename, mp3filename, mp3filename2 FROM songs" . $sqladd . " ORDER BY id";
+$sql_songs = "SELECT id, title, lyrics, lyrics_short, lyrics_paged, author, keywords, tabfilename, mp3filename, mp3filename2 FROM songs" . $sqladd_songs . " ORDER BY id";
 $result_songs = $conn->query($sql_songs);
 $songs = [];
 if ($result_songs->num_rows > 0) {
@@ -43,7 +45,7 @@ if ($result_meaning->num_rows > 0) {
 $response['meanings'] = $meanings;
 
 // Fetch song_meaning relationships
-$sql_song_meaning = "SELECT song_id, meaning_id FROM song_meaning ORDER BY song_id, meaning_id";
+$sql_song_meaning = "SELECT song_id, meaning_id FROM song_meaning" . $sqladd_song_meaning . " ORDER BY song_id, meaning_id";
 $result_song_meaning = $conn->query($sql_song_meaning);
 $song_meanings = [];
 if ($result_song_meaning->num_rows > 0) {
