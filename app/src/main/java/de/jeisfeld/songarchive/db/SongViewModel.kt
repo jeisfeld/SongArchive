@@ -73,8 +73,7 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
                     hasEmittedInitialSongs = true
                     initState.postValue(1)
                 }
-            }
-            else {
+            } else {
                 val searchArgs = buildSearchArguments(input)
                 songDao.searchSongsForArgs(searchArgs).collectLatest { results ->
                     _songs.value = results
@@ -318,12 +317,14 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
                 }
 
                 // Process Song-Meaning Relationships
+                val fetchedSongIds = fetchedSongs.map { it.id }.toSet()
+                val fetchedMeaningIds = fetchedMeanings.map { it.id }.toSet()
                 val fetchedSongMeanings = response.song_meanings.map {
                     SongMeaning(
                         songId = it.song_id,
                         meaningId = it.meaning_id
                     )
-                }
+                }.filter { it.songId in fetchedSongIds && it.meaningId in fetchedMeaningIds }
 
                 // Store in local Room database
                 songDao.clearMeanings()
@@ -351,7 +352,7 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
                 // Step 3: Notify UI
                 onComplete(success)
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to synchronize: ${e.message}")
+                Log.e(TAG, "Failed to synchronize: ${e.message}", e)
                 onComplete(false)
             }
         }
