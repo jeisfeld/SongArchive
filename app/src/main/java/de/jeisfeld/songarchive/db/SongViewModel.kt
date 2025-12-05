@@ -318,12 +318,14 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
                 }
 
                 // Process Song-Meaning Relationships
+                val fetchedSongIds = fetchedSongs.map { it.id }.toSet()
+                val fetchedMeaningIds = fetchedMeanings.map { it.id }.toSet()
                 val fetchedSongMeanings = response.song_meanings.map {
                     SongMeaning(
                         songId = it.song_id,
                         meaningId = it.meaning_id
                     )
-                }
+                }.filter { it.songId in fetchedSongIds && it.meaningId in fetchedMeaningIds }
 
                 // Store in local Room database
                 songDao.clearMeanings()
