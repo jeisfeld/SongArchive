@@ -116,6 +116,7 @@ fun MainScreen(viewModel: SongViewModel) {
     var showMenu by remember { mutableStateOf(false) }
     var showSyncDialog by remember { mutableStateOf(false) }
     val isConnectedState = remember { mutableStateOf(isInternetAvailable(context)) }
+    val chordRefreshKey by viewModel.chordRefreshKey.collectAsState()
 
     var showShareTextDialog by remember { mutableStateOf(false) }
     var sharedLyricsText by remember { mutableStateOf("") }
@@ -241,7 +242,13 @@ fun MainScreen(viewModel: SongViewModel) {
                     modifier = Modifier
                         .fillMaxSize()
                 ) {
-                    SongTable(viewModel, viewModel.songs.collectAsState().value, isWideScreen, isConnectedState.value)
+                    SongTable(
+                        viewModel = viewModel,
+                        songs = viewModel.songs.collectAsState().value,
+                        isWideScreen = isWideScreen,
+                        isConnected = isConnectedState.value,
+                        chordRefreshKey = chordRefreshKey,
+                    )
                 }
             }
         }

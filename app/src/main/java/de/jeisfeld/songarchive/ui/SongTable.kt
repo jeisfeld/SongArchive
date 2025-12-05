@@ -59,6 +59,7 @@ fun SongTable(
     songs: List<Song>,
     isWideScreen: Boolean,
     isConnected: Boolean,
+    chordRefreshKey: Int = 0,
     onRemoveFromList: ((Song) -> Unit)? = null,
     removableIds: Set<String> = emptySet(),
     onAddToList: ((Song) -> Unit)? = null,
@@ -124,7 +125,7 @@ fun SongTable(
         }
         HorizontalDivider(color = AppColors.TextColorLight, thickness = 2.dp)
         LazyColumn(modifier = Modifier.fillMaxSize()) {
-            items(displayedSongs) { song ->
+            items(displayedSongs, key = { song -> "${song.id}-$chordRefreshKey" }) { song ->
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
