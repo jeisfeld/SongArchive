@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.FormBody
@@ -39,6 +40,8 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
     private val favoriteDao = AppDatabase.getDatabase(application).favoriteListDao()
     private val _songs = MutableStateFlow<List<Song>>(emptyList())
     val songs: StateFlow<List<Song>> = _songs
+    private val _chordRefreshKey = MutableStateFlow(0)
+    val chordRefreshKey: StateFlow<Int> = _chordRefreshKey
     private val client = RetrofitClient.httpClient
     var searchQuery = mutableStateOf("")
     var initState = MutableLiveData<Int>(0)
@@ -347,6 +350,8 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
                         checkUpdateResponse = RetrofitClient.api.checkUpdate()
                     }
                     storeLastAppMetadata()
+                    refreshSongsList()
+                    _chordRefreshKey.update { it + 1 }
                 }
 
                 // Step 3: Notify UI

@@ -6,12 +6,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -56,6 +56,7 @@ fun FavoriteListSongsScreen(
 
     var songsInList by remember { mutableStateOf(initialSongs) }
     val searchResults by viewModel.songs.collectAsState()
+    val chordRefreshKey by viewModel.chordRefreshKey.collectAsState()
     val query = viewModel.searchQuery.value
     var addMode by remember { mutableStateOf(false) }
     val favoriteIds = songsInList.map { it.id }.toSet()
@@ -120,10 +121,11 @@ fun FavoriteListSongsScreen(
                 .padding(padding)
         ) {
             SongTable(
-                viewModel,
-                combinedResults,
-                isWide,
-                isConnected,
+                viewModel = viewModel,
+                songs = combinedResults,
+                isWideScreen = isWide,
+                isConnected = isConnected,
+                chordRefreshKey = chordRefreshKey,
                 onRemoveFromList = { song ->
                     deleteTarget = song
                 },
