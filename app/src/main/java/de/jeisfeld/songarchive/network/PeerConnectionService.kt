@@ -97,11 +97,15 @@ class PeerConnectionService : Service() {
             PeerConnectionAction.SHARE_FAVORITE_LIST -> {
                 val listName = intent.getStringExtra("LIST_NAME")
                 val songIds = intent.getStringExtra("SONG_IDS")
+                val sorted = intent.getBooleanExtra("LIST_SORTED", false)
+                val entries = intent.getStringExtra("LIST_ENTRIES")
                 if (listName != null && songIds != null) {
-                    val params = mapOf(
+                    val params = mutableMapOf(
                         "name" to listName,
-                        "songIds" to songIds
+                        "songIds" to songIds,
+                        "sorted" to sorted.toString()
                     )
+                    entries?.takeIf { it.isNotBlank() }?.let { params["entries"] = it }
                     PeerConnectionViewModel.lastSentCommand = LastSentCommand(NetworkCommand.SHARE_FAVORITE_LIST, params)
                     peerConnectionHandler.sendCommandToClients(NetworkCommand.SHARE_FAVORITE_LIST, params)
                 }

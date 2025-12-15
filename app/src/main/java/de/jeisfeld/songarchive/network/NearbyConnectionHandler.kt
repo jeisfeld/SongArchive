@@ -237,9 +237,13 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
             NetworkCommand.SHARE_FAVORITE_LIST -> {
                 val name = message.params?.get("name") ?: return
                 val ids = message.params?.get("songIds") ?: return
+                val sorted = message.params?.get("sorted")?.toBoolean() ?: false
+                val entries = message.params?.get("entries")
                 val intent = Intent(context, de.jeisfeld.songarchive.ui.favoritelists.FavoriteListImportActivity::class.java).apply {
                     putExtra("LIST_NAME", name)
                     putExtra("SONG_IDS", ids)
+                    putExtra("LIST_SORTED", sorted)
+                    entries?.let { putExtra("LIST_ENTRIES", it) }
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
                 context.startActivity(intent)

@@ -7,6 +7,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import de.jeisfeld.songarchive.db.FavoriteListViewModel
 import de.jeisfeld.songarchive.db.SongViewModel
+import de.jeisfeld.songarchive.db.FavoriteList
+import de.jeisfeld.songarchive.db.FavoriteListSongWithSong
 import de.jeisfeld.songarchive.ui.theme.AppTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -22,15 +24,16 @@ class FavoriteListSongsActivity : AppCompatActivity() {
         songViewModel.searchQuery.value = ""
         songViewModel.searchSongs("")
         lifecycleScope.launch {
-            val songs = withContext(Dispatchers.IO) { favViewModel.getSongsForList(listId) }
+            val favoriteList = withContext(Dispatchers.IO) { favViewModel.getList(listId) }
+            val entries: List<FavoriteListSongWithSong> = withContext(Dispatchers.IO) { favViewModel.getSongEntries(listId) }
             setContent {
                 AppTheme {
                     FavoriteListSongsScreen(
                         songViewModel,
                         favViewModel,
                         listId,
-                        listName,
-                        songs
+                        favoriteList ?: FavoriteList(id = listId, name = listName),
+                        entries
                     ) { finish() }
                 }
             }

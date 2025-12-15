@@ -15,5 +15,7 @@ import androidx.room.Index
 )
 data class FavoriteListSong(
     val listId: Int,
-    val songId: String
+    val songId: String,
+    val position: Int = 0,
+    val customTitle: String? = null
 )
