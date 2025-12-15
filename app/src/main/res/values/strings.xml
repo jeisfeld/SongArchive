@@ -88,7 +88,6 @@
     <string name="confirm_import_list">Import list “%s”?</string>
     <string name="missing_songs">Songs not found: %s</string>
     <string name="sorted_list">Sorted list</string>
-    <string name="favorite_sorted_hint">Enable to reorder songs and set custom titles.</string>
     <string name="drag_to_reorder">Drag to reorder</string>
     <string name="favorite_custom_title_hint">Title in this list</string>
     <string name="favorite_clear_search_reorder">Clear search to reorder</string>

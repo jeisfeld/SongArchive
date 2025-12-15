@@ -177,7 +177,6 @@ fun FavoriteListsScreen(viewModel: FavoriteListViewModel, onClose: () -> Unit) {
                         Checkbox(checked = sorted, onCheckedChange = { sorted = it })
                         Column {
                             Text(text = stringResource(id = R.string.sorted_list), color = AppColors.TextColor)
-                            Text(text = stringResource(id = R.string.favorite_sorted_hint), color = AppColors.TextColor)
                         }
                     }
                 }
@@ -205,7 +204,6 @@ fun FavoriteListsScreen(viewModel: FavoriteListViewModel, onClose: () -> Unit) {
                         Checkbox(checked = sorted, onCheckedChange = { sorted = it })
                         Column {
                             Text(text = stringResource(id = R.string.sorted_list), color = AppColors.TextColor)
-                            Text(text = stringResource(id = R.string.favorite_sorted_hint), color = AppColors.TextColor)
                         }
                     }
                 }

@@ -54,6 +54,7 @@ import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -125,7 +126,7 @@ fun FavoriteListSongsScreen(
         }
     } else entries
 
-    val inListResults = if (query.isNotBlank()) searchResults.filter { favoriteIds.contains(it.id) } else entries.map { it.song }
+    val inListResults = searchResults.filter { favoriteIds.contains(it.id) }
     val combinedResults = inListResults + otherResults
 
     Scaffold(
@@ -250,7 +251,10 @@ fun FavoriteListSongsScreen(
                                         )
                                     }
                                 }
-                                .padding(horizontal = dimensionResource(id = R.dimen.spacing_medium))
+                                .padding(
+                                    horizontal = dimensionResource(id = R.dimen.spacing_medium),
+                                    vertical = dimensionResource(id = R.dimen.spacing_small)
+                                )
                                 .onGloballyPositioned { rowHeight = it.size.height },
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(dimensionResource(id = R.dimen.spacing_small))
@@ -263,7 +267,9 @@ fun FavoriteListSongsScreen(
                             if (isWide) {
                                 Text(
                                     text = (entries.indexOfFirst { it.entry.songId == entry.entry.songId } + 1).toString(),
-                                    color = AppColors.TextColor
+                                    color = AppColors.TextColor,
+                                    modifier = Modifier.width(dimensionResource(id = R.dimen.width_id)),
+                                    textAlign = TextAlign.End
                                 )
                             }
                             Text(
@@ -400,14 +406,14 @@ fun FavoriteListSongsScreen(
                         isWideScreen = isWide,
                         isConnected = isConnected,
                         chordRefreshKey = chordRefreshKey,
-                        onAddToList = { song ->
+                        onAddToList = if (addMode) { song ->
                             scope.launch {
-                                favViewModel.addSongToList(listId, song.id)
+                                withContext(Dispatchers.IO) { favViewModel.addSongToList(listId, song.id) }
                                 val updated = withContext(Dispatchers.IO) { favViewModel.getSongEntries(listId) }
                                 entries.clear(); entries.addAll(updated.sortedBy { it.entry.position })
                             }
-                        },
-                        addableIds = otherResults.map { it.id }.toSet()
+                        } else null,
+                        addableIds = if (addMode) otherResults.map { it.id }.toSet() else emptySet()
                     )
                 }
             } else {
@@ -423,7 +429,7 @@ fun FavoriteListSongsScreen(
                     removableIds = favoriteIds,
                     onAddToList = if (addMode) { song ->
                         scope.launch {
-                            favViewModel.addSongToList(listId, song.id)
+                            withContext(Dispatchers.IO) { favViewModel.addSongToList(listId, song.id) }
                             val updated = withContext(Dispatchers.IO) { favViewModel.getSongEntries(listId) }
                             entries.clear(); entries.addAll(updated.sortedBy { it.entry.position })
                         }
