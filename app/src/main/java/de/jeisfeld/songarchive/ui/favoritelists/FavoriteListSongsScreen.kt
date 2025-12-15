@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.animateItemPlacement
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -49,6 +50,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.audio.isInternetAvailable
 import de.jeisfeld.songarchive.db.FavoriteList
@@ -95,6 +97,7 @@ fun FavoriteListSongsScreen(
     var addMode by remember { mutableStateOf(false) }
     var deleteTarget by remember { mutableStateOf<FavoriteListSongWithSong?>(null) }
     var editingId by remember { mutableStateOf<String?>(null) }
+    var draggedId by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
     val favoriteIds = entries.map { it.entry.songId }.toSet()
@@ -188,36 +191,59 @@ fun FavoriteListSongsScreen(
                         val iconSize = dimensionResource(id = R.dimen.icon_size_small)
                         var offsetY by remember { mutableStateOf(0f) }
                         var rowHeight by remember { mutableStateOf(1) }
+                        val isDragging = draggedId == entry.entry.songId
+
+                        fun finalizeDrag(updateDb: Boolean) {
+                            offsetY = 0f
+                            draggedId = null
+                            if (updateDb) {
+                                entries.forEachIndexed { idx, item ->
+                                    entries[idx] = item.copy(entry = item.entry.copy(position = idx))
+                                }
+                                favViewModel.updatePositions(listId, entries.map { it.entry.songId })
+                            }
+                        }
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .offset { IntOffset(0, offsetY.roundToInt()) }
+                                .zIndex(if (isDragging) 1f else 0f)
                                 .pointerInput(query, entries.size) {
                                     if (query.isBlank()) {
                                         detectDragGesturesAfterLongPress(
+                                            onDragStart = {
+                                                draggedId = entry.entry.songId
+                                                offsetY = 0f
+                                            },
                                             onDrag = { change, dragAmount ->
+                                                if (draggedId != entry.entry.songId) return@detectDragGesturesAfterLongPress
                                                 change.consume()
                                                 offsetY += dragAmount.y
                                                 val itemHeight = rowHeight.takeIf { it != 0 } ?: 1
                                                 val currentIndex = entries.indexOfFirst { it.entry.songId == entry.entry.songId }
+                                                if (currentIndex == -1) return@detectDragGesturesAfterLongPress
                                                 val targetIndex = (currentIndex + (offsetY / itemHeight).roundToInt()).coerceIn(0, entries.lastIndex)
-                                                if (targetIndex != currentIndex && currentIndex >= 0) {
+                                                if (targetIndex != currentIndex) {
                                                     entries.move(currentIndex, targetIndex)
+                                                    offsetY -= (targetIndex - currentIndex) * itemHeight
                                                 }
                                             },
                                             onDragEnd = {
-                                                offsetY = 0f
-                                                entries.forEachIndexed { idx, item ->
-                                                    entries[idx] = item.copy(entry = item.entry.copy(position = idx))
+                                                if (draggedId == entry.entry.songId) {
+                                                    finalizeDrag(updateDb = true)
                                                 }
-                                                favViewModel.updatePositions(listId, entries.map { it.entry.songId })
                                             },
-                                            onDragCancel = { offsetY = 0f }
+                                            onDragCancel = {
+                                                if (draggedId == entry.entry.songId) {
+                                                    finalizeDrag(updateDb = false)
+                                                }
+                                            }
                                         )
                                     }
                                 }
-                                .padding(horizontal = dimensionResource(id = R.dimen.spacing_medium), vertical = dimensionResource(id = R.dimen.spacing_small))
-                                .onGloballyPositioned { rowHeight = it.size.height },
+                                .padding(horizontal = dimensionResource(id = R.dimen.spacing_medium), vertical = 2.dp)
+                                .onGloballyPositioned { rowHeight = it.size.height }
+                                .animateItemPlacement(),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(dimensionResource(id = R.dimen.spacing_small))
                         ) {
