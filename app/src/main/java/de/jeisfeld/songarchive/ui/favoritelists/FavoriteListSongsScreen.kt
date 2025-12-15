@@ -400,22 +400,22 @@ fun FavoriteListSongsScreen(
                 }
 
                 if (addMode || query.isNotBlank()) {
-                            SongTable(
-                                viewModel = viewModel,
-                                songs = otherResults,
-                                isWideScreen = isWide,
-                                isConnected = isConnected,
-                                chordRefreshKey = chordRefreshKey,
-                                onAddToList = { song ->
-                                    scope.launch {
-                                        withContext(Dispatchers.IO) { favViewModel.addSongToList(listId, song.id) }
-                                        val updated = withContext(Dispatchers.IO) { favViewModel.getSongEntries(listId) }
-                                        entries.clear(); entries.addAll(updated.sortedBy { it.entry.position })
-                                    }
-                                },
-                                addableIds = otherResults.map { it.id }.toSet()
-                            )
-                        }
+                    SongTable(
+                        viewModel = viewModel,
+                        songs = otherResults,
+                        isWideScreen = isWide,
+                        isConnected = isConnected,
+                        chordRefreshKey = chordRefreshKey,
+                        onAddToList = if (addMode) { song ->
+                            scope.launch {
+                                withContext(Dispatchers.IO) { favViewModel.addSongToList(listId, song.id) }
+                                val updated = withContext(Dispatchers.IO) { favViewModel.getSongEntries(listId) }
+                                entries.clear(); entries.addAll(updated.sortedBy { it.entry.position })
+                            }
+                        } else null,
+                        addableIds = if (addMode) otherResults.map { it.id }.toSet() else emptySet()
+                    )
+                }
             } else {
                 SongTable(
                     viewModel = viewModel,
