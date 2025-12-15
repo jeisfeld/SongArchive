@@ -81,6 +81,8 @@ dependencies {
 
     // Jetpack Compose UI
     implementation(libs.ui)
+    implementation(libs.androidx.foundation)
+    implementation(libs.androidx.ui.util)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
 
     // Room für SQLite-Datenbank

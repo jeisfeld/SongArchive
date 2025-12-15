@@ -33,8 +33,8 @@
     <string name="upload">Upload</string>
     <string name="upload_song_title">Upload song</string>
     <string name="confirm_upload_song">Upload this song to the server?</string>
-    <string name="upload_song_success">Song uploaded to server.</string>
-    <string name="upload_song_failed">Song upload failed.</string>
+    <string name="upload_song_success">Song uploaded to server</string>
+    <string name="upload_song_failed">Song upload failed</string>
 
     <string name="sync">Sync</string>
     <string name="network_connection">Network Connection</string>
@@ -87,6 +87,12 @@
     <string name="import_favorite_list">Import Favorite List</string>
     <string name="confirm_import_list">Import list “%s”?</string>
     <string name="missing_songs">Songs not found: %s</string>
+    <string name="sorted_list">Sorted list</string>
+    <string name="favorite_sorted_hint">Enable to reorder songs and set custom titles.</string>
+    <string name="drag_to_reorder">Drag to reorder</string>
+    <string name="favorite_custom_title_hint">Title in this list</string>
+    <string name="favorite_clear_search_reorder">Clear search to reorder</string>
+    <string name="favorite_set_custom_title">Set custom title</string>
 
     <string-array name="network_modes">
         <item>Disabled</item>

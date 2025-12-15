@@ -177,7 +177,7 @@ interface SongDao {
     )
     fun getMeaningsForSong(songId: String): List<Meaning>
 
-    @Query("SELECT s.* FROM songs s INNER JOIN favorite_list_song fls ON s.id = fls.songId WHERE fls.listId = :listId ORDER BY s.id")
+    @Query("SELECT s.* FROM songs s INNER JOIN favorite_list_song fls ON s.id = fls.songId WHERE fls.listId = :listId ORDER BY fls.position, s.id")
     suspend fun getSongsForList(listId: Int): List<Song>
 }
 

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -118,13 +119,24 @@ fun FavoriteListsScreen(viewModel: FavoriteListViewModel, onClose: () -> Unit) {
                             IconButton(
                                 onClick = {
                                 scope.launch {
-                                    val songs = withContext(Dispatchers.IO) { viewModel.getSongsForList(list.id) }
-                                    val ids = songs.joinToString(",") { it.id }
+                                    val entries = withContext(Dispatchers.IO) { viewModel.getSongEntries(list.id) }
+                                    val ids = entries.joinToString(",") { it.entry.songId }
+                                    val payload = org.json.JSONArray().apply {
+                                        entries.sortedBy { it.entry.position }.forEach { entry ->
+                                            put(org.json.JSONObject().apply {
+                                                put("songId", entry.entry.songId)
+                                                put("position", entry.entry.position)
+                                                put("customTitle", entry.entry.customTitle)
+                                            })
+                                        }
+                                    }.toString()
                                     val intent = Intent(context, PeerConnectionService::class.java).apply {
                                         setAction(PeerConnectionAction.SHARE_FAVORITE_LIST.toString())
                                         putExtra("ACTION", PeerConnectionAction.SHARE_FAVORITE_LIST)
                                         putExtra("LIST_NAME", list.name)
                                         putExtra("SONG_IDS", ids)
+                                        putExtra("LIST_SORTED", list.isSorted)
+                                        putExtra("LIST_ENTRIES", payload)
                                     }
                                     context.startService(intent)
                                 }
@@ -154,13 +166,25 @@ fun FavoriteListsScreen(viewModel: FavoriteListViewModel, onClose: () -> Unit) {
 
     if (showAdd) {
         var name by remember { mutableStateOf("") }
+        var sorted by remember { mutableStateOf(false) }
         AlertDialog(
             onDismissRequest = { showAdd = false },
             title = { Text(stringResource(id = R.string.add_favorite_list)) },
-            text = { OutlinedTextField(value = name, onValueChange = { name = it }, placeholder = { Text(stringResource(id = R.string.list_name)) }) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(dimensionResource(id = R.dimen.spacing_small))) {
+                    OutlinedTextField(value = name, onValueChange = { name = it }, placeholder = { Text(stringResource(id = R.string.list_name)) })
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = sorted, onCheckedChange = { sorted = it })
+                        Column {
+                            Text(text = stringResource(id = R.string.sorted_list), color = AppColors.TextColor)
+                            Text(text = stringResource(id = R.string.favorite_sorted_hint), color = AppColors.TextColor)
+                        }
+                    }
+                }
+            },
             confirmButton = {
                 TextButton(onClick = {
-                    if (name.isNotBlank()) viewModel.addList(name.trim())
+                    if (name.isNotBlank()) viewModel.addList(name.trim(), sorted)
                     showAdd = false
                 }) { Text(stringResource(id = R.string.ok)) }
             },
@@ -170,13 +194,25 @@ fun FavoriteListsScreen(viewModel: FavoriteListViewModel, onClose: () -> Unit) {
 
     renameTarget?.let { list ->
         var name by remember { mutableStateOf(list.name) }
+        var sorted by remember { mutableStateOf(list.isSorted) }
         AlertDialog(
             onDismissRequest = { renameTarget = null },
             title = { Text(stringResource(id = R.string.rename_favorite_list)) },
-            text = { OutlinedTextField(value = name, onValueChange = { name = it }) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(dimensionResource(id = R.dimen.spacing_small))) {
+                    OutlinedTextField(value = name, onValueChange = { name = it })
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = sorted, onCheckedChange = { sorted = it })
+                        Column {
+                            Text(text = stringResource(id = R.string.sorted_list), color = AppColors.TextColor)
+                            Text(text = stringResource(id = R.string.favorite_sorted_hint), color = AppColors.TextColor)
+                        }
+                    }
+                }
+            },
             confirmButton = {
                 TextButton(onClick = {
-                    if (name.isNotBlank()) viewModel.rename(list, name.trim())
+                    if (name.isNotBlank()) viewModel.rename(list, name.trim(), sorted)
                     renameTarget = null
                 }) { Text(stringResource(id = R.string.ok)) }
             },

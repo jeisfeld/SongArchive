@@ -18,25 +18,29 @@ import androidx.compose.runtime.setValue
 import kotlinx.coroutines.launch
 import androidx.compose.ui.res.stringResource
 import de.jeisfeld.songarchive.R
+import de.jeisfeld.songarchive.db.FavoriteListEntryInput
 
 class FavoriteListImportActivity: AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val listName = intent.getStringExtra("LIST_NAME") ?: ""
         val songIds = intent.getStringExtra("SONG_IDS")?.takeIf { it.isNotBlank() }?.split(',') ?: emptyList()
+        val sorted = intent.getBooleanExtra("LIST_SORTED", false)
+        val entriesJson = intent.getStringExtra("LIST_ENTRIES")
         val viewModel = ViewModelProvider(this)[FavoriteListViewModel::class.java]
         setContent {
             AppTheme {
-                ImportDialog(listName, songIds, viewModel) { finish() }
+                ImportDialog(listName, songIds, entriesJson, sorted, viewModel) { finish() }
             }
         }
     }
 }
 
 @Composable
-private fun ImportDialog(name: String, songs: List<String>, viewModel: FavoriteListViewModel, onClose: () -> Unit) {
+private fun ImportDialog(name: String, songs: List<String>, entriesJson: String?, sorted: Boolean, viewModel: FavoriteListViewModel, onClose: () -> Unit) {
     val scope = rememberCoroutineScope()
     var missing by remember { mutableStateOf<List<String>?>(null) }
+    val payloadEntries = remember(entriesJson) { parseEntries(entriesJson) }
 
     if (missing != null) {
         AlertDialog(
@@ -53,7 +57,11 @@ private fun ImportDialog(name: String, songs: List<String>, viewModel: FavoriteL
             confirmButton = {
                 TextButton(onClick = {
                     scope.launch {
-                        val missingIds = viewModel.addListWithSongs(name, songs)
+                        val missingIds = if (payloadEntries != null) {
+                            viewModel.addListWithEntries(name, payloadEntries, sorted)
+                        } else {
+                            viewModel.addListWithSongs(name, songs, sorted)
+                        }
                         if (missingIds.isNotEmpty()) {
                             missing = missingIds
                         } else {
@@ -64,5 +72,21 @@ private fun ImportDialog(name: String, songs: List<String>, viewModel: FavoriteL
             },
             dismissButton = { TextButton(onClick = onClose) { Text(stringResource(id = R.string.cancel)) } }
         )
+    }
+}
+
+private fun parseEntries(json: String?): List<FavoriteListEntryInput>? {
+    if (json.isNullOrBlank()) return null
+    return try {
+        val array = org.json.JSONArray(json)
+        (0 until array.length()).mapNotNull { index ->
+            val obj = array.optJSONObject(index) ?: return@mapNotNull null
+            val songId = obj.optString("songId").takeIf { it.isNotBlank() } ?: return@mapNotNull null
+            val position = obj.optInt("position", index)
+            val title = obj.optString("customTitle").takeIf { it.isNotBlank() }
+            FavoriteListEntryInput(songId, position, title)
+        }.sortedBy { it.position }
+    } catch (_: Exception) {
+        null
     }
 }

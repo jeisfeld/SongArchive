@@ -87,6 +87,12 @@
     <string name="import_favorite_list">Favoritenliste importieren</string>
     <string name="confirm_import_list">Liste „%s“ importieren?</string>
     <string name="missing_songs">Folgende Lieder wurden nicht importiert: %s</string>
+    <string name="sorted_list">Sortierte Liste</string>
+    <string name="favorite_sorted_hint">Aktivieren, um Lieder umzubenennen und zu sortieren.</string>
+    <string name="drag_to_reorder">Ziehen zum Sortieren</string>
+    <string name="favorite_custom_title_hint">Titel in dieser Liste</string>
+    <string name="favorite_clear_search_reorder">Suche leeren, um sortieren zu können</string>
+    <string name="favorite_set_custom_title">Titel in Liste bearbeiten</string>
 
     <string-array name="network_modes">
         <item>Deaktiviert</item>
