@@ -26,6 +26,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -218,60 +219,62 @@ fun FavoriteListSongsScreen(
                                 favViewModel.updatePositions(listId, entries.map { it.entry.songId })
                             }
                         }
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .offset { IntOffset(0, offsetY.roundToInt()) }
-                                .zIndex(if (isDragging) 1f else 0f)
-                                .pointerInput(query, entries.size) {
-                                    if (query.isBlank()) {
-                                        detectDragGesturesAfterLongPress(
-                                            onDragStart = {
-                                                draggedId = entry.entry.songId
-                                                offsetY = 0f
-                                            },
-                                            onDrag = { change, dragAmount ->
-                                                if (draggedId != entry.entry.songId) return@detectDragGesturesAfterLongPress
-                                                change.consume()
-                                                offsetY += dragAmount.y
-                                                val itemHeight = rowHeight.takeIf { it != 0 } ?: 1
-                                                val currentIndex = entries.indexOfFirst { it.entry.songId == entry.entry.songId }
-                                                if (currentIndex == -1) return@detectDragGesturesAfterLongPress
-                                                val targetIndex = (currentIndex + (offsetY / itemHeight).roundToInt()).coerceIn(0, entries.lastIndex)
-                                                if (targetIndex != currentIndex) {
-                                                    entries.move(currentIndex, targetIndex)
-                                                    offsetY -= (targetIndex - currentIndex) * itemHeight
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .offset { IntOffset(0, offsetY.roundToInt()) }
+                                    .zIndex(if (isDragging) 1f else 0f)
+                                    .pointerInput(query, entries.size) {
+                                        if (query.isBlank()) {
+                                            detectDragGesturesAfterLongPress(
+                                                onDragStart = {
+                                                    draggedId = entry.entry.songId
+                                                    offsetY = 0f
+                                                },
+                                                onDrag = { change, dragAmount ->
+                                                    if (draggedId != entry.entry.songId) return@detectDragGesturesAfterLongPress
+                                                    change.consume()
+                                                    offsetY += dragAmount.y
+                                                    val itemHeight = rowHeight.takeIf { it != 0 } ?: 1
+                                                    val currentIndex = entries.indexOfFirst { it.entry.songId == entry.entry.songId }
+                                                    if (currentIndex == -1) return@detectDragGesturesAfterLongPress
+                                                    val targetIndex = (currentIndex + (offsetY / itemHeight).roundToInt()).coerceIn(0, entries.lastIndex)
+                                                    if (targetIndex != currentIndex) {
+                                                        entries.move(currentIndex, targetIndex)
+                                                        offsetY -= (targetIndex - currentIndex) * itemHeight
+                                                    }
+                                                },
+                                                onDragEnd = {
+                                                    if (draggedId == entry.entry.songId) {
+                                                        finalizeDrag(updateDb = true)
+                                                    }
+                                                },
+                                                onDragCancel = {
+                                                    if (draggedId == entry.entry.songId) {
+                                                        finalizeDrag(updateDb = false)
+                                                    }
                                                 }
-                                            },
-                                            onDragEnd = {
-                                                if (draggedId == entry.entry.songId) {
-                                                    finalizeDrag(updateDb = true)
-                                                }
-                                            },
-                                            onDragCancel = {
-                                                if (draggedId == entry.entry.songId) {
-                                                    finalizeDrag(updateDb = false)
-                                                }
-                                            }
-                                        )
+                                            )
+                                        }
                                     }
-                                }
-                                .padding(horizontal = dimensionResource(id = R.dimen.spacing_medium))
-                                .onGloballyPositioned { rowHeight = it.size.height }
-                                .animateItemPlacement(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(dimensionResource(id = R.dimen.spacing_small))
-                        ) {
+                                    .padding(horizontal = dimensionResource(id = R.dimen.spacing_medium))
+                                    .onGloballyPositioned { rowHeight = it.size.height }
+                                    .animateItemPlacement(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(dimensionResource(id = R.dimen.spacing_small))
+                            ) {
                             Icon(
-                                painter = painterResource(id = R.drawable.ic_list),
+                                painter = painterResource(id = R.drawable.ic_drag_handle),
                                 contentDescription = stringResource(id = R.string.drag_to_reorder),
                                 tint = AppColors.TextColor
                             )
-                            Text(
-                                text = (entries.indexOfFirst { it.entry.songId == entry.entry.songId } + 1).toString(),
-                                modifier = Modifier.width(dimensionResource(id = R.dimen.width_id)),
-                                color = AppColors.TextColor
-                            )
+                            if (isWide) {
+                                Text(
+                                    text = (entries.indexOfFirst { it.entry.songId == entry.entry.songId } + 1).toString(),
+                                    color = AppColors.TextColor
+                                )
+                            }
                             Text(
                                 text = entry.entry.customTitle ?: entry.song.title,
                                 modifier = Modifier
@@ -387,6 +390,12 @@ fun FavoriteListSongsScreen(
                                         contentDescription = stringResource(id = R.string.remove_from_list)
                                     )
                                 }
+                            }
+                            if (index < filteredEntries.lastIndex) {
+                                HorizontalDivider(
+                                    color = AppColors.TextColorLight,
+                                    modifier = Modifier.padding(horizontal = dimensionResource(id = R.dimen.spacing_medium))
+                                )
                             }
                         }
                     }
