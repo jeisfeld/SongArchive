@@ -1,5 +1,10 @@
 package de.jeisfeld.songarchive.ui.favoritelists
 
+import android.Manifest
+import android.app.Activity
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -12,10 +17,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.animateItemPlacement
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -45,21 +53,26 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import de.jeisfeld.songarchive.R
+import de.jeisfeld.songarchive.audio.AudioPlayerService
+import de.jeisfeld.songarchive.audio.PlaybackViewModel
 import de.jeisfeld.songarchive.audio.isInternetAvailable
 import de.jeisfeld.songarchive.db.FavoriteList
 import de.jeisfeld.songarchive.db.FavoriteListSongWithSong
 import de.jeisfeld.songarchive.db.FavoriteListViewModel
 import de.jeisfeld.songarchive.db.SongViewModel
+import de.jeisfeld.songarchive.ui.ChordsViewerActivity
+import de.jeisfeld.songarchive.ui.LyricsViewerActivity
 import de.jeisfeld.songarchive.ui.SearchBar
 import de.jeisfeld.songarchive.ui.SongTable
 import de.jeisfeld.songarchive.ui.theme.AppColors
+import de.jeisfeld.songarchive.util.LocalTabUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -78,6 +91,7 @@ fun FavoriteListSongsScreen(
     val context = LocalContext.current
     val isWide = LocalConfiguration.current.screenWidthDp > 600
     val isConnected = isInternetAvailable(context)
+    val currentlyPlayingSong by PlaybackViewModel.currentlyPlayingSong.collectAsState()
 
     val lists by favViewModel.lists.collectAsState()
     var currentList by remember { mutableStateOf(initialList) }
@@ -96,7 +110,8 @@ fun FavoriteListSongsScreen(
     val query = viewModel.searchQuery.value
     var addMode by remember { mutableStateOf(false) }
     var deleteTarget by remember { mutableStateOf<FavoriteListSongWithSong?>(null) }
-    var editingId by remember { mutableStateOf<String?>(null) }
+    var renameTarget by remember { mutableStateOf<FavoriteListSongWithSong?>(null) }
+    var renameDraft by remember { mutableStateOf("") }
     var draggedId by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
@@ -241,7 +256,7 @@ fun FavoriteListSongsScreen(
                                         )
                                     }
                                 }
-                                .padding(horizontal = dimensionResource(id = R.dimen.spacing_medium), vertical = 2.dp)
+                                .padding(horizontal = dimensionResource(id = R.dimen.spacing_medium))
                                 .onGloballyPositioned { rowHeight = it.size.height }
                                 .animateItemPlacement(),
                             verticalAlignment = Alignment.CenterVertically,
@@ -257,35 +272,121 @@ fun FavoriteListSongsScreen(
                                 modifier = Modifier.width(dimensionResource(id = R.dimen.width_id)),
                                 color = AppColors.TextColor
                             )
-                            if (editingId == entry.entry.songId) {
-                                var titleDraft by remember(entry.entry.songId) {
-                                    mutableStateOf(entry.entry.customTitle ?: entry.song.title)
-                                }
-                                OutlinedTextField(
-                                    value = titleDraft,
-                                    onValueChange = { titleDraft = it },
-                                    modifier = Modifier.weight(1f),
-                                    placeholder = { Text(stringResource(id = R.string.favorite_custom_title_hint)) },
-                                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                                    keyboardActions = KeyboardActions(onDone = {
-                                        editingId = null
-                                        val sanitized = titleDraft.trim().ifBlank { null }
-                                        val idx = entries.indexOfFirst { it.entry.songId == entry.entry.songId }
-                                        if (idx >= 0) {
-                                            entries[idx] = entries[idx].copy(entry = entries[idx].entry.copy(customTitle = sanitized))
+                            Text(
+                                text = entry.entry.customTitle ?: entry.song.title,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable {
+                                        renameTarget = entry
+                                        renameDraft = entry.entry.customTitle ?: entry.song.title
+                                    },
+                                color = AppColors.TextColor
+                            )
+                            Row(
+                                modifier = Modifier.width(dimensionResource(id = R.dimen.width_actions)),
+                                horizontalArrangement = Arrangement.spacedBy(
+                                    dimensionResource(id = R.dimen.spacing_small),
+                                    Alignment.End
+                                ),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Image(
+                                    painter = painterResource(id = R.drawable.text2),
+                                    contentDescription = stringResource(id = R.string.view_lyrics),
+                                    modifier = Modifier
+                                        .size(iconSize)
+                                        .clickable {
+                                            val intent = Intent(context, LyricsViewerActivity::class.java)
+                                            intent.putExtra("SONG", entry.song)
+                                            context.startActivity(intent)
                                         }
-                                        favViewModel.updateCustomTitle(listId, entry.entry.songId, sanitized)
-                                    })
                                 )
-                            } else {
-                                Text(
-                                    text = entry.entry.customTitle ?: entry.song.title,
-                                    modifier = Modifier.weight(1f).clickable { editingId = entry.entry.songId },
-                                    color = AppColors.TextColor
-                                )
-                            }
-                            IconButton(onClick = { deleteTarget = entry }, modifier = Modifier.width(iconSize)) {
-                                Image(painter = painterResource(id = R.drawable.ic_delete), contentDescription = stringResource(id = R.string.remove_from_list))
+                                entry.song.tabfilename?.takeIf { it.isNotBlank() }?.let { tabFilename ->
+                                    val isLocalTab = LocalTabUtils.isLocalTab(tabFilename)
+                                    val localTabUri = if (isLocalTab) LocalTabUtils.decodeLocalTab(tabFilename) else null
+                                    val remoteTabFilename = if (!isLocalTab) tabFilename else null
+                                    val chordsAvailable = when {
+                                        localTabUri != null -> true
+                                        remoteTabFilename != null ->
+                                            java.io.File(context.filesDir, "chords/$remoteTabFilename").exists()
+                                        else -> false
+                                    }
+                                    if (chordsAvailable) {
+                                        Image(
+                                            painter = painterResource(id = R.drawable.chords2),
+                                            contentDescription = stringResource(id = R.string.view_chords),
+                                            modifier = Modifier
+                                                .size(iconSize)
+                                                .clickable {
+                                                    if (remoteTabFilename != null) {
+                                                        val imageFile = java.io.File(context.filesDir, "chords/$remoteTabFilename")
+                                                        if (!imageFile.exists()) {
+                                                            return@clickable
+                                                        }
+                                                    }
+                                                    scope.launch(Dispatchers.IO) {
+                                                        val meanings = viewModel.getMeaningsForSong(entry.song.id)
+                                                        withContext(Dispatchers.Main) {
+                                                            val intent = Intent(context, ChordsViewerActivity::class.java).apply {
+                                                                putExtra("SONG", entry.song)
+                                                                putExtra("MEANINGS", meanings)
+                                                            }
+                                                            context.startActivity(intent)
+                                                        }
+                                                    }
+                                                }
+                                        )
+                                    }
+                                }
+                                entry.song.mp3filename?.takeIf { it.isNotBlank() && isConnected }?.let {
+                                    Image(
+                                        painter = painterResource(
+                                            id = if (currentlyPlayingSong?.id == entry.song.id) R.drawable.ic_stop else R.drawable.ic_play
+                                        ),
+                                        contentDescription = if (currentlyPlayingSong?.id == entry.song.id) "Stop" else "Play MP3",
+                                        modifier = Modifier
+                                            .size(iconSize)
+                                            .clickable {
+                                                if (currentlyPlayingSong?.id == entry.song.id) {
+                                                    val intent = Intent(context, AudioPlayerService::class.java).apply {
+                                                        action = "STOP"
+                                                    }
+                                                    context.startService(intent)
+                                                    PlaybackViewModel.updatePlaybackState(null, false, 0L, 0L)
+                                                } else {
+                                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                                        (context as? Activity)?.let { activity ->
+                                                            if (
+                                                                ContextCompat.checkSelfPermission(
+                                                                    context,
+                                                                    Manifest.permission.POST_NOTIFICATIONS
+                                                                ) != PackageManager.PERMISSION_GRANTED
+                                                            ) {
+                                                                ActivityCompat.requestPermissions(
+                                                                    activity,
+                                                                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                                                                    1
+                                                                )
+                                                            }
+                                                        }
+                                                    }
+
+                                                    PlaybackViewModel.updatePlaybackState(entry.song, true, 0L, 0L)
+                                                    val intent = Intent(context, AudioPlayerService::class.java).apply {
+                                                        action = "PLAY"
+                                                        putExtra("SONG", entry.song)
+                                                    }
+                                                    context.startForegroundService(intent)
+                                                }
+                                            }
+                                    )
+                                }
+                                IconButton(onClick = { deleteTarget = entry }, modifier = Modifier.size(iconSize)) {
+                                    Image(
+                                        painter = painterResource(id = R.drawable.ic_delete),
+                                        contentDescription = stringResource(id = R.string.remove_from_list)
+                                    )
+                                }
                             }
                         }
                     }
@@ -350,6 +451,48 @@ fun FavoriteListSongsScreen(
                     },
                     dismissButton = {
                         TextButton(onClick = { deleteTarget = null }) {
+                            Text(stringResource(id = R.string.cancel))
+                        }
+                    }
+                )
+            }
+
+            renameTarget?.let { target ->
+                AlertDialog(
+                    onDismissRequest = { renameTarget = null },
+                    title = { Text(stringResource(id = R.string.favorite_set_custom_title)) },
+                    text = {
+                        OutlinedTextField(
+                            value = renameDraft,
+                            onValueChange = { renameDraft = it },
+                            placeholder = { Text(stringResource(id = R.string.favorite_custom_title_hint)) },
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                            keyboardActions = KeyboardActions(onDone = {
+                                val sanitized = renameDraft.trim().ifBlank { null }
+                                val idx = entries.indexOfFirst { it.entry.songId == target.entry.songId }
+                                if (idx >= 0) {
+                                    entries[idx] = entries[idx].copy(entry = entries[idx].entry.copy(customTitle = sanitized))
+                                }
+                                favViewModel.updateCustomTitle(listId, target.entry.songId, sanitized)
+                                renameTarget = null
+                            })
+                        )
+                    },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            val sanitized = renameDraft.trim().ifBlank { null }
+                            val idx = entries.indexOfFirst { it.entry.songId == target.entry.songId }
+                            if (idx >= 0) {
+                                entries[idx] = entries[idx].copy(entry = entries[idx].entry.copy(customTitle = sanitized))
+                            }
+                            favViewModel.updateCustomTitle(listId, target.entry.songId, sanitized)
+                            renameTarget = null
+                        }) {
+                            Text(stringResource(id = R.string.ok))
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { renameTarget = null }) {
                             Text(stringResource(id = R.string.cancel))
                         }
                     }
