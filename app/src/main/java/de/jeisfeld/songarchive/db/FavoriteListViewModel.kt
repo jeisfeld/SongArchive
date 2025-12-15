@@ -77,11 +77,9 @@ class FavoriteListViewModel(application: Application) : AndroidViewModel(applica
         }
     }
 
-    fun addSongToList(listId: Int, songId: String) {
-        viewModelScope.launch {
-            val max = dao.getMaxPosition(listId)
-            dao.insertSong(FavoriteListSong(listId, songId, max + 1))
-        }
+    suspend fun addSongToList(listId: Int, songId: String) {
+        val max = dao.getMaxPosition(listId)
+        dao.insertSong(FavoriteListSong(listId, songId, max + 1))
     }
 
     fun removeSongFromList(listId: Int, songId: String) {
