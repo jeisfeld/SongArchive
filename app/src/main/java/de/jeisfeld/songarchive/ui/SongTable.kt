@@ -16,7 +16,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -63,7 +65,8 @@ fun SongTable(
     onRemoveFromList: ((Song) -> Unit)? = null,
     removableIds: Set<String> = emptySet(),
     onAddToList: ((Song) -> Unit)? = null,
-    addableIds: Set<String> = emptySet()
+    addableIds: Set<String> = emptySet(),
+    listState: LazyListState? = null
 ) {
     val context = LocalContext.current
     val currentlyPlayingSong by PlaybackViewModel.currentlyPlayingSong.collectAsState()
@@ -93,6 +96,7 @@ fun SongTable(
         } else {
             baseActionsWidth - iconSize - spacing * 2
         }
+        val lazyListState = listState ?: rememberLazyListState()
         // Fixed Table Header (Outside LazyColumn)
         Row(modifier = Modifier.fillMaxWidth().padding(bottom = dimensionResource(id = R.dimen.spacing_small))) {
             Text(
@@ -124,7 +128,7 @@ fun SongTable(
             )
         }
         HorizontalDivider(color = AppColors.TextColorLight, thickness = 2.dp)
-        LazyColumn(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(modifier = Modifier.fillMaxSize(), state = lazyListState) {
             items(displayedSongs, key = { song -> "${song.id}-$chordRefreshKey" }) { song ->
                 Column(
                     modifier = Modifier
