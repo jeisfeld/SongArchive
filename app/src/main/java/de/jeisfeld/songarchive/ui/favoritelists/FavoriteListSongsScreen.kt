@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
@@ -127,7 +128,9 @@ fun FavoriteListSongsScreen(
     } else entries
 
     val inListResults = searchResults.filter { favoriteIds.contains(it.id) }
-    val combinedResults = inListResults + otherResults
+    val favoriteSongsInDisplayOrder = if (query.isBlank()) entries.map { it.song } else inListResults
+    val combinedResults = favoriteSongsInDisplayOrder + otherResults
+    val songTableListState = rememberLazyListState()
 
     Scaffold(
         topBar = {
@@ -176,8 +179,9 @@ fun FavoriteListSongsScreen(
                             val shuffled = entries.shuffled()
                             entries.clear(); entries.addAll(shuffled)
                             favViewModel.updatePositions(listId, entries.map { it.entry.songId })
+                            scope.launch { songTableListState.animateScrollToItem(0) }
                         }
-                    })
+                    }, showShuffle = !currentList.isSorted)
                 }
             }
         }
@@ -423,6 +427,7 @@ fun FavoriteListSongsScreen(
                     isWideScreen = isWide,
                     isConnected = isConnected,
                     chordRefreshKey = chordRefreshKey,
+                    listState = songTableListState,
                     onRemoveFromList = { song ->
                         deleteTarget = entries.firstOrNull { it.entry.songId == song.id }
                     },

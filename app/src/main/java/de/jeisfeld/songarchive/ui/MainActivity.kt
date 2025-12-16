@@ -362,7 +362,7 @@ fun ProgressOverlay() {
 }
 
 @Composable
-fun SearchBar(viewModel: SongViewModel, onShuffle: (() -> Unit)) {
+fun SearchBar(viewModel: SongViewModel, onShuffle: (() -> Unit), showShuffle: Boolean = true) {
     OutlinedTextField(
         value = viewModel.searchQuery.value,
         onValueChange = {
@@ -395,7 +395,7 @@ fun SearchBar(viewModel: SongViewModel, onShuffle: (() -> Unit)) {
                         modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small))
                     )
                 }
-            } else {
+            } else if (showShuffle) {
                 IconButton(onClick = {
                     onShuffle.invoke()
                 }) {
