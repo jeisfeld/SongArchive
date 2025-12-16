@@ -128,7 +128,16 @@ fun FavoriteListSongsScreen(
     } else entries
 
     val inListResults = searchResults.filter { favoriteIds.contains(it.id) }
-    val favoriteSongsInDisplayOrder = if (query.isBlank()) entries.map { it.song } else inListResults
+    val favoriteSongsInDisplayOrder = when {
+        query.isNotBlank() -> inListResults
+        currentList.isSorted -> entries.map { it.song }
+        else -> {
+            val naturalOrder = searchResults.mapIndexed { index, song -> song.id to index }.toMap()
+            val naturalEntries = entries.sortedBy { naturalOrder[it.entry.songId] ?: Int.MAX_VALUE }
+            val isShuffled = entries.map { it.entry.songId } != naturalEntries.map { it.entry.songId }
+            if (isShuffled) entries.map { it.song } else naturalEntries.map { it.song }
+        }
+    }
     val combinedResults = favoriteSongsInDisplayOrder + otherResults
     val songTableListState = rememberLazyListState()
 
