@@ -117,6 +117,7 @@ fun FavoriteListSongsScreen(
     val scope = rememberCoroutineScope()
 
     val favoriteIds = entries.map { it.entry.songId }.toSet()
+    val entryOrder = entries.mapIndexed { index, entry -> entry.entry.songId to index }.toMap()
     val otherResults = if (query.isNotBlank() || addMode) searchResults.filterNot { favoriteIds.contains(it.id) } else emptyList()
     val filteredEntries = if (query.isNotBlank()) {
         entries.filter {
@@ -126,7 +127,9 @@ fun FavoriteListSongsScreen(
         }
     } else entries
 
-    val inListResults = searchResults.filter { favoriteIds.contains(it.id) }
+    val inListResults = searchResults
+        .filter { favoriteIds.contains(it.id) }
+        .sortedBy { entryOrder[it.id] ?: Int.MAX_VALUE }
     val combinedResults = inListResults + otherResults
 
     Scaffold(
@@ -171,10 +174,14 @@ fun FavoriteListSongsScreen(
                         .padding(horizontal = dimensionResource(id = R.dimen.spacing_medium))
                         .offset(y = -12.dp)
                 ) {
-                    SearchBar(viewModel, onShuffle = {
-                        if (!currentList.isSorted) {
-                            val shuffled = entries.shuffled()
-                            entries.clear(); entries.addAll(shuffled)
+                    SearchBar(viewModel, onShuffle = if (currentList.isSorted) null else {
+                        {
+                            val shuffledWithPositions = entries
+                                .shuffled()
+                                .mapIndexed { index, entry ->
+                                    entry.copy(entry = entry.entry.copy(position = index))
+                                }
+                            entries.clear(); entries.addAll(shuffledWithPositions)
                             favViewModel.updatePositions(listId, entries.map { it.entry.songId })
                         }
                     })
