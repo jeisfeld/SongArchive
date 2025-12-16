@@ -127,7 +127,8 @@ fun FavoriteListSongsScreen(
     } else entries
 
     val inListResults = searchResults.filter { favoriteIds.contains(it.id) }
-    val combinedResults = inListResults + otherResults
+    val favoriteSongsInDisplayOrder = if (query.isBlank()) entries.map { it.song } else inListResults
+    val combinedResults = favoriteSongsInDisplayOrder + otherResults
 
     Scaffold(
         topBar = {
@@ -177,7 +178,7 @@ fun FavoriteListSongsScreen(
                             entries.clear(); entries.addAll(shuffled)
                             favViewModel.updatePositions(listId, entries.map { it.entry.songId })
                         }
-                    })
+                    }, showShuffle = !currentList.isSorted)
                 }
             }
         }
