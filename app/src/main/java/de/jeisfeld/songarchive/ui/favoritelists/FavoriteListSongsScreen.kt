@@ -106,6 +106,7 @@ fun FavoriteListSongsScreen(
             addAll(initialEntries.sortedBy { it.entry.position })
         }
     }
+    var isShuffled by remember { mutableStateOf(false) }
 
     val searchResults by viewModel.songs.collectAsState()
     val chordRefreshKey by viewModel.chordRefreshKey.collectAsState()
@@ -128,7 +129,11 @@ fun FavoriteListSongsScreen(
     } else entries
 
     val inListResults = searchResults.filter { favoriteIds.contains(it.id) }
-    val favoriteSongsInDisplayOrder = if (query.isBlank()) entries.map { it.song } else inListResults
+    val favoriteSongsInDisplayOrder = when {
+        query.isNotBlank() -> inListResults
+        currentList.isSorted || isShuffled -> entries.map { it.song }
+        else -> searchResults.filter { favoriteIds.contains(it.id) }
+    }
     val combinedResults = favoriteSongsInDisplayOrder + otherResults
     val songTableListState = rememberLazyListState()
 
@@ -179,6 +184,7 @@ fun FavoriteListSongsScreen(
                             val shuffled = entries.shuffled()
                             entries.clear(); entries.addAll(shuffled)
                             favViewModel.updatePositions(listId, entries.map { it.entry.songId })
+                            isShuffled = true
                             scope.launch { songTableListState.animateScrollToItem(0) }
                         }
                     }, showShuffle = !currentList.isSorted)
