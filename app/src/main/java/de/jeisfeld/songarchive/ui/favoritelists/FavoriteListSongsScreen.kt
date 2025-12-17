@@ -278,7 +278,9 @@ fun FavoriteListSongsScreen(
                                 Text(
                                     text = (entries.indexOfFirst { it.entry.songId == entry.entry.songId } + 1).toString(),
                                     color = AppColors.TextColor,
-                                    modifier = Modifier.width(dimensionResource(id = R.dimen.width_id)),
+                                    modifier = Modifier
+                                        .width(dimensionResource(id = R.dimen.width_favorite_number))
+                                        .padding(end = dimensionResource(id = R.dimen.spacing_medium)),
                                     textAlign = TextAlign.End
                                 )
                             }
