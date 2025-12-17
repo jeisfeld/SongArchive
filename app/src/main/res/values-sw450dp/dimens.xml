@@ -10,6 +10,6 @@
     <dimen name="icon_size_large">44dp</dimen>
     <dimen name="icon_font_large">22sp</dimen>
     <dimen name="width_id">58dp</dimen>
-    <dimen name="spacing_action_icons">10dp</dimen>
+    <dimen name="width_favorite_number">36dp</dimen>
     <dimen name="width_actions">144dp</dimen>
 </resources>

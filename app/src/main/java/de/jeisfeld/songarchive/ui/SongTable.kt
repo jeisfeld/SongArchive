@@ -89,8 +89,13 @@ fun SongTable(
 
     Column(modifier = Modifier.fillMaxSize().padding(horizontal = dimensionResource(id = R.dimen.spacing_medium))) {
         val iconSize = dimensionResource(id = R.dimen.icon_size_small)
-        val spacing = dimensionResource(id = R.dimen.spacing_action_icons)
-        val actionsWidth = dimensionResource(id = R.dimen.width_actions)
+        val spacing = dimensionResource(id = R.dimen.spacing_medium)
+        val baseActionsWidth = dimensionResource(id = R.dimen.width_actions)
+        val actionsWidth = if (onRemoveFromList != null || onAddToList != null) {
+            baseActionsWidth
+        } else {
+            baseActionsWidth - iconSize - spacing * 2
+        }
         val lazyListState = listState ?: rememberLazyListState()
         // Fixed Table Header (Outside LazyColumn)
         Row(modifier = Modifier.fillMaxWidth().padding(bottom = dimensionResource(id = R.dimen.spacing_small))) {
@@ -159,7 +164,10 @@ fun SongTable(
                         }
                         Row(
                             modifier = Modifier.width(actionsWidth),
-                            horizontalArrangement = Arrangement.spacedBy(spacing, Alignment.End)
+                            horizontalArrangement = Arrangement.spacedBy(
+                                dimensionResource(id = R.dimen.spacing_medium),
+                                Alignment.End
+                            )
                         ) {
                             if (onRemoveFromList != null && removableIds.contains(song.id)) {
                                 Image(

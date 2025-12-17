@@ -278,7 +278,7 @@ fun FavoriteListSongsScreen(
                                 Text(
                                     text = (entries.indexOfFirst { it.entry.songId == entry.entry.songId } + 1).toString(),
                                     color = AppColors.TextColor,
-                                    modifier = Modifier.width(dimensionResource(id = R.dimen.width_id)),
+                                    modifier = Modifier.width(dimensionResource(id = R.dimen.width_favorite_number)),
                                     textAlign = TextAlign.End
                                 )
                             }
@@ -295,7 +295,7 @@ fun FavoriteListSongsScreen(
                             Row(
                                 modifier = Modifier.width(dimensionResource(id = R.dimen.width_actions)),
                                 horizontalArrangement = Arrangement.spacedBy(
-                                    dimensionResource(id = R.dimen.spacing_action_icons),
+                                    dimensionResource(id = R.dimen.spacing_small),
                                     Alignment.End
                                 ),
                                 verticalAlignment = Alignment.CenterVertically
@@ -392,13 +392,12 @@ fun FavoriteListSongsScreen(
                                             }
                                     )
                                 }
-                                Image(
-                                    painter = painterResource(id = R.drawable.ic_delete),
-                                    contentDescription = stringResource(id = R.string.remove_from_list),
-                                    modifier = Modifier
-                                        .size(iconSize)
-                                        .clickable { deleteTarget = entry }
-                                )
+                                IconButton(onClick = { deleteTarget = entry }, modifier = Modifier.size(iconSize)) {
+                                    Image(
+                                        painter = painterResource(id = R.drawable.ic_delete),
+                                        contentDescription = stringResource(id = R.string.remove_from_list)
+                                    )
+                                }
                             }
                         }
                         if (index < filteredEntries.lastIndex) {
