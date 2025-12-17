@@ -5,6 +5,7 @@
     <dimen name="spacing_vertical_medium">8dp</dimen>
     <dimen name="spacing_search_vertical">4dp</dimen>
     <dimen name="spacing_heading_vertical">16dp</dimen>
+    <dimen name="spacing_action_icons">20dp</dimen>
     <dimen name="width_actions">232dp</dimen>
     <dimen name="network_menu_width">340dp</dimen>
 </resources>

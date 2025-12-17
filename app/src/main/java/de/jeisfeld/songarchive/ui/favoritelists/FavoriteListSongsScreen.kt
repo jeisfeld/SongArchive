@@ -295,7 +295,7 @@ fun FavoriteListSongsScreen(
                             Row(
                                 modifier = Modifier.width(dimensionResource(id = R.dimen.width_actions)),
                                 horizontalArrangement = Arrangement.spacedBy(
-                                    dimensionResource(id = R.dimen.spacing_small),
+                                    dimensionResource(id = R.dimen.spacing_action_icons),
                                     Alignment.End
                                 ),
                                 verticalAlignment = Alignment.CenterVertically

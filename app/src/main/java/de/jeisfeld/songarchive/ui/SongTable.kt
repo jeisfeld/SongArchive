@@ -89,7 +89,7 @@ fun SongTable(
 
     Column(modifier = Modifier.fillMaxSize().padding(horizontal = dimensionResource(id = R.dimen.spacing_medium))) {
         val iconSize = dimensionResource(id = R.dimen.icon_size_small)
-        val spacing = dimensionResource(id = R.dimen.spacing_medium)
+        val spacing = dimensionResource(id = R.dimen.spacing_action_icons)
         val baseActionsWidth = dimensionResource(id = R.dimen.width_actions)
         val actionsWidth = if (onRemoveFromList != null || onAddToList != null) {
             baseActionsWidth
@@ -164,10 +164,7 @@ fun SongTable(
                         }
                         Row(
                             modifier = Modifier.width(actionsWidth),
-                            horizontalArrangement = Arrangement.spacedBy(
-                                dimensionResource(id = R.dimen.spacing_medium),
-                                Alignment.End
-                            )
+                            horizontalArrangement = Arrangement.spacedBy(spacing, Alignment.End)
                         ) {
                             if (onRemoveFromList != null && removableIds.contains(song.id)) {
                                 Image(
