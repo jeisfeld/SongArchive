@@ -295,7 +295,7 @@ fun FavoriteListSongsScreen(
                             Row(
                                 modifier = Modifier.width(dimensionResource(id = R.dimen.width_actions)),
                                 horizontalArrangement = Arrangement.spacedBy(
-                                    dimensionResource(id = R.dimen.spacing_small),
+                                    dimensionResource(id = R.dimen.spacing_action_icons),
                                     Alignment.End
                                 ),
                                 verticalAlignment = Alignment.CenterVertically
@@ -392,12 +392,13 @@ fun FavoriteListSongsScreen(
                                             }
                                     )
                                 }
-                                IconButton(onClick = { deleteTarget = entry }, modifier = Modifier.size(iconSize)) {
-                                    Image(
-                                        painter = painterResource(id = R.drawable.ic_delete),
-                                        contentDescription = stringResource(id = R.string.remove_from_list)
-                                    )
-                                }
+                                Image(
+                                    painter = painterResource(id = R.drawable.ic_delete),
+                                    contentDescription = stringResource(id = R.string.remove_from_list),
+                                    modifier = Modifier
+                                        .size(iconSize)
+                                        .clickable { deleteTarget = entry }
+                                )
                             }
                         }
                         if (index < filteredEntries.lastIndex) {
