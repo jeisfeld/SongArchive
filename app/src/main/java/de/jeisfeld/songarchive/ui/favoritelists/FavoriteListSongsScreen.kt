@@ -30,6 +30,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -58,6 +59,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -278,8 +280,10 @@ fun FavoriteListSongsScreen(
                                 Text(
                                     text = (entries.indexOfFirst { it.entry.songId == entry.entry.songId } + 1).toString(),
                                     color = AppColors.TextColor,
-                                    modifier = Modifier.width(dimensionResource(id = R.dimen.width_id)),
-                                    textAlign = TextAlign.End
+                                    modifier = Modifier.padding(end = dimensionResource(id = R.dimen.spacing_medium)),
+                                    textAlign = TextAlign.End,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontSize = 12.sp
                                 )
                             }
                             Text(
