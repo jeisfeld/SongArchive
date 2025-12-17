@@ -58,6 +58,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -281,6 +282,7 @@ fun FavoriteListSongsScreen(
                                     modifier = Modifier
                                         .width(dimensionResource(id = R.dimen.width_favorite_number))
                                         .padding(end = dimensionResource(id = R.dimen.spacing_medium)),
+                                    fontSize = dimensionResource(id = R.dimen.font_favorite_number).value.sp,
                                     textAlign = TextAlign.End
                                 )
                             }

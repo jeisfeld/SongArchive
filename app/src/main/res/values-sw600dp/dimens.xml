@@ -10,7 +10,8 @@
     <dimen name="icon_size_large">50dp</dimen>
     <dimen name="icon_font_large">25sp</dimen>
     <dimen name="width_id">66dp</dimen>
-    <dimen name="width_favorite_number">40dp</dimen>
+    <dimen name="width_favorite_number">48dp</dimen>
+    <dimen name="font_favorite_number">15sp</dimen>
     <dimen name="spacing_action_icons">16dp</dimen>
     <dimen name="width_actions">200dp</dimen>
     <dimen name="network_menu_width">320dp</dimen>
