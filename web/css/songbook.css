@@ -311,8 +311,8 @@ body.no-scroll {
 .audio-player-section {
 	width: 100%;
 	max-width: 1024px;
-	margin: 16px auto;
-	padding: 12px;
+	margin: 0 auto 10px;
+	padding: 6px 8px;
 	border: 1px solid var(--text-color-light);
 	border-radius: 8px;
 	background: var(--inner-color);
@@ -326,12 +326,13 @@ body.no-scroll {
 .audio-player-row {
 	display: flex;
 	align-items: center;
-	gap: 8px;
+	gap: 6px;
 }
 
 .audio-player-row audio {
 	flex: 1;
 	width: 100%;
+	min-width: 0;
 }
 
 .audio-player-controls {
@@ -344,19 +345,35 @@ body.no-scroll {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	padding: 4px;
+	padding: 2px;
 	border: none;
 	background: none;
 	cursor: pointer;
 }
 
 .audio-control-btn img {
-	width: 24px;
-	height: 24px;
+	width: 22px;
+	height: 22px;
 }
 
 #audio-btns {
 	text-align: center;
+}
+
+@media ( max-width : 600px) {
+	.audio-player-section {
+		padding: 4px 6px;
+	}
+	.audio-player-row {
+		gap: 4px;
+	}
+	.audio-player-controls {
+		gap: 4px;
+	}
+	.audio-control-btn img {
+		width: 20px;
+		height: 20px;
+	}
 }
 
 .open-audio-btn {

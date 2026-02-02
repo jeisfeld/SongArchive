@@ -241,7 +241,7 @@ function renderAudioPlayer() {
 
 	let audioHTML = `
         <div class="audio-player-row">
-            <audio id="audio-player-element" controls autoplay>
+            <audio id="audio-player-element" controls autoplay controlslist="nodownload noplaybackrate noremoteplayback" disablepictureinpicture>
                 <source src="/audio/songs/${encodeURIComponent(audioFilename)}" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>
