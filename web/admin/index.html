@@ -20,12 +20,16 @@
 		</div>
 
 		<!-- Search Box with Local PNG Icon -->
-                <div class="search-container">
-                        <img src="/img/search2.png" alt="Search"> <input type="text" id="searchBox" placeholder="Search..."
-                                oninput="toggleClearButton()" onkeyup="searchSongs()">
-                        <button id="clearButton" type="button" aria-label="Clear search" title="Clear search"
-                                onclick="clearSearch()">✕</button>
-                </div>
+		<div class="search-container">
+			<img src="/img/search2.png" alt="Search"> <input type="text" id="searchBox" placeholder="Search..."
+				oninput="toggleClearButton()" onkeyup="searchSongs()">
+			<button id="clearButton" type="button" aria-label="Clear search" title="Clear search"
+				onclick="clearSearch()">✕</button>
+		</div>
+
+		<div id="audio-player-section" class="audio-player-section hidden">
+			<div id="audio-player"></div>
+		</div>
 
 		<!-- Table for Results -->
 		<table>

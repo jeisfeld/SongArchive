@@ -316,10 +316,43 @@ body.no-scroll {
 	border: 1px solid var(--text-color-light);
 	border-radius: 8px;
 	background: var(--inner-color);
+	box-sizing: border-box;
 }
 
 .audio-player-section.hidden {
 	display: none;
+}
+
+.audio-player-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.audio-player-row audio {
+	flex: 1;
+	width: 100%;
+}
+
+.audio-player-controls {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.audio-control-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 4px;
+	border: none;
+	background: none;
+	cursor: pointer;
+}
+
+.audio-control-btn img {
+	width: 24px;
+	height: 24px;
 }
 
 #audio-btns {

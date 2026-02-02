@@ -236,48 +236,33 @@ function renderAudioPlayer() {
 		return;
 	}
 
-	const { id, title, author, tabfilename, mp3files, currentIndex } = currentSong;
+	const { mp3files, currentIndex } = currentSong;
 	const audioFilename = mp3files[currentIndex];
 
 	let audioHTML = `
-        <div class="audio-info">
-            <strong>${id} ${title}</strong><br>
-    `;
-	if (author) {
-		audioHTML += `<em class="author-col">${formatAuthors(author)}</em>`;
-	}
-	audioHTML += `</div>`;
-
-	audioHTML += `
-        <div class="audio-container">
+        <div class="audio-player-row">
             <audio id="audio-player-element" controls autoplay>
                 <source src="/audio/songs/${encodeURIComponent(audioFilename)}" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>
-        </div>
+            <div class="audio-player-controls">
     `;
-
-	let buttonsHTML = `<div id="audio-btns">`;
 	if (mp3files.length > 1) {
-		buttonsHTML += `
-			<button class="open-audio-btn" id="next-track-btn" onclick="playNextTrack()" aria-label="Next track">
-				<img src="/img/next2.svg" alt="Next Track" class="audio-icon">
+		audioHTML += `
+			<button class="audio-control-btn" id="next-track-btn" onclick="playNextTrack()" aria-label="Next track">
+				<img src="/img/next2.svg" alt="Next Track">
 			</button>
 		`;
 	}
-	if (tabfilename) {
-		buttonsHTML += `
-            <button class="open-audio-btn" id="open-audio-lyrics-btn" onclick="showLyrics('${id}', '${title}', 'popup2')">
-                <img src="/img/text2.png" alt="Show Lyrics" class="audio-icon">
-            </button>
-			<button class="open-audio-btn" id="open-audio-chords-btn" onclick="showImage('${tabfilename}', 'popup2')">
-			    <img src="/img/chords2.png" alt="Show Chords" class="audio-icon">
-			</button>
-        `;
-	}
-	buttonsHTML += `</div>`;
+	audioHTML += `
+				<button class="audio-control-btn" id="stop-track-btn" onclick="stopAudio()" aria-label="Stop">
+					<img src="/img/stop2.svg" alt="Stop">
+				</button>
+            </div>
+        </div>
+    `;
 
-	audioPlayer.innerHTML = audioHTML + buttonsHTML;
+	audioPlayer.innerHTML = audioHTML;
 	audioSection.classList.remove("hidden");
 
 	setTimeout(() => {
@@ -295,6 +280,18 @@ function playNextTrack() {
 
 	currentSong.currentIndex = (currentSong.currentIndex + 1) % currentSong.mp3files.length;
 	renderAudioPlayer();
+}
+
+function stopAudio() {
+	const audioElement = document.getElementById("audio-player-element");
+	if (audioElement) {
+		audioElement.pause();
+		audioElement.currentTime = 0;
+	}
+
+	currentSong = null;
+	renderAudioPlayer();
+	displayResult(lastSearchResults);
 }
 
 let hideControlsTimeout; // Store timeout globally
@@ -778,4 +775,3 @@ if (typeof window !== "undefined") {
 		}
 	}
 }
-
