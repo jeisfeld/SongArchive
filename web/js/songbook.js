@@ -1,5 +1,7 @@
 let searchAbortController = new AbortController(); // Create a controller
 let searchTimeout = null;
+let currentSong = null;
+let lastSearchResults = [];
 
 function getAdminModule() {
 	if (typeof window === "undefined") {
@@ -64,15 +66,24 @@ async function performSearch(query) {
 }
 
 function displayResult(songs) {
+	lastSearchResults = Array.isArray(songs) ? songs : [];
+	let displaySongs = lastSearchResults;
+	const hasCurrentSong = currentSong && lastSearchResults.some(song => song.id === currentSong.id);
+
+	if (currentSong && !hasCurrentSong) {
+		displaySongs = [currentSong, ...lastSearchResults];
+	}
+
 	let tableHTML = "";
-	songs.forEach(song => {
+	displaySongs.forEach(song => {
 		const adminModule = getAdminModule();
 		const adminActions = adminModule && typeof adminModule.renderActionButtons === "function"
 			? adminModule.renderActionButtons(song)
 			: "";
+		const isCurrentSong = currentSong && song.id === currentSong.id;
 
 		tableHTML += `
-                        <tr>
+                        <tr class="${isCurrentSong ? "playing-row" : ""}">
                                 <td><a href="/?q=${song.id}" class="unformatted-link" target="_blank">${song.id}</a></td>
                                 <td>${song.title}</td>
                                 <td class="author-col">${formatAuthors(song.author || "")}</td>
@@ -196,7 +207,38 @@ function formatAuthors(authorStr) {
 function playAudio(mp3filename1, mp3filename2 = "", id = "", title = "", author = "", imageFilename = "") {
 	if (!mp3filename1) return;
 
-	// Song title and author (display only once)
+	currentSong = {
+		id,
+		title,
+		author,
+		tabfilename: imageFilename,
+		mp3filename: mp3filename1,
+		mp3filename2: mp3filename2 || "",
+		mp3files: [mp3filename1, mp3filename2].filter(Boolean),
+		currentIndex: 0
+	};
+
+	renderAudioPlayer();
+	displayResult(lastSearchResults);
+}
+
+function renderAudioPlayer() {
+	const audioSection = document.getElementById("audio-player-section");
+	const audioPlayer = document.getElementById("audio-player");
+
+	if (!audioSection || !audioPlayer) {
+		return;
+	}
+
+	if (!currentSong) {
+		audioSection.classList.add("hidden");
+		audioPlayer.innerHTML = "";
+		return;
+	}
+
+	const { id, title, author, tabfilename, mp3files, currentIndex } = currentSong;
+	const audioFilename = mp3files[currentIndex];
+
 	let audioHTML = `
         <div class="audio-info">
             <strong>${id} ${title}</strong><br>
@@ -206,72 +248,53 @@ function playAudio(mp3filename1, mp3filename2 = "", id = "", title = "", author 
 	}
 	audioHTML += `</div>`;
 
-	// First audio player (always present & autoplay enabled)
 	audioHTML += `
         <div class="audio-container">
-            <audio id="audio1" controls autoplay>
-                <source src="/audio/songs/${encodeURIComponent(mp3filename1)}" type="audio/mpeg">
+            <audio id="audio-player-element" controls autoplay>
+                <source src="/audio/songs/${encodeURIComponent(audioFilename)}" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>
         </div>
     `;
 
-	// Second audio player (only added if a second file exists)
-	if (mp3filename2) {
-		audioHTML += `
-            <hr> <!-- Separator between audios -->
-            <div class="audio-container">
-                <audio id="audio2" controls>
-                    <source src="/audio/songs/${encodeURIComponent(mp3filename2)}" type="audio/mpeg">
-                    Your browser does not support the audio element.
-                </audio>
-            </div>
-        `;
+	let buttonsHTML = `<div id="audio-btns">`;
+	if (mp3files.length > 1) {
+		buttonsHTML += `
+			<button class="open-audio-btn" id="next-track-btn" onclick="playNextTrack()" aria-label="Next track">
+				<img src="/img/next2.svg" alt="Next Track" class="audio-icon">
+			</button>
+		`;
 	}
-
-	// Optional Image (Initially Hidden, Behind Audio)
-	let buttonsHTML = "";
-	if (imageFilename) {
-		buttonsHTML = `
-		<div id = "audio-btns">
+	if (tabfilename) {
+		buttonsHTML += `
             <button class="open-audio-btn" id="open-audio-lyrics-btn" onclick="showLyrics('${id}', '${title}', 'popup2')">
                 <img src="/img/text2.png" alt="Show Lyrics" class="audio-icon">
             </button>
-			<button class="open-audio-btn" id="open-audio-chords-btn" onclick="showImage('${imageFilename}', 'popup2')">
+			<button class="open-audio-btn" id="open-audio-chords-btn" onclick="showImage('${tabfilename}', 'popup2')">
 			    <img src="/img/chords2.png" alt="Show Chords" class="audio-icon">
 			</button>
-		</div>
         `;
 	}
+	buttonsHTML += `</div>`;
 
-	// Insert into popup
-	document.getElementById("popup-body").innerHTML = audioHTML + buttonsHTML;
-	document.getElementById("popup").style.display = "flex";
-	document.body.classList.add("no-scroll"); // Disable main page scrolling
+	audioPlayer.innerHTML = audioHTML + buttonsHTML;
+	audioSection.classList.remove("hidden");
 
-	// Wait for the DOM to update, then attach event listeners
 	setTimeout(() => {
-		let audio1 = document.getElementById("audio1");
-		let audio2 = document.getElementById("audio2");
-
-		if (audio1) {
-			audio1.play(); // Auto-play first audio
+		const audioElement = document.getElementById("audio-player-element");
+		if (audioElement) {
+			audioElement.play();
 		}
+	}, 100);
+}
 
-		if (audio2) {
-			audio2.addEventListener("play", function() {
-				if (audio1 && !audio1.paused) {
-					audio1.pause(); // Stop first audio when second starts
-				}
-			});
+function playNextTrack() {
+	if (!currentSong || currentSong.mp3files.length < 2) {
+		return;
+	}
 
-			audio1.addEventListener("play", function() {
-				if (audio2 && !audio2.paused) {
-					audio2.pause(); // Stop second audio when first starts
-				}
-			});
-		}
-	}, 100); // Delay slightly to ensure elements exist
+	currentSong.currentIndex = (currentSong.currentIndex + 1) % currentSong.mp3files.length;
+	renderAudioPlayer();
 }
 
 let hideControlsTimeout; // Store timeout globally
@@ -755,5 +778,4 @@ if (typeof window !== "undefined") {
 		}
 	}
 }
-
 

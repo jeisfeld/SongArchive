@@ -113,6 +113,10 @@ td {
 	background: var(--inner-color);
 }
 
+.playing-row td {
+	background: var(--inner-color-shaded);
+}
+
 .unformatted-link {
 	color: inherit;
 	text-decoration: none;
@@ -302,6 +306,20 @@ body.no-scroll {
 	text-align: center;
 	margin-bottom: 5px;
 	font-size: 1rem;
+}
+
+.audio-player-section {
+	width: 100%;
+	max-width: 1024px;
+	margin: 16px auto;
+	padding: 12px;
+	border: 1px solid var(--text-color-light);
+	border-radius: 8px;
+	background: var(--inner-color);
+}
+
+.audio-player-section.hidden {
+	display: none;
 }
 
 #audio-btns {
