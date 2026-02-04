@@ -376,6 +376,11 @@ body.no-scroll {
 	.audio-player-row {
 		gap: 4px;
 	}
+	.audio-player-row audio::-webkit-media-controls-mute-button,
+	.audio-player-row audio::-webkit-media-controls-volume-slider,
+	.audio-player-row audio::-webkit-media-controls-volume-control-container {
+		display: none;
+	}
 	.audio-player-controls {
 		gap: 4px;
 	}

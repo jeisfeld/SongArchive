@@ -238,10 +238,12 @@ function renderAudioPlayer() {
 
 	const { mp3files, currentIndex } = currentSong;
 	const audioFilename = mp3files[currentIndex];
+	const isNarrowScreen = window.matchMedia("(max-width: 600px)").matches;
+	const controlsList = isNarrowScreen ? 'controlslist="nodownload noplaybackrate noremoteplayback"' : 'controlslist="noremoteplayback"';
 
 	let audioHTML = `
         <div class="audio-player-row">
-            <audio id="audio-player-element" controls autoplay controlslist="nodownload noplaybackrate noremoteplayback" disablepictureinpicture>
+            <audio id="audio-player-element" controls autoplay ${controlsList} disablepictureinpicture>
                 <source src="/audio/songs/${encodeURIComponent(audioFilename)}" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>
