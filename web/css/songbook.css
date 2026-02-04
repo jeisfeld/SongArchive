@@ -98,6 +98,11 @@ table {
 	border-collapse: collapse;
 }
 
+.song-list {
+	width: 100%;
+	max-width: 1024px;
+}
+
 th, td {
 	padding: 8px;
 	border: 1px solid white;
@@ -443,6 +448,20 @@ body.no-scroll {
 		width: 35px;
 		height: 35px;
 		padding: 7px;
+	}
+}
+
+@media ( max-width : 768px) and (orientation: portrait) {
+	body {
+		overflow: hidden;
+	}
+	.container {
+		height: 100vh;
+	}
+	.song-list {
+		flex: 1;
+		overflow-y: auto;
+		-webkit-overflow-scrolling: touch;
 	}
 }
 
