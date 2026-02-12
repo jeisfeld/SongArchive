@@ -92,14 +92,16 @@ function displayResult(songs) {
                                                 ${adminActions}
                                                 <img src="/img/text2.png" alt="View Lyrics" class="icon-btn" onclick="showLyrics('${song.id}', '${song.title}')">
                                                 ${song.tabfilename ? `<img src="/img/chords2.png" alt="View Image" class="icon-btn" onclick="showImage('${song.tabfilename}')">` : ""}
-                                                ${song.mp3filename ? `
-                                                        <img src="/img/play2.png" alt="Play Audio" class="icon-btn"
-                                                             onclick="playAudio('${song.mp3filename}',
-							                        '${song.mp3filename2 ? song.mp3filename2 : ''}', 
+								${song.mp3filename ? `
+									${isCurrentSong
+										? `<img src="/img/stop2.svg" alt="Stop Audio" class="icon-btn" onclick="stopAudio()">`
+										: `<img src="/img/play2.png" alt="Play Audio" class="icon-btn"
+										     onclick="playAudio('${song.mp3filename}',
+						                        '${song.mp3filename2 ? song.mp3filename2 : ''}', 
 													'${song.id}', 
-							                        '${song.title}', 
-							                        '${song.author ? song.author : ''}', 
-							                        '${song.tabfilename ? song.tabfilename.replace('.txt', '.jpg') : ''}')">
+						                        '${song.title}', 
+						                        '${song.author ? song.author : ''}', 
+						                        '${song.tabfilename ? song.tabfilename.replace('.txt', '.jpg') : ''}')">`}
 						` : ""}
 					</div>
 				</td>
