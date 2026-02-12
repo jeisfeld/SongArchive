@@ -157,10 +157,14 @@ fun SongTable(
                                 }
                             )
                         }
+                        val isCurrentSong = currentlyPlayingSong?.id == song.id
+                        val isSongPlaying = isCurrentSong && isPlaying
+
                         Row(
                             modifier = Modifier.width(actionsWidth),
                             horizontalArrangement = Arrangement.spacedBy(spacing, Alignment.End)
                         ) {
+
                             if (onRemoveFromList != null && removableIds.contains(song.id)) {
                                 Image(
                                     painter = painterResource(id = R.drawable.ic_delete),
@@ -223,14 +227,14 @@ fun SongTable(
                                 }
                             }
 
-                            song.mp3filename?.takeIf { it.isNotBlank() && isConnected }?.let { filename ->
+                            song.mp3filename?.takeIf { it.isNotBlank() && isConnected }?.let { _ ->
                                 Image(
                                     painter = painterResource(
-                                        id = if (currentlyPlayingSong?.id == song.id) R.drawable.ic_stop else R.drawable.ic_play
+                                        id = if (isSongPlaying) R.drawable.ic_stop else R.drawable.ic_play
                                     ),
-                                    contentDescription = if (currentlyPlayingSong?.id == song.id) "Stop" else "Play MP3",
+                                    contentDescription = if (isSongPlaying) "Stop" else "Play MP3",
                                     modifier = Modifier.size(dimensionResource(id = R.dimen.icon_size_small)).clickable {
-                                        if (currentlyPlayingSong?.id == song.id) {
+                                        if (isSongPlaying) {
                                             val intent = Intent(context, AudioPlayerService::class.java).apply {
                                                 action = "STOP"
                                             }
@@ -266,7 +270,7 @@ fun SongTable(
                     HorizontalDivider(color = AppColors.TextColorLight)
 
                     // Ensure Mini Player is displayed when the song is playing
-                    if (currentlyPlayingSong?.id == song.id) {
+                    if (isCurrentSong) {
                         MiniAudioPlayer(
                             song = song,
                             isPlaying = isPlaying,
