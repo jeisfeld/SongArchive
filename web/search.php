@@ -13,6 +13,31 @@ $applyIdFilter = ! $includeHidden;
 // Use regex to check if query is a valid ID (numeric OR numeric + single letter)
 $is_valid_id = preg_match ( '/^[XY\d]\d{3}[a-zA-Z]?$/', $query );
 $isSingleLetter = preg_match ( '/^[a-zA-Z]$/', $query );
+
+function extractValidSongIds($query) {
+	$trimmedQuery = trim ( $query );
+	if ($trimmedQuery === "") {
+		return [ ];
+	}
+
+	$parts = preg_split ( '/[|,;\s]+/', $trimmedQuery, - 1, PREG_SPLIT_NO_EMPTY );
+	if (! $parts || count ( $parts ) < 2) {
+		return [ ];
+	}
+
+	$validIds = [ ];
+	foreach ( $parts as $part ) {
+		$trimmedPart = trim ( $part );
+		if (! preg_match ( '/^[XY\d]\d{3}[a-zA-Z]?$/', $trimmedPart )) {
+			return [ ];
+		}
+		$validIds [] = $trimmedPart;
+	}
+
+	return array_values ( array_unique ( $validIds ) );
+}
+
+$multiSongIds = extractValidSongIds ( $query );
 function interpolateQuery($query, $params) {
 	foreach ( $params as $key => $value ) {
 		// Escape string values and format for SQL
@@ -71,6 +96,56 @@ if ($is_valid_id) {
 	}
 
 	// Return JSON
+	echo json_encode ( array_values ( $songs ), JSON_PRETTY_PRINT );
+	$stmt->close ();
+	$conn->close ();
+	return;
+}
+
+if (! empty ( $multiSongIds )) {
+	$placeholders = implode ( ',', array_fill ( 0, count ( $multiSongIds ), '?' ) );
+	$orderExpression = 'FIELD(s.id, ' . implode ( ',', array_fill ( 0, count ( $multiSongIds ), '?' ) ) . ')';
+	$sql = "SELECT s.id, s.title, s.lyrics, s.lyrics_short, s.tabfilename, s.mp3filename, s.mp3filename2, s.author,
+               m.title AS meaning_title, m.meaning AS meaning_text
+        FROM songs s
+        LEFT JOIN song_meaning sm ON s.id = sm.song_id
+        LEFT JOIN meaning m ON sm.meaning_id = m.id
+        WHERE s.id IN ($placeholders)
+        ORDER BY $orderExpression";
+
+	$stmt = $conn->prepare ( $sql );
+	$bindValues = array_merge ( $multiSongIds, $multiSongIds );
+	$types = str_repeat ( 's', count ( $bindValues ) );
+	$stmt->bind_param ( $types, ...$bindValues );
+	$stmt->execute ();
+	$result = $stmt->get_result ();
+
+	$songs = [ ];
+	while ( $row = $result->fetch_assoc () ) {
+		$song_id = $row ['id'];
+
+		if (! isset ( $songs [$song_id] )) {
+			$songs [$song_id] = [
+					'id' => $row ['id'],
+					'title' => $row ['title'],
+					'lyrics' => $row ['lyrics'],
+					'lyrics_short' => $row ['lyrics_short'],
+					'tabfilename' => $row ['tabfilename'],
+					'mp3filename' => $row ['mp3filename'],
+					'mp3filename2' => $row ['mp3filename2'],
+					'author' => $row ['author'],
+					'meanings' => [ ]
+			];
+		}
+
+		if ($row ['meaning_title'] !== null) {
+			$songs [$song_id] ['meanings'] [] = [
+					'title' => $row ['meaning_title'],
+					'meaning' => $row ['meaning_text']
+			];
+		}
+	}
+
 	echo json_encode ( array_values ( $songs ), JSON_PRETTY_PRINT );
 	$stmt->close ();
 	$conn->close ();
