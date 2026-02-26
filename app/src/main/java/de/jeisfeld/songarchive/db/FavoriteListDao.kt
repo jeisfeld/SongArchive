@@ -19,6 +19,9 @@ interface FavoriteListDao {
     @Query("SELECT * FROM favorite_lists WHERE id = :id")
     suspend fun getById(id: Int): FavoriteList?
 
+    @Query("SELECT * FROM favorite_lists WHERE name = :name ORDER BY id LIMIT 1")
+    suspend fun getByName(name: String): FavoriteList?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(list: FavoriteList): Long
 
@@ -39,6 +42,9 @@ interface FavoriteListDao {
 
     @Query("DELETE FROM favorite_list_song WHERE listId = :listId AND songId = :songId")
     suspend fun deleteSongFromList(listId: Int, songId: String)
+
+    @Query("DELETE FROM favorite_list_song WHERE listId = :listId")
+    suspend fun deleteAllSongsFromList(listId: Int)
 
     @Query("SELECT listId FROM favorite_list_song WHERE songId = :songId")
     suspend fun getListsForSong(songId: String): List<Int>

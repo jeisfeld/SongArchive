@@ -40,6 +40,7 @@ class FavoriteListImportActivity: AppCompatActivity() {
 private fun ImportDialog(name: String, songs: List<String>, entriesJson: String?, sorted: Boolean, viewModel: FavoriteListViewModel, onClose: () -> Unit) {
     val scope = rememberCoroutineScope()
     var missing by remember { mutableStateOf<List<String>?>(null) }
+    var overwriteListId by remember { mutableStateOf<Int?>(null) }
     val payloadEntries = remember(entriesJson) { parseEntries(entriesJson) }
 
     if (missing != null) {
@@ -53,14 +54,32 @@ private fun ImportDialog(name: String, songs: List<String>, entriesJson: String?
         AlertDialog(
             onDismissRequest = onClose,
             title = { Text(stringResource(id = R.string.import_favorite_list)) },
-            text = { Text(stringResource(id = R.string.confirm_import_list, name)) },
+            text = {
+                val textRes = if (overwriteListId == null) R.string.confirm_import_list else R.string.confirm_overwrite_import_list
+                Text(stringResource(id = textRes, name))
+            },
             confirmButton = {
                 TextButton(onClick = {
                     scope.launch {
+                        if (overwriteListId == null) {
+                            val existing = viewModel.getListByName(name)
+                            if (existing != null) {
+                                overwriteListId = existing.id
+                                return@launch
+                            }
+                        }
                         val missingIds = if (payloadEntries != null) {
-                            viewModel.addListWithEntries(name, payloadEntries, sorted)
+                            if (overwriteListId != null) {
+                                viewModel.overwriteListWithEntries(overwriteListId!!, sorted, payloadEntries)
+                            } else {
+                                viewModel.addListWithEntries(name, payloadEntries, sorted)
+                            }
                         } else {
-                            viewModel.addListWithSongs(name, songs, sorted)
+                            if (overwriteListId != null) {
+                                viewModel.overwriteListWithSongs(overwriteListId!!, sorted, songs)
+                            } else {
+                                viewModel.addListWithSongs(name, songs, sorted)
+                            }
                         }
                         if (missingIds.isNotEmpty()) {
                             missing = missingIds

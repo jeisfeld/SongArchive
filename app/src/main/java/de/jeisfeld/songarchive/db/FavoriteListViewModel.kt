@@ -57,6 +57,47 @@ class FavoriteListViewModel(application: Application) : AndroidViewModel(applica
         return missing
     }
 
+
+    suspend fun getListByName(name: String): FavoriteList? {
+        return dao.getByName(name)
+    }
+
+    suspend fun overwriteListWithSongs(listId: Int, sorted: Boolean, songIds: List<String>): List<String> {
+        val missing = mutableListOf<String>()
+        val valid = mutableListOf<String>()
+        songIds.forEach { id ->
+            val exists = songDao.getSongById(id) != null
+            if (exists) {
+                valid.add(id)
+            } else {
+                missing.add(id)
+            }
+        }
+        val existing = dao.getById(listId) ?: return missing
+        dao.update(existing.copy(isSorted = sorted))
+        dao.deleteAllSongsFromList(listId)
+        dao.insertSongs(valid.mapIndexed { index, songId -> FavoriteListSong(listId, songId, index) })
+        return missing
+    }
+
+    suspend fun overwriteListWithEntries(listId: Int, sorted: Boolean, entries: List<FavoriteListEntryInput>): List<String> {
+        val missing = mutableListOf<String>()
+        val validEntries = mutableListOf<FavoriteListSong>()
+        entries.sortedBy { it.position }.forEach { entry ->
+            val exists = songDao.getSongById(entry.songId) != null
+            if (exists) {
+                validEntries.add(FavoriteListSong(listId, entry.songId, entry.position, entry.customTitle))
+            } else {
+                missing.add(entry.songId)
+            }
+        }
+        val existing = dao.getById(listId) ?: return missing
+        dao.update(existing.copy(isSorted = sorted))
+        dao.deleteAllSongsFromList(listId)
+        dao.insertSongs(validEntries)
+        return missing
+    }
+
     fun rename(list: FavoriteList, newName: String, sorted: Boolean = list.isSorted) {
         viewModelScope.launch { dao.update(list.copy(name = newName, isSorted = sorted)) }
     }

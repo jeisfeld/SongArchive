@@ -86,6 +86,7 @@
     <string name="share_favorite_list">Share list</string>
     <string name="import_favorite_list">Import Favorite List</string>
     <string name="confirm_import_list">Import list “%s”?</string>
+    <string name="confirm_overwrite_import_list">A list named “%s” already exists. Overwrite it?</string>
     <string name="missing_songs">Songs not found: %s</string>
     <string name="sorted_list">Sorted list</string>
     <string name="drag_to_reorder">Drag to reorder</string>
