@@ -12,6 +12,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -40,7 +41,14 @@ class FavoriteListImportActivity: AppCompatActivity() {
 private fun ImportDialog(name: String, songs: List<String>, entriesJson: String?, sorted: Boolean, viewModel: FavoriteListViewModel, onClose: () -> Unit) {
     val scope = rememberCoroutineScope()
     var missing by remember { mutableStateOf<List<String>?>(null) }
+    var existingListId by remember { mutableStateOf<Int?>(null) }
+    var existingListChecked by remember { mutableStateOf(false) }
     val payloadEntries = remember(entriesJson) { parseEntries(entriesJson) }
+
+    LaunchedEffect(name) {
+        existingListId = viewModel.getListByName(name)?.id
+        existingListChecked = true
+    }
 
     if (missing != null) {
         AlertDialog(
@@ -53,14 +61,34 @@ private fun ImportDialog(name: String, songs: List<String>, entriesJson: String?
         AlertDialog(
             onDismissRequest = onClose,
             title = { Text(stringResource(id = R.string.import_favorite_list)) },
-            text = { Text(stringResource(id = R.string.confirm_import_list, name)) },
+            text = {
+                val textRes = if (existingListChecked && existingListId != null) {
+                    R.string.confirm_overwrite_import_list
+                } else {
+                    R.string.confirm_import_list
+                }
+                Text(stringResource(id = textRes, name))
+            },
             confirmButton = {
                 TextButton(onClick = {
                     scope.launch {
-                        val missingIds = if (payloadEntries != null) {
-                            viewModel.addListWithEntries(name, payloadEntries, sorted)
+                        val targetListId = if (existingListChecked) {
+                            existingListId
                         } else {
-                            viewModel.addListWithSongs(name, songs, sorted)
+                            viewModel.getListByName(name)?.id
+                        }
+                        val missingIds = if (payloadEntries != null) {
+                            if (targetListId != null) {
+                                viewModel.overwriteListWithEntries(targetListId, sorted, payloadEntries)
+                            } else {
+                                viewModel.addListWithEntries(name, payloadEntries, sorted)
+                            }
+                        } else {
+                            if (targetListId != null) {
+                                viewModel.overwriteListWithSongs(targetListId, sorted, songs)
+                            } else {
+                                viewModel.addListWithSongs(name, songs, sorted)
+                            }
                         }
                         if (missingIds.isNotEmpty()) {
                             missing = missingIds

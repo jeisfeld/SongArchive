@@ -86,6 +86,7 @@
     <string name="share_favorite_list">Liste teilen</string>
     <string name="import_favorite_list">Favoritenliste importieren</string>
     <string name="confirm_import_list">Liste „%s“ importieren?</string>
+    <string name="confirm_overwrite_import_list">Eine Liste namens „%s“ existiert bereits. Überschreiben?</string>
     <string name="missing_songs">Folgende Lieder wurden nicht importiert: %s</string>
     <string name="sorted_list">Sortierte Liste</string>
     <string name="drag_to_reorder">Ziehen zum Sortieren</string>
