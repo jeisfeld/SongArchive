@@ -22,7 +22,10 @@ class FavoriteListViewModel(application: Application) : AndroidViewModel(applica
     )
 
     fun addList(name: String, sorted: Boolean = false) {
-        viewModelScope.launch { dao.insert(FavoriteList(name = name, isSorted = sorted)) }
+        viewModelScope.launch {
+            val maxPosition = dao.getMaxListPosition()
+            dao.insert(FavoriteList(name = name, isSorted = sorted, position = maxPosition + 1))
+        }
     }
 
     suspend fun addListWithSongs(name: String, songIds: List<String>, sorted: Boolean = false): List<String> {
@@ -36,7 +39,8 @@ class FavoriteListViewModel(application: Application) : AndroidViewModel(applica
                 missing.add(id)
             }
         }
-        val listId = dao.insert(FavoriteList(name = name, isSorted = sorted)).toInt()
+        val maxPosition = dao.getMaxListPosition()
+        val listId = dao.insert(FavoriteList(name = name, isSorted = sorted, position = maxPosition + 1)).toInt()
         dao.insertSongs(valid.mapIndexed { index, songId -> FavoriteListSong(listId, songId, index) })
         return missing
     }
@@ -52,7 +56,8 @@ class FavoriteListViewModel(application: Application) : AndroidViewModel(applica
                 missing.add(entry.songId)
             }
         }
-        val listId = dao.insert(FavoriteList(name = name, isSorted = sorted)).toInt()
+        val maxPosition = dao.getMaxListPosition()
+        val listId = dao.insert(FavoriteList(name = name, isSorted = sorted, position = maxPosition + 1)).toInt()
         dao.insertSongs(validEntries.map { it.copy(listId = listId) })
         return missing
     }
@@ -149,6 +154,14 @@ class FavoriteListViewModel(application: Application) : AndroidViewModel(applica
         viewModelScope.launch {
             orderedSongIds.forEachIndexed { index, songId ->
                 dao.updatePosition(listId, songId, index)
+            }
+        }
+    }
+
+    fun updateListPositions(orderedListIds: List<Int>) {
+        viewModelScope.launch {
+            orderedListIds.forEachIndexed { index, listId ->
+                dao.updateListPosition(listId, index)
             }
         }
     }

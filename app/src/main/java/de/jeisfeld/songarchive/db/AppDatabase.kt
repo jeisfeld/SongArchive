@@ -9,7 +9,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [Song::class, Meaning::class, SongMeaning::class, AppMetadata::class, FavoriteList::class, FavoriteListSong::class],
-    version = 15,
+    version = 16,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -69,6 +69,23 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_15_16 = object : Migration(15, 16) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE favorite_lists ADD COLUMN position INTEGER NOT NULL DEFAULT 0")
+                database.execSQL(
+                    """
+                        UPDATE favorite_lists
+                        SET position = ordering.new_position
+                        FROM (
+                            SELECT id, ROW_NUMBER() OVER (ORDER BY id) - 1 AS new_position
+                            FROM favorite_lists
+                        ) AS ordering
+                        WHERE favorite_lists.id = ordering.id
+                    """.trimIndent()
+                )
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -76,13 +93,12 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "songs.db"
                 )
-                    .addMigrations(MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15)
+                    .addMigrations(MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16)
                     .build()
                 INSTANCE = instance
                 instance
             }
         }
     }
-
 }
 

@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface FavoriteListDao {
-    @Query("SELECT * FROM favorite_lists ORDER BY id")
+    @Query("SELECT * FROM favorite_lists ORDER BY position, id")
     fun getAll(): Flow<List<FavoriteList>>
 
     @Query("SELECT * FROM favorite_lists WHERE id = :id")
@@ -30,6 +30,12 @@ interface FavoriteListDao {
 
     @Delete
     suspend fun delete(list: FavoriteList)
+
+    @Query("SELECT COALESCE(MAX(position), -1) FROM favorite_lists")
+    suspend fun getMaxListPosition(): Int
+
+    @Query("UPDATE favorite_lists SET position = :position WHERE id = :listId")
+    suspend fun updateListPosition(listId: Int, position: Int)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSong(entry: FavoriteListSong)
