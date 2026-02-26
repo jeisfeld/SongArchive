@@ -7,5 +7,6 @@ import androidx.room.PrimaryKey
 data class FavoriteList(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val name: String,
-    val isSorted: Boolean = false
+    val isSorted: Boolean = false,
+    val position: Int = 0
 )
