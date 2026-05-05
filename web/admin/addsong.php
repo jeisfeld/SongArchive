@@ -26,27 +26,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($formValues['id'] === '' || $formValues['title'] === '' || trim($lyricsInput) === '') {
         $errorMessage = 'Please fill in all required fields.';
     } else {
-        $insertSql = 'INSERT INTO songs (id, title, lyrics) VALUES (?, ?, ?)';
-        $insertStmt = $conn->prepare($insertSql);
+        try {
+            $insertSql = 'INSERT INTO songs (id, title, lyrics) VALUES (?, ?, ?)';
+            $insertStmt = $conn->prepare($insertSql);
 
-        if (! $insertStmt) {
-            error_log('Failed to prepare insert statement: ' . $conn->error);
-            $errorMessage = 'Unable to prepare the song for saving.';
-        } else {
-            $insertStmt->bind_param('sss', $formValues['id'], $formValues['title'], $lyricsInput);
-
-            if ($insertStmt->execute()) {
-                $insertSuccess = true;
+            if (! $insertStmt) {
+                error_log('Failed to prepare insert statement: ' . $conn->error);
+                $errorMessage = 'Unable to prepare the song for saving.';
             } else {
-                if ($insertStmt->errno === 1062) {
-                    $errorMessage = 'A song with this ID already exists.';
-                } else {
-                    error_log('Failed to execute insert statement: ' . $insertStmt->error);
-                    $errorMessage = 'Failed to save the song.';
-                }
-            }
+                $insertStmt->bind_param('sss', $formValues['id'], $formValues['title'], $lyricsInput);
 
-            $insertStmt->close();
+                if ($insertStmt->execute()) {
+                    $insertSuccess = true;
+                } else {
+                    if ($insertStmt->errno === 1062) {
+                        $errorMessage = 'A song with this ID already exists.';
+                    } else {
+                        error_log('Failed to execute insert statement: ' . $insertStmt->error);
+                        $errorMessage = 'Failed to save the song.';
+                    }
+                }
+
+                $insertStmt->close();
+            }
+        } catch (Throwable $exception) {
+            $errorCode = method_exists($exception, 'getCode') ? (int) $exception->getCode() : 0;
+            if ($errorCode === 1062) {
+                $errorMessage = 'A song with this ID already exists.';
+            } else {
+                error_log('Failed to save song: ' . $exception->getMessage());
+                $errorMessage = 'Failed to save the song.';
+            }
         }
     }
 }
