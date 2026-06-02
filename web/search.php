@@ -7,7 +7,7 @@ require_once "db_config.php";
 
 // Get query
 $query = isset ( $_GET ['q'] ) ? trim ( $_GET ['q'] ) : "";
-$includeHidden = filter_var ( $_GET ['include_hidden'] ?? false, FILTER_VALIDATE_BOOLEAN );
+$includeHidden = filter_var ( $_POST ['include_hidden'] ?? false, FILTER_VALIDATE_BOOLEAN );
 $applyIdFilter = ! $includeHidden;
 
 // Use regex to check if query is a valid ID (numeric OR numeric + single letter)
