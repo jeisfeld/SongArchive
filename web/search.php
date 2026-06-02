@@ -8,6 +8,12 @@ require_once "db_config.php";
 // Get query
 $query = isset ( $_GET ['q'] ) ? trim ( $_GET ['q'] ) : "";
 $includeHidden = filter_var ( $_POST ['include_hidden'] ?? false, FILTER_VALIDATE_BOOLEAN );
+
+if (! $includeHidden && isset ( $_COOKIE [session_name ()] )) {
+	session_start ();
+	$includeHidden = ! empty ( $_SESSION ['include_hidden_search'] );
+}
+
 $applyIdFilter = ! $includeHidden;
 
 // Use regex to check if query is a valid ID (numeric OR numeric + single letter)
