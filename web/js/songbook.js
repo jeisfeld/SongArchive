@@ -46,12 +46,16 @@ async function performSearch(query) {
 	const signal = searchAbortController.signal;
 
 	try {
-		let requestUrl = "/search.php?q=" + encodeURIComponent(query);
+		const requestBody = new URLSearchParams();
 		if (isAdminView()) {
-			requestUrl += "&include_hidden=1";
+			requestBody.set("include_hidden", "1");
 		}
 
-		let response = await fetch(requestUrl, { signal });
+		let response = await fetch("/search.php?q=" + encodeURIComponent(query), {
+			method: "POST",
+			body: requestBody,
+			signal
+		});
 		let songs = await response.json();
 		displayResult(songs);
 	}
