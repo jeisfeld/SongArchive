@@ -22,5 +22,6 @@
 /songarchivexplugin/build
 /util
 /web/admin/.htpasswd
+/web/vip/.htpasswd
 /web/chords.zip
 /web/db_config.php
