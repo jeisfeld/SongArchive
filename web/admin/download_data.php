@@ -25,7 +25,7 @@ else {
 }
 
 // Fetch songs
-$sql_songs = "SELECT id, title, lyrics, lyrics_short, lyrics_paged, author, keywords, tabfilename, mp3filename, mp3filename2 FROM songs" . $sqladd_songs . " ORDER BY id";
+$sql_songs = "SELECT id, title, lyrics, lyrics_short, lyrics_paged, author, keywords, chordmarkup, tabfilename, mp3filename, mp3filename2 FROM songs" . $sqladd_songs . " ORDER BY id";
 $result_songs = $conn->query ( $sql_songs );
 $songs = [ ];
 if ($result_songs->num_rows > 0) {

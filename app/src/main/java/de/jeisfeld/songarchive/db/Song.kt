@@ -16,6 +16,7 @@ data class Song(
     val lyricsPaged: String?,
     val author: String,
     val keywords: String,
+    val chordmarkup: String?,
     val tabfilename: String?,
     val mp3filename: String?,
     val mp3filename2: String?,
