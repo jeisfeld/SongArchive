@@ -152,6 +152,7 @@ fun MainScreen(viewModel: SongViewModel) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 isConnectedState.value = isInternetAvailable(context)
+                viewModel.refreshSongs()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)

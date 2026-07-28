@@ -95,6 +95,12 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun refreshSongs() {
+        viewModelScope.launch {
+            refreshSongsList()
+        }
+    }
+
     fun addLocalSong(
         title: String,
         lyrics: String,
