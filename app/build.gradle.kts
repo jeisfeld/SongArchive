@@ -26,12 +26,12 @@ val basicAuthPassword = authProperties.getProperty("basicAuthPassword", "")
 
 android {
     namespace = "de.jeisfeld.songarchive"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "de.jeisfeld.songarchive"
         minSdk = 26
-        targetSdk = 36
+        targetSdk = 37
         versionCode = 25
         versionName = "1.2.9"
 
@@ -73,6 +73,7 @@ android {
 }
 
 dependencies {
+    testImplementation(libs.junit)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)

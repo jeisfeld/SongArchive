@@ -4,9 +4,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
 import android.os.Bundle
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -122,13 +120,7 @@ fun MainScreen(viewModel: SongViewModel) {
     var sharedLyricsText by remember { mutableStateOf("") }
     var showLocalSongDialog by remember { mutableStateOf(false) }
 
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestMultiplePermissions()
-    ) { result ->
-        if (result.all { it.value }) {
-            PeerConnectionViewModel.startPeerConnectionService(context)
-        }
-    }
+    val requestNetworkConnection = rememberNetworkConnectionRequest(context)
 
     // If DB is empty on startup, then synchronize data
     LaunchedEffect(Unit) {
@@ -209,7 +201,7 @@ fun MainScreen(viewModel: SongViewModel) {
                                 showMenu = showMenu,
                                 onDismissRequest = { showMenu = false },
                                 context = context,
-                                permissionLauncher = permissionLauncher,
+                                onNetworkConnectionRequested = requestNetworkConnection,
                                 onShareText = { showShareTextDialog = true },
                                 onSync = {
                                     isSyncing = true
@@ -259,8 +251,8 @@ fun MainScreen(viewModel: SongViewModel) {
         if (showSyncDialog) {
             AlertDialog(
                 onDismissRequest = { showSyncDialog = false },
-                title = { Text(context.getString(R.string.update_available_title)) },
-                text = { Text(context.getString(R.string.update_available_text)) },
+                title = { Text(stringResource(R.string.update_available_title)) },
+                text = { Text(stringResource(R.string.update_available_text)) },
                 confirmButton = {
                     TextButton(onClick = {
                         showSyncDialog = false
@@ -270,12 +262,12 @@ fun MainScreen(viewModel: SongViewModel) {
                             viewModel.searchSongs(viewModel.searchQuery.value)
                         }
                     }) {
-                        Text(context.getString(R.string.ok))
+                        Text(stringResource(R.string.ok))
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = { showSyncDialog = false }) {
-                        Text(context.getString(R.string.cancel))
+                        Text(stringResource(R.string.cancel))
                     }
                 }
             )

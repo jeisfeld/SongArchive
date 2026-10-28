@@ -14,6 +14,13 @@ object PeerConnectionViewModel : ViewModel() {
     val stopRemoteActivity = MutableLiveData(false)
 
     fun startPeerConnectionService(context: Context) {
+        if (peerConnectionMode == PeerConnectionMode.DISABLED || missingNearbyPermissions(context).isNotEmpty()) {
+            peerConnectionMode = PeerConnectionMode.DISABLED
+            context.stopService(Intent(context, PeerConnectionService::class.java))
+            lastSentCommand = null
+            connectedDevices = 0
+            return
+        }
         val serviceIntent = Intent(context, PeerConnectionService::class.java).apply {
             val action = when (peerConnectionMode) {
                 PeerConnectionMode.DISABLED -> PeerConnectionAction.CONNECTION_DISABLE

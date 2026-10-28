@@ -120,4 +120,8 @@
         <item>Texte (weiß/schwarz)</item>
         <item>Akkorde</item>
     </string-array>
+    <string name="network_permissions_explanation">Um Geräte in der Nähe zu finden und zu verbinden, benötigt die Netzwerkverbindung Zugriff auf den Standort (GPS), Bluetooth und WLAN sowie ab Android 17 auf das lokale Netzwerk. Erteile die angefragten Berechtigungen in den folgenden Systemdialogen und wähle den genauen Standort. WLAN, Bluetooth und Standortdienste müssen ebenfalls eingeschaltet sein.</string>
+    <string name="network_permissions_denied">Die Netzwerkverbindung benötigt alle angefragten Berechtigungen, einschließlich des genauen Standorts. Aktiviere sie in den App-Berechtigungseinstellungen, um fortzufahren.</string>
+    <string name="network_radios_required">Schalte WLAN, Bluetooth und Standortdienste (GPS) in den Systemeinstellungen ein, um die Netzwerkverbindung zu nutzen.</string>
+    <string name="network_grant_permissions">Berechtigungen erteilen</string>
 </resources>

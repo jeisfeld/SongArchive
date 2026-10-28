@@ -120,4 +120,8 @@
         <item>Lyrics (white/black)</item>
         <item>Chords</item>
     </string-array>
+    <string name="network_permissions_explanation">To discover and connect to nearby devices, Network Connection needs location (GPS), Bluetooth and Wi-Fi access, and local network access on Android 17 or later. Grant the requested permissions in the following system dialogs and select precise location. Wi-Fi, Bluetooth and location services must also be enabled.</string>
+    <string name="network_permissions_denied">Network Connection needs all requested permissions, including precise location. Enable them in the app permissions settings to continue.</string>
+    <string name="network_radios_required">Enable Wi-Fi, Bluetooth and location services (GPS) in system settings to use Network Connection.</string>
+    <string name="network_grant_permissions">Grant permissions</string>
 </resources>

@@ -27,7 +27,17 @@ class PeerConnectionService : Service() {
         Log.d(TAG, "Received message for action " + action)
 
         if (action == null) {
-            return START_STICKY
+            stopSelf()
+            return START_NOT_STICKY
+        }
+        // Permissions can be revoked after connection setup, including before a service restart.
+        if (action != PeerConnectionAction.CONNECTION_DISABLE && missingNearbyPermissions(this).isNotEmpty()) {
+            PeerConnectionViewModel.peerConnectionMode = PeerConnectionMode.DISABLED
+            PeerConnectionViewModel.connectedDevices = 0
+            PeerConnectionViewModel.lastSentCommand = null
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
+            return START_NOT_STICKY
         }
         if (PeerConnectionViewModel.peerConnectionMode == PeerConnectionMode.DISABLED && action != PeerConnectionAction.CONNECTION_DISABLE) {
             startNotification(intent, action)

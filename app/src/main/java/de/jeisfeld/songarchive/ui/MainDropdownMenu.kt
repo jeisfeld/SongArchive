@@ -1,8 +1,6 @@
 package de.jeisfeld.songarchive.ui
 
-import android.Manifest
 import android.content.Context
-import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Row
@@ -28,7 +26,6 @@ import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.network.ClientMode
@@ -45,7 +42,7 @@ fun MainDropdownMenu(
     showMenu: Boolean,
     onDismissRequest: () -> Unit,
     context: Context,
-    permissionLauncher: ManagedActivityResultLauncher<Array<String>, Map<String, Boolean>>,
+    onNetworkConnectionRequested: (PeerConnectionMode, ClientMode) -> Unit,
     onShareText: () -> Unit,
     onSync: () -> Unit,
     onAddSong: () -> Unit,
@@ -146,38 +143,19 @@ fun MainDropdownMenu(
                                 showNetworkMenu = true
                             } else {
                                 onDismissRequest()
-                                if (PeerConnectionViewModel.peerConnectionMode == PeerConnectionMode.DISABLED) {
-                                    when (DefaultNetworkConnection.fromId(defaultConnection)) {
-                                        DefaultNetworkConnection.SERVER -> {
-                                            PeerConnectionViewModel.peerConnectionMode = PeerConnectionMode.SERVER
-                                        }
-
-                                        DefaultNetworkConnection.CLIENT_LYRICS_BS -> {
-                                            PeerConnectionViewModel.peerConnectionMode = PeerConnectionMode.CLIENT
-                                            PeerConnectionViewModel.clientMode = ClientMode.LYRICS_BS
-                                        }
-
-                                        DefaultNetworkConnection.CLIENT_LYRICS_BW -> {
-                                            PeerConnectionViewModel.peerConnectionMode = PeerConnectionMode.CLIENT
-                                            PeerConnectionViewModel.clientMode = ClientMode.LYRICS_BW
-                                        }
-
-                                        DefaultNetworkConnection.CLIENT_LYRICS_WB -> {
-                                            PeerConnectionViewModel.peerConnectionMode = PeerConnectionMode.CLIENT
-                                            PeerConnectionViewModel.clientMode = ClientMode.LYRICS_WB
-                                        }
-
-                                        DefaultNetworkConnection.CLIENT_CHORDS -> {
-                                            PeerConnectionViewModel.peerConnectionMode = PeerConnectionMode.CLIENT
-                                            PeerConnectionViewModel.clientMode = ClientMode.CHORDS
-                                        }
-
-                                        else -> {}
-                                    }
-                                } else {
-                                    PeerConnectionViewModel.peerConnectionMode = PeerConnectionMode.DISABLED
+                                val defaultMode = DefaultNetworkConnection.fromId(defaultConnection)
+                                val networkMode = when {
+                                    PeerConnectionViewModel.peerConnectionMode != PeerConnectionMode.DISABLED -> PeerConnectionMode.DISABLED
+                                    defaultMode == DefaultNetworkConnection.SERVER -> PeerConnectionMode.SERVER
+                                    else -> PeerConnectionMode.CLIENT
                                 }
-                                PeerConnectionViewModel.startPeerConnectionService(context)
+                                val clientMode = when (defaultMode) {
+                                    DefaultNetworkConnection.CLIENT_LYRICS_BW -> ClientMode.LYRICS_BW
+                                    DefaultNetworkConnection.CLIENT_LYRICS_WB -> ClientMode.LYRICS_WB
+                                    DefaultNetworkConnection.CLIENT_CHORDS -> ClientMode.CHORDS
+                                    else -> ClientMode.LYRICS_BS
+                                }
+                                onNetworkConnectionRequested(networkMode, clientMode)
                             }
                         },
                         onLongClick = { showNetworkMenu = true }
@@ -204,47 +182,9 @@ fun MainDropdownMenu(
                 selectedNetworkMode = PeerConnectionViewModel.peerConnectionMode,
                 selectedClientMode = PeerConnectionViewModel.clientMode,
                 onModeSelected = { networkMode, clientMode ->
-                    val isPeerConnectionModeChanged = networkMode != PeerConnectionViewModel.peerConnectionMode
-                    PeerConnectionViewModel.peerConnectionMode = networkMode
-                    PeerConnectionViewModel.clientMode = clientMode
                     onDismissRequest()
                     showNetworkMenu = false
-                    val requiredPermissions = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                        arrayOf(
-                            Manifest.permission.NEARBY_WIFI_DEVICES,
-                            Manifest.permission.ACCESS_FINE_LOCATION,
-                            Manifest.permission.BLUETOOTH,
-                            Manifest.permission.BLUETOOTH_SCAN,
-                            Manifest.permission.BLUETOOTH_ADMIN,
-                            Manifest.permission.BLUETOOTH_CONNECT,
-                            Manifest.permission.BLUETOOTH_ADVERTISE
-                        )
-                    } else if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-                        arrayOf(
-                            Manifest.permission.ACCESS_FINE_LOCATION,
-                            Manifest.permission.BLUETOOTH,
-                            Manifest.permission.BLUETOOTH_SCAN,
-                            Manifest.permission.BLUETOOTH_ADMIN,
-                            Manifest.permission.BLUETOOTH_CONNECT,
-                            Manifest.permission.BLUETOOTH_ADVERTISE
-                        )
-                    } else {
-                        arrayOf(
-                            Manifest.permission.ACCESS_FINE_LOCATION,
-                            Manifest.permission.BLUETOOTH,
-                            Manifest.permission.BLUETOOTH_ADMIN,
-                        )
-                    }
-                    val missingPermissions = requiredPermissions.filter {
-                        ContextCompat.checkSelfPermission(context, it) != android.content.pm.PackageManager.PERMISSION_GRANTED
-                    }
-                    if (isPeerConnectionModeChanged) {
-                        if (missingPermissions.isNotEmpty()) {
-                            permissionLauncher.launch(missingPermissions.toTypedArray())
-                        } else {
-                            PeerConnectionViewModel.startPeerConnectionService(context)
-                        }
-                    }
+                    onNetworkConnectionRequested(networkMode, clientMode)
                 },
                 onDismiss = { showNetworkMenu = false }
             )
