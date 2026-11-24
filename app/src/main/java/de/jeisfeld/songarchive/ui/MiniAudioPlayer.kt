@@ -19,10 +19,12 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.SliderState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -69,8 +71,10 @@ fun MiniAudioPlayer(
             )
 
             // Progress Bar (with Ball Indicator)
+            val sliderState = remember { SliderState() }
+            sliderState.value = if (totalDuration > 0) currentTime.toFloat() / totalDuration else 0f
             Slider(
-                value = if (totalDuration > 0) (currentTime.toFloat() / totalDuration) else 0f,
+                state = sliderState,
                 onValueChange = { progress ->
                     val newPosition = (progress * totalDuration).toLong()
                     PlaybackViewModel.setProgress(newPosition)
