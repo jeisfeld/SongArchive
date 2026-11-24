@@ -20,7 +20,6 @@ import com.google.android.gms.nearby.connection.Payload
 import com.google.android.gms.nearby.connection.PayloadCallback
 import com.google.android.gms.nearby.connection.PayloadTransferUpdate
 import com.google.android.gms.nearby.connection.Strategy
-import com.google.gson.Gson
 import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.ui.ChordsViewerActivity
 import de.jeisfeld.songarchive.ui.LyricsViewerActivity
@@ -73,11 +72,8 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
         }
     }
 
-    private val gson = Gson()
-
     fun sendCommandToClient(endpointId: String, command: NetworkCommand, params: Map<String, String?> = emptyMap()) {
-        val message = Message(command.name, params.filterValues { it != null }.mapValues { it.value!! })
-        val json = gson.toJson(message)
+        val json = NearbyMessageCodec.encode(command, params)
         val payload = Payload.fromBytes(json.toByteArray(StandardCharsets.UTF_8))
         connectionsClient.sendPayload(endpointId, payload)
         Log.d(TAG, "Sent JSON message to $endpointId: $json")
@@ -124,9 +120,8 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
                         val lastSentCommand = PeerConnectionViewModel.lastSentCommand
                         if (lastSentCommand == null) {
                             sendCommandToClient(
-                                endpointId, NetworkCommand.DISPLAY_TEXT, mapOf(
-                                    "style" to DisplayStyle.REMOTE_BLACK.toString()
-                                )
+                                endpointId, NetworkCommand.DISPLAY_TEXT,
+                                NearbyMessageCodec.displayParams(DisplayStyle.REMOTE_BLACK)
                             )
                         } else {
                             sendCommandToClient(endpointId, lastSentCommand.command, lastSentCommand.params)
@@ -184,7 +179,7 @@ class NearbyConnectionHandler(private val context: Context) : PeerConnectionHand
             payload.asBytes()?.let {
                 val json = String(it, StandardCharsets.UTF_8)
                 Log.d(TAG, "Processing payload " + json)
-                val message = gson.fromJson(json, Message::class.java)
+                val message = NearbyMessageCodec.decode(json)
                 processCommand(message)
             }
         }

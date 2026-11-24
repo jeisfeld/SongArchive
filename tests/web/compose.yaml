@@ -1,0 +1,34 @@
+name: songarchive-tests
+services:
+  database:
+    build:
+      context: ../..
+      dockerfile: tests/web/Dockerfile
+      target: database
+    environment:
+      MARIADB_RANDOM_ROOT_PASSWORD: "1"
+      MARIADB_DATABASE: archive_fixture
+      MARIADB_USER: archive_fixture
+      MARIADB_PASSWORD: fixture-password
+    tmpfs:
+      - /var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  web:
+    build:
+      context: ../..
+      dockerfile: tests/web/Dockerfile
+      target: site
+    depends_on:
+      database:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${SONGARCHIVE_TEST_PORT:-8123}:80"
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(str_contains(file_get_contents('http://127.0.0.1/search.php?q=0012a') ?: '', 'Morning River') ? 0 : 1);"]
+      interval: 2s
+      timeout: 3s
+      retries: 15

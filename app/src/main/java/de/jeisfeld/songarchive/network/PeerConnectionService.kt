@@ -81,12 +81,7 @@ class PeerConnectionService : Service() {
                     else -> NetworkCommand.DISPLAY_SONG
                 }
                 if (songId != null || lyrics != null) {
-                    val params = mapOf(
-                        "songId" to songId,
-                        "style" to style.toString(),
-                        "lyrics" to lyrics,
-                        "lyricsShort" to lyricsShort
-                    )
+                    val params = NearbyMessageCodec.displayParams(style, songId, lyrics, lyricsShort)
                     PeerConnectionViewModel.lastSentCommand = LastSentCommand(networkCommand, params)
                     peerConnectionHandler.sendCommandToClients(networkCommand, params)
                 }
@@ -96,10 +91,7 @@ class PeerConnectionService : Service() {
                 val style = (intent.getSerializableExtra("STYLE") as DisplayStyle?) ?: DisplayStyle.REMOTE_DEFAULT
                 val songId = intent.getStringExtra("SONG_ID")
                 if (songId != null) {
-                    val params = mapOf(
-                        "songId" to songId,
-                        "style" to style.toString(),
-                    )
+                    val params = NearbyMessageCodec.displayParams(style, songId)
                     PeerConnectionViewModel.lastSentCommand = LastSentCommand(NetworkCommand.DISPLAY_CHORDS, params)
                     peerConnectionHandler.sendCommandToClients(NetworkCommand.DISPLAY_CHORDS, params)
                 }
@@ -110,12 +102,7 @@ class PeerConnectionService : Service() {
                 val sorted = intent.getBooleanExtra("LIST_SORTED", false)
                 val entries = intent.getStringExtra("LIST_ENTRIES")
                 if (listName != null && songIds != null) {
-                    val params = mutableMapOf(
-                        "name" to listName,
-                        "songIds" to songIds,
-                        "sorted" to sorted.toString()
-                    )
-                    entries?.takeIf { it.isNotBlank() }?.let { params["entries"] = it }
+                    val params = NearbyMessageCodec.favoriteListParams(listName, songIds, sorted, entries)
                     PeerConnectionViewModel.lastSentCommand = LastSentCommand(NetworkCommand.SHARE_FAVORITE_LIST, params)
                     peerConnectionHandler.sendCommandToClients(NetworkCommand.SHARE_FAVORITE_LIST, params)
                 }

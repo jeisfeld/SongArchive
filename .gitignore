@@ -25,3 +25,6 @@
 /web/vip/.htpasswd
 /web/chords.zip
 /web/db_config.php
+/tests/web/node_modules/
+/tests/web/test-results/
+/tests/web/playwright-report/
