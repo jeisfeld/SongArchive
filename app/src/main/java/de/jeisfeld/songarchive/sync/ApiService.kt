@@ -1,10 +1,12 @@
 package de.jeisfeld.songarchive.sync
 
 import okhttp3.OkHttpClient
+import okhttp3.ResponseBody
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.GET
 import retrofit2.http.Query
+import retrofit2.http.Streaming
 
 interface ApiService {
     @GET("admin/download_data.php")
@@ -12,6 +14,10 @@ interface ApiService {
 
     @GET("admin/check_update.php")
     suspend fun checkUpdate(): CheckUpdateResponse
+
+    @Streaming
+    @GET("admin/download_chords.php")
+    suspend fun downloadChordArchive(): ResponseBody
 }
 
 object RetrofitClient {

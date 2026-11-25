@@ -35,3 +35,7 @@ data class CheckUpdateResponse(
    val tab_count: Int?,
    val chords_zip_size: Long?
 )
+
+internal fun CheckUpdateResponse.hasArchiveUpdate(numberOfTabs: Int, chordsZipSize: Long): Boolean =
+    (tab_count != null && tab_count != numberOfTabs) ||
+        (chords_zip_size?.let { it != chordsZipSize } ?: ((tab_count ?: 0) > 0))

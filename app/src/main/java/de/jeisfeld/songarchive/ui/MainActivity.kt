@@ -127,7 +127,7 @@ fun MainScreen(viewModel: SongViewModel) {
         viewModel.isDatabaseEmpty { isEmpty ->
             if (isEmpty) {
                 isSyncing = true
-                viewModel.synchronizeDatabaseAndImages(true) { success ->
+                viewModel.synchronizeDatabaseAndImages {
                     isSyncing = false
                 }
             } else {
@@ -205,9 +205,8 @@ fun MainScreen(viewModel: SongViewModel) {
                                 onShareText = { showShareTextDialog = true },
                                 onSync = {
                                     isSyncing = true
-                                    viewModel.synchronizeDatabaseAndImages(true) { _ ->
+                                    viewModel.synchronizeDatabaseAndImages {
                                         isSyncing = false
-                                        viewModel.searchSongs(viewModel.searchQuery.value)
                                     }
                                 },
                                 onAddSong = { showLocalSongDialog = true }
@@ -257,9 +256,8 @@ fun MainScreen(viewModel: SongViewModel) {
                     TextButton(onClick = {
                         showSyncDialog = false
                         isSyncing = true
-                        viewModel.synchronizeDatabaseAndImages(false) { success ->
+                        viewModel.synchronizeDatabaseAndImages {
                             isSyncing = false
-                            viewModel.searchSongs(viewModel.searchQuery.value)
                         }
                     }) {
                         Text(stringResource(R.string.ok))

@@ -12,10 +12,14 @@ import androidx.core.net.toUri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
+import androidx.room.withTransaction
 import de.jeisfeld.songarchive.R
-import de.jeisfeld.songarchive.sync.CheckUpdateResponse
+import de.jeisfeld.songarchive.sync.ApiService
 import de.jeisfeld.songarchive.sync.RetrofitClient
+import de.jeisfeld.songarchive.sync.hasArchiveUpdate
+import de.jeisfeld.songarchive.sync.installChordArchive
 import de.jeisfeld.songarchive.util.LocalTabUtils
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,20 +28,30 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import okhttp3.FormBody
 import okhttp3.Request
 import java.io.File
-import java.io.FileInputStream
-import java.io.FileOutputStream
 import java.text.Normalizer
 import java.util.regex.Pattern
-import java.util.zip.ZipInputStream
 
-class SongViewModel(application: Application) : AndroidViewModel(application) {
+class SongViewModel internal constructor(
+    application: Application,
+    private val database: AppDatabase,
+    private val archiveApi: ApiService,
+    private val archiveFilesDir: File
+) : AndroidViewModel(application) {
+    constructor(application: Application) : this(
+        application, AppDatabase.getDatabase(application), RetrofitClient.api, application.filesDir
+    )
+
     val TAG = "SongViewModel"
-    private val songDao = AppDatabase.getDatabase(application).songDao()
-    private val favoriteDao = AppDatabase.getDatabase(application).favoriteListDao()
+    private val songDao = database.songDao()
+    private val favoriteDao = database.favoriteListDao()
+    private val metadataDao = database.appMetadataDao()
+    private val syncMutex = Mutex()
     private val _songs = MutableStateFlow<List<Song>>(emptyList())
     val songs: StateFlow<List<Song>> = _songs
     private val _chordRefreshKey = MutableStateFlow(0)
@@ -45,7 +59,6 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
     private val client = RetrofitClient.httpClient
     var searchQuery = mutableStateOf("")
     var initState = MutableLiveData<Int>(0)
-    var checkUpdateResponse: CheckUpdateResponse? = null
     private var searchJob: Job? = null
     private var hasEmittedInitialSongs = false
 
@@ -285,104 +298,113 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun synchronizeDatabaseAndImages(recheckUpdate: Boolean, onComplete: (Boolean) -> Unit) {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                // Synchronize private songs only in server mode
-                val queryUser = if (pluginVerified.value ?: false) "private" else null
-
-                val existingFavorites = favoriteDao.getAllEntries()
-
-                // Fetch all data in one API call
-                val response = RetrofitClient.api.fetchAllData(user = queryUser)
-
-                // Process Songs
-                val fetchedSongs = response.songs.map {
-                    Song(
-                        id = it.id,
-                        title = it.title.trim(),
-                        lyrics = it.lyrics?.trim() ?: "",
-                        lyricsShort = it.lyrics_short?.trim(),
-                        lyricsPaged = it.lyrics_paged?.trim(),
-                        author = it.author?.trim() ?: "",
-                        keywords = it.keywords?.trim() ?: "",
-                        chordmarkup = it.chordmarkup?.trim(),
-                        tabfilename = it.tabfilename,
-                        mp3filename = it.mp3filename,
-                        mp3filename2 = it.mp3filename2,
-
-                        // Normalize fields before storing in Room
-                        title_normalized = " " + removeAccents(it.title).trim(),
-                        lyrics_normalized = " " + removeAccents(it.lyrics ?: "").trim(),
-                        author_normalized = " " + removeAccents(it.author ?: "").trim(),
-                        keywords_normalized = " " + removeAccents(it.keywords ?: "").trim()
-                    )
+    fun synchronizeDatabaseAndImages(onComplete: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            val success = try {
+                syncMutex.withLock {
+                    withContext(Dispatchers.IO) { synchronizeArchive() }
                 }
-
-                // Process Meanings
-                val fetchedMeanings = response.meanings.map {
-                    Meaning(
-                        id = it.id,
-                        title = it.title.trim(),
-                        meaning = it.meaning.trim()
-                    )
-                }
-
-                // Process Song-Meaning Relationships
-                val fetchedSongIds = fetchedSongs.map { it.id }.toSet()
-                val fetchedMeaningIds = fetchedMeanings.map { it.id }.toSet()
-                val fetchedSongMeanings = response.song_meanings.map {
-                    SongMeaning(
-                        songId = it.song_id,
-                        meaningId = it.meaning_id
-                    )
-                }.filter { it.songId in fetchedSongIds && it.meaningId in fetchedMeaningIds }
-
-                // Store in local Room database
-                songDao.clearMeanings()
-                songDao.clearSongs()
-                songDao.insertSongs(fetchedSongs)
-                refreshSongsList()
-
-                songDao.insertMeanings(fetchedMeanings)
-                songDao.insertSongMeanings(fetchedSongMeanings)
-
-                val localSongIds = songDao.getLocalSongIds()
-                val validSongIds = (fetchedSongs.map { it.id } + localSongIds).toSet()
-                favoriteDao.insertSongs(existingFavorites.filter { validSongIds.contains(it.songId) })
-
-                // Step 2: Download and Extract Images
-                val success = downloadAndExtractZip(getApplication(), "https://heilsame-lieder.de/admin/download_chords.php")
-
-                if (success) {
-                    if (recheckUpdate) {
-                        checkUpdateResponse = RetrofitClient.api.checkUpdate()
-                    }
-                    storeLastAppMetadata()
-                    refreshSongsList()
-                    _chordRefreshKey.update { it + 1 }
-                }
-
-                // Step 3: Notify UI
-                onComplete(success)
+                true
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to synchronize: ${e.message}", e)
-                onComplete(false)
+                Log.e(TAG, "Failed to synchronize", e)
+                false
             }
+            onComplete(success)
         }
     }
 
-    private suspend fun refreshSongsList() {
-        val currentQuery = withContext(Dispatchers.Main) { searchQuery.value }
-        val updatedSongs = if (currentQuery.isBlank()) {
-            withContext(Dispatchers.IO) { songDao.getAllSongs() }
-        } else {
-            val searchArgs = buildSearchArguments(currentQuery)
-            withContext(Dispatchers.IO) {
-                songDao.searchSongsForArgs(searchArgs).first()
-            }
+    private suspend fun synchronizeArchive() {
+        // Synchronize private songs only in server mode
+        val queryUser = if (pluginVerified.value ?: false) "private" else null
+
+        // Fetch all data in one API call
+        val response = archiveApi.fetchAllData(user = queryUser)
+
+        // Process Songs
+        val fetchedSongs = response.songs.map {
+            Song(
+                id = it.id,
+                title = it.title.trim(),
+                lyrics = it.lyrics?.trim() ?: "",
+                lyricsShort = it.lyrics_short?.trim(),
+                lyricsPaged = it.lyrics_paged?.trim(),
+                author = it.author?.trim() ?: "",
+                keywords = it.keywords?.trim() ?: "",
+                chordmarkup = it.chordmarkup?.trim(),
+                tabfilename = it.tabfilename,
+                mp3filename = it.mp3filename,
+                mp3filename2 = it.mp3filename2,
+
+                // Normalize fields before storing in Room
+                title_normalized = " " + removeAccents(it.title).trim(),
+                lyrics_normalized = " " + removeAccents(it.lyrics ?: "").trim(),
+                author_normalized = " " + removeAccents(it.author ?: "").trim(),
+                keywords_normalized = " " + removeAccents(it.keywords ?: "").trim()
+            )
         }
-        _songs.value = updatedSongs
+
+        // Process Meanings
+        val fetchedMeanings = response.meanings.map {
+            Meaning(
+                id = it.id,
+                title = it.title.trim(),
+                meaning = it.meaning.trim()
+            )
+        }
+
+        // Process Song-Meaning Relationships
+        val fetchedSongIds = fetchedSongs.map { it.id }.toSet()
+        val fetchedMeaningIds = fetchedMeanings.map { it.id }.toSet()
+        val fetchedSongMeanings = response.song_meanings.map {
+            SongMeaning(
+                songId = it.song_id,
+                meaningId = it.meaning_id
+            )
+        }.filter { it.songId in fetchedSongIds && it.meaningId in fetchedMeaningIds }
+
+        val zipSize = archiveApi.downloadChordArchive().use {
+            installChordArchive(archiveFilesDir, it.byteStream())
+        }
+        try {
+            val tabCount = try {
+                archiveApi.checkUpdate().tab_count
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Could not refresh the server tab count", e)
+                null
+            }
+
+            database.withTransaction {
+                val existingFavorites = favoriteDao.getAllEntries()
+                songDao.clearMeanings()
+                songDao.clearSongs()
+                songDao.insertSongs(fetchedSongs)
+                songDao.insertMeanings(fetchedMeanings)
+                songDao.insertSongMeanings(fetchedSongMeanings)
+
+                val validSongIds = fetchedSongIds + songDao.getLocalSongIds()
+                favoriteDao.insertSongs(existingFavorites.filter { it.songId in validSongIds })
+
+                val existing = metadataDao.get() ?: AppMetadata(numberOfTabs = 0, chordsZipSize = 0)
+                metadataDao.insert(existing.copy(numberOfTabs = tabCount ?: existing.numberOfTabs, chordsZipSize = zipSize))
+            }
+            refreshSongsList()
+        } finally {
+            _chordRefreshKey.update { it + 1 }
+        }
+    }
+
+    private suspend fun refreshSongsList() = withContext(Dispatchers.Main) {
+        val currentQuery = searchQuery.value
+        val updatedSongs = if (currentQuery.isBlank()) {
+            songDao.getAllSongs()
+        } else {
+            songDao.searchSongsForArgs(buildSearchArguments(currentQuery)).first()
+        }
+        if (searchQuery.value == currentQuery) _songs.value = updatedSongs
     }
 
     private data class SearchArguments(
@@ -478,82 +500,21 @@ class SongViewModel(application: Application) : AndroidViewModel(application) {
             .replace("\n", " ")
     }
 
-    private fun downloadAndExtractZip(context: Context, url: String): Boolean {
-        return try {
-            val zipFile = File(context.filesDir, "chords.zip")
-            val imagesDir = File(context.filesDir, "chords")
-
-            // Step 1: Download ZIP
-            val request = Request.Builder().url(url).build()
-            val response = client.newCall(request).execute()
-            val body = response.body
-
-            FileOutputStream(zipFile).use { output ->
-                body.byteStream().copyTo(output)
-            }
-
-            // Step 2: Delete old images before extraction
-            if (imagesDir.exists()) imagesDir.deleteRecursively()
-            imagesDir.mkdirs()
-
-            // Step 3: Extract ZIP contents
-            val zipInputStream = ZipInputStream(FileInputStream(zipFile))
-            var entry = zipInputStream.nextEntry
-            while (entry != null) {
-                val file = File(imagesDir, entry.name)
-                FileOutputStream(file).use { output ->
-                    zipInputStream.copyTo(output)
-                }
-                zipInputStream.closeEntry()
-                entry = zipInputStream.nextEntry
-            }
-            zipInputStream.close()
-
-            // Step 4: Cleanup ZIP file after extraction
-            zipFile.delete()
-
-            true // Success
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to download or extract ZIP: ${e.message}")
-            false // Failure
-        }
-    }
-
     fun checkForSongUpdates(onResult: (Boolean) -> Unit) {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                checkUpdateResponse = RetrofitClient.api.checkUpdate()
-                Log.d(TAG, "Remote Metadata: " + checkUpdateResponse)
-
-                val localMetadata =
-                    AppDatabase.getDatabase(getApplication()).appMetadataDao().get()
-                        ?: AppMetadata(numberOfTabs = 0, chordsZipSize = 0, language = "system", defaultNetworkConnection = 0)
-                Log.d(TAG, "Local Metadata: " + localMetadata)
-
-                val tabsChanged = checkUpdateResponse?.tab_count != null && checkUpdateResponse?.tab_count != localMetadata.numberOfTabs
-                val sizeChanged = checkUpdateResponse?.chords_zip_size != null && checkUpdateResponse?.chords_zip_size != localMetadata.chordsZipSize
-
-                onResult(tabsChanged || sizeChanged)
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to check for update: ${e.message}")
-                onResult(false)
-            }
-        }
-    }
-
-    fun storeLastAppMetadata() {
-        viewModelScope.launch(Dispatchers.IO) {
-            checkUpdateResponse?.tab_count?.let { tabCount ->
-                checkUpdateResponse?.chords_zip_size?.let { zipSize ->
-                    val dao = AppDatabase.getDatabase(getApplication()).appMetadataDao()
-                    val existing =
-                        dao.get() ?: AppMetadata(numberOfTabs = tabCount, chordsZipSize = zipSize, language = "system", defaultNetworkConnection = 0)
-                    dao.insert(
-                        existing.copy(numberOfTabs = tabCount, chordsZipSize = zipSize)
-                    )
+        viewModelScope.launch {
+            val needsUpdate = try {
+                syncMutex.withLock {
+                    val remote = archiveApi.checkUpdate()
+                    val local = metadataDao.get() ?: AppMetadata(numberOfTabs = 0, chordsZipSize = 0)
+                    remote.hasArchiveUpdate(local.numberOfTabs, local.chordsZipSize)
                 }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to check for update", e)
+                false
             }
-            checkUpdateResponse = null
+            onResult(needsUpdate)
         }
     }
 

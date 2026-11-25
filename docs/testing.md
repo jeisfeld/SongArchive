@@ -38,7 +38,7 @@ Use a test device and, for sync or upload, a configured test archive account.
 
 | Workflow | Automated coverage | Device check |
 | --- | --- | --- |
-| Sync with the web database | PHP catalog and chord ZIP responses, Android JSON decoding, and Room local-song retention during a catalog clear | Sync a test catalog with an existing local song and favorites. Verify the retained entries and open downloaded songs and chords offline. Repeat after upgrading from an older build if the schema changed. |
+| Sync with the web database | PHP catalog and chord ZIP responses, Android JSON decoding, local-song retention, and a recreated ZIP with the new chord available as soon as sync finishes | Sync a test catalog with an existing local song and favorites. Verify retained entries and open downloaded songs and chords offline. On a test server, remove its cached chord ZIP and add a new chord image. Accept the startup prompt, confirm the icon appears immediately, and restart to verify the prompt has cleared. |
 | Search for a song | Room query ranking and browse order | Search from the app, clear the query, and open the expected result. |
 | Display lyrics | Nearby lyrics message format | Open a song with full and short lyrics and verify the text in portrait and landscape. |
 | Display chords as an image | Local chord URI encoding and the web chord image viewer | Open a downloaded sheet and a locally attached image. The Android viewer currently requests orientation based on the image dimensions. |

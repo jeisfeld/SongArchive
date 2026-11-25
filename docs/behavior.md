@@ -30,6 +30,7 @@ Android source paths in the table are relative to `app/src/main/java/de/jeisfeld
 - Standard sync excludes `X` songs and their meaning links. When the optional companion is verified, the Android request includes `user=private`. Many lyrics and media fields are nullable, including `lyrics_short`, `lyrics_paged`, `chordmarkup`, and the recording filenames.
 - Android refreshes downloaded songs and meanings in Room, keeps local `Y` rows during the clear step, and restores saved favorite entries whose songs still exist. Changes here should be checked with a local song, a retained downloaded song, and a downloaded song removed from the server.
 - `/admin/check_update.php` returns the tab count and chord ZIP size, either of which can be unavailable. The app downloads chord images through `/admin/download_chords.php` and streams recordings individually.
+- If the server has chord sheets and its ZIP is missing, the update check offers synchronization so the download endpoint can rebuild the archive. Android validates and installs the downloaded ZIP before publishing the refreshed catalog and chord icons. It saves the size of the installed download and updates the tab count when the server provides it.
 
 ## Nearby message format
 
