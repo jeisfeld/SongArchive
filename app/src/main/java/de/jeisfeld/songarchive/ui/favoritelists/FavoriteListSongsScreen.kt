@@ -70,12 +70,11 @@ import de.jeisfeld.songarchive.db.FavoriteList
 import de.jeisfeld.songarchive.db.FavoriteListSongWithSong
 import de.jeisfeld.songarchive.db.FavoriteListViewModel
 import de.jeisfeld.songarchive.db.SongViewModel
-import de.jeisfeld.songarchive.ui.ChordsViewerActivity
 import de.jeisfeld.songarchive.ui.LyricsViewerActivity
 import de.jeisfeld.songarchive.ui.SearchBar
 import de.jeisfeld.songarchive.ui.SongTable
 import de.jeisfeld.songarchive.ui.theme.AppColors
-import de.jeisfeld.songarchive.util.LocalTabUtils
+import de.jeisfeld.songarchive.ui.SongChordsButton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -315,44 +314,7 @@ fun FavoriteListSongsScreen(
                                             context.startActivity(intent)
                                         }
                                 )
-                                entry.song.tabfilename?.takeIf { it.isNotBlank() }?.let { tabFilename ->
-                                    val isLocalTab = LocalTabUtils.isLocalTab(tabFilename)
-                                    val localTabUri = if (isLocalTab) LocalTabUtils.decodeLocalTab(tabFilename) else null
-                                    val remoteTabFilename = if (!isLocalTab) tabFilename else null
-                                    val chordsAvailable = when {
-                                        localTabUri != null -> true
-                                        remoteTabFilename != null ->
-                                            java.io.File(context.filesDir, "chords/$remoteTabFilename").exists()
-
-                                        else -> false
-                                    }
-                                    if (chordsAvailable) {
-                                        Image(
-                                            painter = painterResource(id = R.drawable.chords2),
-                                            contentDescription = stringResource(id = R.string.view_chords),
-                                            modifier = Modifier
-                                                .size(iconSize)
-                                                .clickable {
-                                                    if (remoteTabFilename != null) {
-                                                        val imageFile = java.io.File(context.filesDir, "chords/$remoteTabFilename")
-                                                        if (!imageFile.exists()) {
-                                                            return@clickable
-                                                        }
-                                                    }
-                                                    scope.launch(Dispatchers.IO) {
-                                                        val meanings = viewModel.getMeaningsForSong(entry.song.id)
-                                                        withContext(Dispatchers.Main) {
-                                                            val intent = Intent(context, ChordsViewerActivity::class.java).apply {
-                                                                putExtra("SONG", entry.song)
-                                                                putExtra("MEANINGS", meanings)
-                                                            }
-                                                            context.startActivity(intent)
-                                                        }
-                                                    }
-                                                }
-                                        )
-                                    }
-                                }
+                                SongChordsButton(entry.song, viewModel, iconSize, chordRefreshKey)
                                 entry.song.mp3filename?.takeIf { it.isNotBlank() && isConnected }?.let {
                                     Image(
                                         painter = painterResource(

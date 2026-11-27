@@ -105,7 +105,7 @@ class ChordsViewerActivity : AppCompatActivity() {
             }
         }
 
-        // Get the image path from intent
+        // Remote chord requests supply a song ID instead of a full song.
         @Suppress("DEPRECATION")
         val song: Song? = intent.getParcelableExtra("SONG")
         val songId: String? = intent.getStringExtra("SONG_ID")
@@ -126,92 +126,66 @@ class ChordsViewerActivity : AppCompatActivity() {
             return
         }
 
-        val tabFilename = song.tabfilename?.takeIf { it.isNotBlank() }
-        val imageSource = when {
-            tabFilename == null -> null
-            LocalTabUtils.isLocalTab(tabFilename) -> {
-                LocalTabUtils.decodeLocalTab(tabFilename)?.let { ChordsImageSource.ContentUri(it) }
-            }
-
-            else -> {
-                val imageFile = File(context.filesDir, "chords/$tabFilename")
-                if (imageFile.exists()) {
-                    ChordsImageSource.LocalFile(imageFile.absolutePath)
-                } else {
-                    null
-                }
-            }
-        }
-
-        if (imageSource == null) {
+        val imageSource = findChordsImage(context, song.tabfilename)
+        val sheet = if (imageSource is ChordsImageSource.ContentUri) null else ChordSheet.parse(song.chordmarkup)
+        if (sheet == null && imageSource == null) {
             finish()
             return
         }
 
-        val isLandscapeImage = isLandscapeImage(this, imageSource)
-        requestedOrientation = when (isLandscapeImage) {
-            true -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-            false -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
-            null -> ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        if (sheet == null && imageSource != null) {
+            setSheetOrientation(isLandscapeImage(this, imageSource))
         }
 
         @Suppress("DEPRECATION")
         val meanings: List<Meaning> = intent.getParcelableArrayListExtra("MEANINGS") ?: emptyList()
         setContent {
             AppTheme {
-                ChordsViewerScreen(song, imageSource, displayStyle, meanings) { finish() }
+                ChordsViewerScreen(
+                    song, sheet, imageSource, displayStyle, meanings,
+                    onLandscapeSheet = { wide -> setSheetOrientation(if (wide) true else null) },
+                    onClose = ::finish
+                )
             }
         }
     }
+
+    private fun setSheetOrientation(landscape: Boolean?) {
+        val orientation = when (landscape) {
+            true -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            false -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+            null -> ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        }
+        if (requestedOrientation != orientation) requestedOrientation = orientation
+    }
 }
 
-sealed class ChordsImageSource {
+internal sealed class ChordsImageSource {
     data class LocalFile(val path: String) : ChordsImageSource()
     data class ContentUri(val uriString: String) : ChordsImageSource()
 }
 
+internal fun findChordsImage(context: Context, tabFilename: String?): ChordsImageSource? {
+    val filename = tabFilename?.takeIf { it.isNotBlank() } ?: return null
+    if (LocalTabUtils.isLocalTab(filename)) {
+        return LocalTabUtils.decodeLocalTab(filename)?.let { ChordsImageSource.ContentUri(it) }
+    }
+    return File(context.filesDir, "chords/$filename").takeIf(File::isFile)
+        ?.let { ChordsImageSource.LocalFile(it.absolutePath) }
+}
+
 @Composable
-fun ChordsViewerScreen(
-    song: Song?,
-    imageSource: ChordsImageSource,
+private fun ChordsViewerScreen(
+    song: Song,
+    sheet: ChordSheet?,
+    imageSource: ChordsImageSource?,
     displayStyle: DisplayStyle,
     meanings: List<Meaning>,
+    onLandscapeSheet: (Boolean) -> Unit,
     onClose: () -> Unit
 ) {
     var showMeaningsPopup by remember { mutableStateOf(false) }
     var showButtons by remember { mutableStateOf(displayStyle == DisplayStyle.STANDARD) }
-
-    val configuration = LocalConfiguration.current
-    val context = LocalContext.current
-    val orientation = configuration.orientation
-    val bitmap = remember(imageSource, orientation, context) {
-        val originalBitmap = loadBitmapFromSource(context, imageSource)
-
-        if (originalBitmap != null &&
-            orientation == Configuration.ORIENTATION_PORTRAIT &&
-            originalBitmap.width > originalBitmap.height
-        ) {
-            rotateBitmap(originalBitmap, 90f)
-        } else {
-            originalBitmap
-        }
-    }
-
-    if (bitmap == null) {
-        LaunchedEffect(Unit) {
-            onClose()
-        }
-        return
-    }
-    var scale by remember { mutableStateOf(1f) }
-    var offsetX by remember { mutableStateOf(0f) }
-    var offsetY by remember { mutableStateOf(0f) }
-
-    val maxScale = 5f
-    val minScale = 1f
-    val imageWidth = bitmap.width.toFloat()
-    val imageHeight = bitmap.height.toFloat()
-
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -225,30 +199,11 @@ fun ChordsViewerScreen(
                     }
                 }
         ) {
-            Image(
-                bitmap = bitmap.asImageBitmap(),
-                contentDescription = null,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .pointerInput(Unit) {
-                        detectTransformGestures { _, pan, zoom, _ ->
-                            val newScale = (scale * zoom).coerceIn(minScale, maxScale)
-                            val maxTranslationX = (imageWidth * (newScale - 1) * 1.3f)
-                            val maxTranslationY = (imageHeight * (newScale - 1))
-
-                            scale = newScale
-                            offsetX = (offsetX + pan.x).coerceIn(-maxTranslationX, maxTranslationX)
-                            offsetY = (offsetY + pan.y).coerceIn(-maxTranslationY, maxTranslationY)
-                        }
-                    }
-                    .graphicsLayer(
-                        scaleX = scale,
-                        scaleY = scale,
-                        translationX = offsetX,
-                        translationY = offsetY
-                    ),
-                contentScale = ContentScale.Fit
-            )
+            if (sheet != null) {
+                ChordSheetContent(sheet, onLandscapeSheet)
+            } else if (imageSource != null) {
+                ChordsImageContent(imageSource, onClose)
+            }
 
             AnimatedVisibility(
                 visible = showButtons,
@@ -316,6 +271,59 @@ fun ChordsViewerScreen(
     }
 }
 
+
+@Composable
+private fun ChordsImageContent(imageSource: ChordsImageSource, onClose: () -> Unit) {
+    val configuration = LocalConfiguration.current
+    val context = LocalContext.current
+    val orientation = configuration.orientation
+    val bitmap = remember(imageSource, orientation, context) {
+        val originalBitmap = loadBitmapFromSource(context, imageSource)
+
+        if (originalBitmap != null &&
+            orientation == Configuration.ORIENTATION_PORTRAIT &&
+            originalBitmap.width > originalBitmap.height
+        ) {
+            rotateBitmap(originalBitmap, 90f)
+        } else {
+            originalBitmap
+        }
+    }
+
+    if (bitmap == null) {
+        LaunchedEffect(Unit) { onClose() }
+        return
+    }
+
+    var scale by remember { mutableStateOf(1f) }
+    var offsetX by remember { mutableStateOf(0f) }
+    var offsetY by remember { mutableStateOf(0f) }
+
+    Image(
+        bitmap = bitmap.asImageBitmap(),
+        contentDescription = null,
+        modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(Unit) {
+                detectTransformGestures { _, pan, zoom, _ ->
+                    val newScale = (scale * zoom).coerceIn(1f, 5f)
+                    val maxTranslationX = bitmap.width * (newScale - 1) * 1.3f
+                    val maxTranslationY = bitmap.height * (newScale - 1)
+
+                    scale = newScale
+                    offsetX = (offsetX + pan.x).coerceIn(-maxTranslationX, maxTranslationX)
+                    offsetY = (offsetY + pan.y).coerceIn(-maxTranslationY, maxTranslationY)
+                }
+            }
+            .graphicsLayer(
+                scaleX = scale,
+                scaleY = scale,
+                translationX = offsetX,
+                translationY = offsetY
+            ),
+        contentScale = ContentScale.Fit
+    )
+}
 
 private fun isLandscapeImage(context: Context, source: ChordsImageSource): Boolean? {
     val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }

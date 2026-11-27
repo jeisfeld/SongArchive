@@ -3,7 +3,8 @@ header ( "Content-Type: application/json" );
 header ( "Access-Control-Allow-Origin: *" );
 
 // Include database config
-require_once "../db_config.php";
+require_once __DIR__ . "/../db_config.php";
+require_once __DIR__ . "/../chord_markup.php";
 
 if ($conn->connect_error) {
 	die ( json_encode ( [ 
@@ -25,7 +26,8 @@ else {
 }
 
 // Fetch songs
-$sql_songs = "SELECT id, title, lyrics, lyrics_short, lyrics_paged, author, keywords, chordmarkup, tabfilename, mp3filename, mp3filename2 FROM songs" . $sqladd_songs . " ORDER BY id";
+$chordMarkup = chordMarkupReleased () ? "chordmarkup" : "NULL AS chordmarkup";
+$sql_songs = "SELECT id, title, lyrics, lyrics_short, lyrics_paged, author, keywords, $chordMarkup, tabfilename, mp3filename, mp3filename2 FROM songs" . $sqladd_songs . " ORDER BY id";
 $result_songs = $conn->query ( $sql_songs );
 $songs = [ ];
 if ($result_songs->num_rows > 0) {
@@ -34,6 +36,9 @@ if ($result_songs->num_rows > 0) {
 	}
 }
 $response ['songs'] = $songs;
+if (chordMarkupReleased ()) {
+	$response ['chord_markup_revision'] = chordMarkupRevision ( $songs );
+}
 
 // Fetch meaning
 $sql_meaning = "SELECT id, title, meaning FROM meaning ORDER BY id";

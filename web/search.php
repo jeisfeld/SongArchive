@@ -3,18 +3,29 @@ header ( "Access-Control-Allow-Origin: *" );
 header ( "Content-Type: application/json" );
 
 // Include database config
-require_once "db_config.php";
+require_once __DIR__ . "/db_config.php";
+require_once __DIR__ . "/chord_markup.php";
 
 // Get query
 $query = isset ( $_GET ['q'] ) ? trim ( $_GET ['q'] ) : "";
 $includeHidden = filter_var ( $_POST ['include_hidden'] ?? false, FILTER_VALIDATE_BOOLEAN );
 
-if (! $includeHidden && isset ( $_COOKIE [session_name ()] )) {
+if (isset ( $_COOKIE [session_name ()] )) {
 	session_start ();
-	$includeHidden = ! empty ( $_SESSION ['include_hidden_search'] );
+	$includeHidden = $includeHidden || ! empty ( $_SESSION ['include_hidden_search'] );
 }
 
 $applyIdFilter = ! $includeHidden;
+$showChordMarkup = ! empty ( $isAdminSearch ) || chordMarkupReleased ();
+$chordDetails = "";
+$chordAvailability = "";
+if ($showChordMarkup) {
+	$allowPrivateChordMarkup = ! empty ( $isAdminSearch ) || ! empty ( $_SESSION ['vip_user'] );
+	$chordMarkup = $allowPrivateChordMarkup ? "s.chordmarkup" : "CASE WHEN s.id NOT LIKE 'X%' THEN s.chordmarkup END";
+	$visibleChordMarkup = $allowPrivateChordMarkup ? "chordmarkup" : "CASE WHEN id NOT LIKE 'X%' THEN chordmarkup END";
+	$chordDetails = ", $chordMarkup AS chordmarkup";
+	$chordAvailability = ", NULLIF(TRIM($visibleChordMarkup), '') IS NOT NULL AS has_chordmarkup";
+}
 
 // Use regex to check if query is a valid ID (numeric OR numeric + single letter)
 $is_valid_id = preg_match ( '/^[XY\d]\d{3}[a-zA-Z]?$/', $query );
@@ -60,7 +71,7 @@ function interpolateQuery($query, $params) {
 // SQL Query for valid id
 if ($is_valid_id) {
 	// If searching by ID
-	$sql = "SELECT s.id, s.title, s.lyrics, s.lyrics_short, s.tabfilename, s.mp3filename, s.mp3filename2, s.author,
+	$sql = "SELECT s.id, s.title, s.lyrics, s.lyrics_short, s.tabfilename, s.mp3filename, s.mp3filename2, s.author$chordDetails,
                m.title AS meaning_title, m.meaning AS meaning_text
         FROM songs s
         LEFT JOIN song_meaning sm ON s.id = sm.song_id
@@ -91,6 +102,10 @@ if ($is_valid_id) {
 					'author' => $row ['author'],
 					'meanings' => [ ] // Initialize meanings array
 			];
+			if ($showChordMarkup) {
+				$songs [$song_id] ['chordmarkup'] = $row ['chordmarkup'];
+				$songs [$song_id] ['has_chordmarkup'] = trim ( $row ['chordmarkup'] ?? '' ) !== '';
+			}
 		}
 
 		// Add meaning if it's not null (avoiding empty records)
@@ -112,7 +127,7 @@ if ($is_valid_id) {
 if (! empty ( $multiSongIds )) {
 	$placeholders = implode ( ',', array_fill ( 0, count ( $multiSongIds ), '?' ) );
 	$orderExpression = 'FIELD(s.id, ' . implode ( ',', array_fill ( 0, count ( $multiSongIds ), '?' ) ) . ')';
-	$sql = "SELECT s.id, s.title, s.lyrics, s.lyrics_short, s.tabfilename, s.mp3filename, s.mp3filename2, s.author,
+	$sql = "SELECT s.id, s.title, s.lyrics, s.lyrics_short, s.tabfilename, s.mp3filename, s.mp3filename2, s.author$chordDetails,
                m.title AS meaning_title, m.meaning AS meaning_text
         FROM songs s
         LEFT JOIN song_meaning sm ON s.id = sm.song_id
@@ -143,6 +158,10 @@ if (! empty ( $multiSongIds )) {
 					'author' => $row ['author'],
 					'meanings' => [ ]
 			];
+			if ($showChordMarkup) {
+				$songs [$song_id] ['chordmarkup'] = $row ['chordmarkup'];
+				$songs [$song_id] ['has_chordmarkup'] = trim ( $row ['chordmarkup'] ?? '' ) !== '';
+			}
 		}
 
 		if ($row ['meaning_title'] !== null) {
@@ -161,7 +180,7 @@ if (! empty ( $multiSongIds )) {
 
 // now the case where input is not exact id.
 if ($query === "*" || $query === "") {
-	$sql = "SELECT id, title, tabfilename, mp3filename, mp3filename2, author FROM songs";
+	$sql = "SELECT id, title, tabfilename, mp3filename, mp3filename2, author$chordAvailability FROM songs";
 	if ($applyIdFilter) {
 		$sql .= " where id NOT REGEXP '^[XY]'";
 	}
@@ -171,14 +190,14 @@ if ($query === "*" || $query === "") {
             CASE WHEN id LIKE '0%' THEN NULL ELSE id END ASC";
 }
 else if ($query === "@@shuffle@@") {
-	$sql = "SELECT id, title, tabfilename, mp3filename, mp3filename2, author FROM songs";
+	$sql = "SELECT id, title, tabfilename, mp3filename, mp3filename2, author$chordAvailability FROM songs";
 	if ($applyIdFilter) {
 		$sql .= " where id NOT REGEXP '^[XY]'";
 	}
 	$sql .= " order by RAND()";
 }
 else if ($isSingleLetter) {
-	$sql = "SELECT id, title, author, tabfilename, mp3filename, mp3filename2, author FROM songs
+	$sql = "SELECT id, title, author, tabfilename, mp3filename, mp3filename2, author$chordAvailability FROM songs
             WHERE (title REGEXP CONCAT('(^| )', ?, '.*')
                OR lyrics REGEXP CONCAT('(^| )', ?, '.*'))";
 	if ($applyIdFilter) {
@@ -269,7 +288,7 @@ else {
 	$selectParams = array_merge ( $selectParams, $selectParamsMatch ); // lyricsMatch
 
 	// Construct SQL query with ranking priority
-	$sql = "SELECT id, title, tabfilename, mp3filename, mp3filename2, author, keywords,
+	$sql = "SELECT id, title, tabfilename, mp3filename, mp3filename2, author, keywords$chordAvailability,
                 ($fullMatchTitle) AS full_title_match,
                 ($fullMatchLyrics) AS full_lyrics_match,
                 ($fullMatchKeywords) AS full_keywords_match,

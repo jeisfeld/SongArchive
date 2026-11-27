@@ -13,7 +13,7 @@ interface ApiService {
     suspend fun fetchAllData(@Query("user") user: String? = null): SyncResponse
 
     @GET("admin/check_update.php")
-    suspend fun checkUpdate(): CheckUpdateResponse
+    suspend fun checkUpdate(@Query("user") user: String? = null): CheckUpdateResponse
 
     @Streaming
     @GET("admin/download_chords.php")

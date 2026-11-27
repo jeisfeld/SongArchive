@@ -85,6 +85,32 @@ class SongSynchronizationTest {
     }
 
     @Test
+    fun textRevisionUpdatesCatalogWithAnUnchangedInstalledZip() = runBlocking {
+        val archive = chordZip()
+        val oldMetadata = AppMetadata(numberOfTabs = 1, chordsZipSize = archive.size.toLong(), chordMarkupRevision = "previous")
+        database.appMetadataDao().insert(oldMetadata)
+        database.songDao().insertSong(existingSong)
+        val images = File(filesDir, "chords").apply { mkdir() }
+        File(images, "new.jpg").writeText("installed image")
+        val api = ArchiveApi(archive, textRevision = "current")
+        viewModel = SongViewModel(application, database, api, filesDir)
+
+        assertTrue(awaitResult(viewModel::checkForSongUpdates))
+        assertTrue(awaitResult(viewModel::synchronizeDatabaseAndImages))
+
+        assertFalse(api.downloaded)
+        assertEquals(sheet, viewModel.songs.value.single().chordmarkup)
+        assertEquals("installed image", File(images, "new.jpg").readText())
+        assertEquals(0, viewModel.chordRefreshKey.value)
+        assertEquals(oldMetadata.copy(chordMarkupRevision = "current"), database.appMetadataDao().get())
+        assertFalse(awaitResult(viewModel::checkForSongUpdates))
+
+        assertTrue(awaitResult(viewModel::synchronizeDatabaseAndImages))
+        assertTrue(api.downloaded)
+        assertEquals("new chord sheet", File(images, "new.jpg").readText())
+    }
+
+    @Test
     fun invalidDownloadKeepsPreviousMetadataAndImages() = runBlocking {
         val oldMetadata = AppMetadata(numberOfTabs = 1, chordsZipSize = 10)
         database.appMetadataDao().insert(oldMetadata)
@@ -136,19 +162,26 @@ class SongSynchronizationTest {
         return bytes.toByteArray()
     }
 
-    private class ArchiveApi(private val archive: ByteArray, private val failPostDownloadCheck: Boolean = false) : ApiService {
-        private var downloaded = false
+    private class ArchiveApi(
+        private val archive: ByteArray,
+        private val failPostDownloadCheck: Boolean = false,
+        private val textRevision: String? = null
+    ) : ApiService {
+        var downloaded = false
+            private set
         private var checksAfterDownload = 0
 
         override suspend fun fetchAllData(user: String?) = SyncResponse(
             songs = listOf(
-                SongResponse("0012", "New chord sheet", "Lyrics", null, null, null, null, null, "new.jpg", null, null)
+                SongResponse("0012", "New chord sheet", "Lyrics", null, null, null, null, sheet.takeIf { textRevision != null }, "new.jpg", null, null)
             ),
             meanings = emptyList(),
-            song_meanings = emptyList()
+            song_meanings = emptyList(),
+            chord_markup_revision = textRevision
         )
 
-        override suspend fun checkUpdate(): CheckUpdateResponse {
+        override suspend fun checkUpdate(user: String?): CheckUpdateResponse {
+            if (textRevision != null) return CheckUpdateResponse(1, archive.size.toLong(), textRevision)
             if (!downloaded) return CheckUpdateResponse(1, null)
             if (failPostDownloadCheck) throw IOException("Metadata temporarily unavailable")
             val reportedSize = if (checksAfterDownload++ == 0) null else archive.size.toLong()
@@ -158,3 +191,6 @@ class SongSynchronizationTest {
         override suspend fun downloadChordArchive() = archive.toResponseBody().also { downloaded = true }
     }
 }
+
+private const val sheet =
+    """{"version":1,"title":"Test sheet","details":[],"lines":[{"kind":"chords","runs":[{"text":"Am"}]}]}"""

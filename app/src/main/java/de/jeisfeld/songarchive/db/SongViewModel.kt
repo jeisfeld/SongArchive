@@ -15,6 +15,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.room.withTransaction
 import de.jeisfeld.songarchive.R
 import de.jeisfeld.songarchive.sync.ApiService
+import de.jeisfeld.songarchive.sync.CheckUpdateResponse
 import de.jeisfeld.songarchive.sync.RetrofitClient
 import de.jeisfeld.songarchive.sync.hasArchiveUpdate
 import de.jeisfeld.songarchive.sync.installChordArchive
@@ -161,7 +162,7 @@ class SongViewModel internal constructor(
                     mp3filename2 = originalSong.mp3filename2,
                     author = originalSong.author,
                     keywords = originalSong.keywords,
-                    chordmarkup = originalSong.chordmarkup,
+                    chordmarkup = originalSong.chordmarkup.takeIf { sanitizedLocalTab == null },
                     title_normalized = normalizeForSearch(trimmedTitle),
                     lyrics_normalized = normalizeForSearch(trimmedLyrics),
                     author_normalized = normalizeForSearch(originalSong.author),
@@ -199,7 +200,7 @@ class SongViewModel internal constructor(
                     lyricsPaged = sanitizedSong.lyricsPaged,
                     author = sanitizedSong.author,
                     keywords = sanitizedSong.keywords,
-                    chordmarkup = sanitizedSong.chordmarkup,
+                    chordmarkup = existingSong.chordmarkup.takeIf { sanitizedSong.tabfilename == null },
                     tabfilename = mergedTabFilename,
                     title_normalized = sanitizedSong.title_normalized,
                     lyrics_normalized = sanitizedSong.lyrics_normalized,
@@ -364,18 +365,26 @@ class SongViewModel internal constructor(
             )
         }.filter { it.songId in fetchedSongIds && it.meaningId in fetchedMeaningIds }
 
-        val zipSize = archiveApi.downloadChordArchive().use {
-            installChordArchive(archiveFilesDir, it.byteStream())
+        val remote = response.chord_markup_revision?.let { readArchiveMetadata(queryUser) }
+        val remoteZipSize = remote?.chords_zip_size
+        val localMetadata = if (remoteZipSize != null) metadataDao.get() else null
+        val imageFiles = fetchedSongs.mapNotNull {
+            it.tabfilename?.takeIf { name -> name.isNotBlank() && !LocalTabUtils.isLocalTab(name) }
+        }
+        val needsArchive = when {
+            remote == null -> true
+            remoteZipSize == null -> remote.tab_count != 0 || imageFiles.isNotEmpty()
+            remoteZipSize != localMetadata?.chordsZipSize -> true
+            response.chord_markup_revision == localMetadata?.chordMarkupRevision -> true
+            else -> imageFiles.any { !File(archiveFilesDir, "chords/$it").isFile }
+        }
+        val zipSize = if (needsArchive) {
+            archiveApi.downloadChordArchive().use { installChordArchive(archiveFilesDir, it.byteStream()) }
+        } else {
+            null
         }
         try {
-            val tabCount = try {
-                archiveApi.checkUpdate().tab_count
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Log.w(TAG, "Could not refresh the server tab count", e)
-                null
-            }
+            val checkedMetadata = if (zipSize != null) readArchiveMetadata(queryUser) ?: remote else remote
 
             database.withTransaction {
                 val existingFavorites = favoriteDao.getAllEntries()
@@ -389,13 +398,29 @@ class SongViewModel internal constructor(
                 favoriteDao.insertSongs(existingFavorites.filter { it.songId in validSongIds })
 
                 val existing = metadataDao.get() ?: AppMetadata(numberOfTabs = 0, chordsZipSize = 0)
-                metadataDao.insert(existing.copy(numberOfTabs = tabCount ?: existing.numberOfTabs, chordsZipSize = zipSize))
+                metadataDao.insert(
+                    existing.copy(
+                        numberOfTabs = checkedMetadata?.tab_count ?: existing.numberOfTabs,
+                        chordsZipSize = zipSize ?: existing.chordsZipSize,
+                        chordMarkupRevision = response.chord_markup_revision
+                    )
+                )
             }
             refreshSongsList()
         } finally {
-            _chordRefreshKey.update { it + 1 }
+            if (zipSize != null) _chordRefreshKey.update { it + 1 }
         }
     }
+
+    private suspend fun readArchiveMetadata(queryUser: String?): CheckUpdateResponse? =
+        try {
+            archiveApi.checkUpdate(queryUser)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not refresh the archive metadata", e)
+            null
+        }
 
     private suspend fun refreshSongsList() = withContext(Dispatchers.Main) {
         val currentQuery = searchQuery.value
@@ -504,9 +529,10 @@ class SongViewModel internal constructor(
         viewModelScope.launch {
             val needsUpdate = try {
                 syncMutex.withLock {
-                    val remote = archiveApi.checkUpdate()
+                    val queryUser = if (pluginVerified.value == true) "private" else null
+                    val remote = archiveApi.checkUpdate(queryUser)
                     val local = metadataDao.get() ?: AppMetadata(numberOfTabs = 0, chordsZipSize = 0)
-                    remote.hasArchiveUpdate(local.numberOfTabs, local.chordsZipSize)
+                    remote.hasArchiveUpdate(local.numberOfTabs, local.chordsZipSize, local.chordMarkupRevision)
                 }
             } catch (e: CancellationException) {
                 throw e

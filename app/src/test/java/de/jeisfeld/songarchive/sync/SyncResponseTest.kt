@@ -2,7 +2,9 @@ package de.jeisfeld.songarchive.sync
 
 import com.google.gson.Gson
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SyncResponseTest {
@@ -43,6 +45,16 @@ class SyncResponseTest {
         )
         assertEquals(listOf(MeaningResponse(17, "Context", "A fictional translation")), response.meanings)
         assertEquals(listOf(SongMeaningResponse("0012a", 17)), response.song_meanings)
+    }
+
+    @Test
+    fun changedChordTextIsAnUpdateWithTheSameImages() {
+        val response = gson.fromJson(
+            """{"tab_count":1,"chords_zip_size":123,"chord_markup_revision":"current"}""",
+            CheckUpdateResponse::class.java
+        )
+        assertTrue(response.hasArchiveUpdate(1, 123, "previous"))
+        assertFalse(response.hasArchiveUpdate(1, 123, "current"))
     }
 
     @Test

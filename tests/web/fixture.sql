@@ -30,7 +30,7 @@ CREATE TABLE song_meaning (
 INSERT INTO songs (id, title, lyrics, lyrics_short, lyrics_paged, author, keywords, chordmarkup, tabfilename, mp3filename, mp3filename2)
 VALUES
     ('0012a', 'Morning River', CONCAT('Morning |river', CHAR(10), 'Carry me home'), 'Carry me home', 'Morning river|Carry me home',
-     'Ada Example [example.test], Ben Example', 'water', '[Am]', 'river.jpg', 'river.mp3', 'river-alternate.mp3'),
+     'Ada Example [example.test], Ben Example', 'water', '{"version":1,"title":"Morning River","details":["(Ada Example)","¾Capo 2"],"lines":[{"kind":"chords","runs":[{"text":"    Am  "},{"text":"G","tone":"alternate"}],"aside":"123","asideTone":"pitch"},{"kind":"lyrics","runs":[{"text":"Morning river"}],"aside":"2x"}]}', 'river.jpg', 'river.mp3', 'river-alternate.mp3'),
     ('0011', 'Evening Song', 'Morning river', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
     ('0010', 'Morning Light', 'Warm skies', NULL, NULL, NULL, 'river', NULL, NULL, NULL, NULL),
     ('1000', 'Morning Sky', 'Bright stars', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),

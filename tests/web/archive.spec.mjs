@@ -58,7 +58,9 @@ test('a shared song link initializes search and opens lyrics, meanings and chord
     await page.locator('#popup .popup-close').click();
     await expect(page.locator('#popup')).toBeHidden();
 
-    await page.getByAltText('View Image').click();
+    await expect(page.getByRole('button', { name: 'Preview chord text' })).toHaveCount(0);
+    expect((await search(page.request, '0012a'))[0]).not.toHaveProperty('chordmarkup');
+    await page.getByRole('button', { name: 'View chords', exact: true }).click();
     const chordImage = page.locator('#popup-image');
     await expect(chordImage).toBeVisible();
     await expect.poll(() => chordImage.evaluate(image => image.naturalWidth)).toBeGreaterThan(0);
@@ -114,6 +116,290 @@ test('VIP entry preserves the query and expands browse in the same browser sessi
 test.describe('admin', () => {
     test.use({ httpCredentials: credentials });
 
+    test('admin can compare the chord image with the imported text', async ({ page }) => {
+        await page.goto('/admin/?q=0012a');
+        await page.getByRole('button', { name: 'View chord image' }).click();
+        await expect(page.locator('#popup-image')).toBeVisible();
+        await page.locator('#popup .popup-close').click();
+
+        await page.getByRole('button', { name: 'Preview chord text' }).click();
+        await expect(page.locator('.chord-sheet h2')).toHaveText('Morning River');
+        const heading = page.locator('.chord-sheet header');
+        const credits = heading.locator('.chord-sheet-credits');
+        const capo = heading.locator('.chord-sheet-capo');
+        await expect(credits).toHaveText('(Ada Example)');
+        await expect(credits).toHaveCSS('text-align', 'center');
+        await expect(capo).toHaveText('¾Capo 2');
+        const headingBounds = await heading.boundingBox();
+        const titleBounds = await heading.locator('h2').boundingBox();
+        const creditsBounds = await credits.boundingBox();
+        const capoBounds = await capo.boundingBox();
+        expect(Math.abs(capoBounds.x + capoBounds.width - headingBounds.x - headingBounds.width)).toBeLessThan(1);
+        expect(creditsBounds.x).toBeGreaterThan(titleBounds.x + titleBounds.width);
+        expect(creditsBounds.x + creditsBounds.width).toBeLessThan(capoBounds.x);
+        expect(creditsBounds.x + creditsBounds.width / 2)
+            .toBeCloseTo((titleBounds.x + titleBounds.width + capoBounds.x) / 2, 0);
+        const chords = page.locator('.chord-sheet-chords .chord-sheet-main');
+        expect(await chords.textContent()).toBe('    Am  G');
+        await expect(chords.locator('span').first()).toHaveCSS('color', 'rgb(0, 100, 158)');
+        const alternate = chords.locator('.chord-sheet-tone-alternate');
+        await expect(alternate).toHaveText('G');
+        await expect(alternate).toHaveCSS('color', 'rgb(98, 172, 230)');
+        const aside = page.locator('.chord-sheet-chords .chord-sheet-aside');
+        await expect(aside).toHaveText('123');
+        await expect(aside).toHaveCSS('color', 'rgb(191, 143, 0)');
+        const repeat = page.locator('.chord-sheet-lyrics .chord-sheet-aside');
+        await expect(repeat).toHaveText('2x');
+        await expect(repeat).toHaveCSS('color', 'rgb(95, 85, 55)');
+        const fontSize = locator => locator.evaluate(element => parseFloat(getComputedStyle(element).fontSize));
+        expect(await fontSize(aside)).toBeCloseTo((await fontSize(chords)) * 0.78, 1);
+        await expect(page.locator('#popup-image')).toHaveCount(0);
+    });
+
+    test('wide chord text fills a landscape layout and refits as the viewport resizes', async ({ page }) => {
+        await page.addInitScript(() => {
+            Element.prototype.requestFullscreen = () => Promise.resolve();
+        });
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.goto('/admin/?q=0012a');
+        await page.getByRole('button', { name: 'Preview chord text' }).click();
+
+        const viewport = page.locator('.chord-sheet-viewport');
+        const sheet = viewport.locator('article');
+        const fontSize = () => sheet.evaluate(element => parseFloat(getComputedStyle(element).fontSize));
+        await expect(viewport).toHaveClass(/chord-sheet-sideways/);
+        expect(await sheet.evaluate(element => element.offsetWidth)).toBeGreaterThan(740);
+        const initialFontSize = await fontSize();
+        expect(initialFontSize).toBeGreaterThan(16);
+        const phoneBounds = await sheet.boundingBox();
+        expect(phoneBounds.x).toBeGreaterThan(0);
+        expect(phoneBounds.x + phoneBounds.width).toBeLessThan(390);
+
+        await page.setViewportSize({ width: 1200, height: 780 });
+        await expect(viewport).not.toHaveClass(/chord-sheet-sideways/);
+        await expect.poll(fontSize).toBeGreaterThan(initialFontSize);
+        const bounds = await sheet.boundingBox();
+        expect(bounds.width).toBeGreaterThan(1100);
+        expect(bounds.y).toBeGreaterThan(150);
+        expect(bounds.y + bounds.height).toBeLessThan(780);
+    });
+
+    test('the heading shrinks onto one line and renders Word comments in regular gray text', async ({ page }) => {
+        await page.route('**/admin/search.php?q=0012a', async route => {
+            if (route.request().method() !== 'GET') return route.continue();
+            const response = await route.fetch();
+            const songs = await response.json();
+            const sheet = JSON.parse(songs[0].chordmarkup);
+            const title = 'Morning River';
+            const titleComment = ' [A long explanation of the song and its original title, which would otherwise wrap]';
+            const creditComment = ' [Translation]';
+            sheet.title = title + titleComment;
+            sheet.details = ['(Ada Example)' + creditComment, 'Capo 2'];
+            sheet.headingRuns = [
+                [{ text: title }, { text: titleComment, tone: 'comment' }],
+                [{ text: '(Ada Example)' }, { text: creditComment, tone: 'comment' }],
+                [{ text: 'Capo 2' }],
+            ];
+            songs[0].chordmarkup = JSON.stringify(sheet);
+            await route.fulfill({ response, json: songs });
+        });
+        await page.goto('/admin/?q=0012a');
+        await page.getByRole('button', { name: 'Preview chord text' }).click();
+
+        const heading = page.locator('.chord-sheet header');
+        const titleComment = heading.locator('h2 .chord-sheet-tone-comment');
+        const creditComment = heading.locator('.chord-sheet-credits .chord-sheet-tone-comment');
+        await expect(titleComment).toHaveCSS('color', 'rgb(117, 117, 117)');
+        await expect(titleComment).toHaveCSS('font-weight', '400');
+        await expect(heading.locator('h2')).toHaveCSS('font-weight', '700');
+        await expect(creditComment).toHaveCSS('color', 'rgb(117, 117, 117)');
+        await expect(heading.locator('.chord-sheet-capo')).toHaveText('Capo 2');
+        const sizes = await heading.evaluate(element => ({
+            font: parseFloat(getComputedStyle(element).fontSize),
+            bodyFont: parseFloat(getComputedStyle(element.parentElement).fontSize),
+            width: element.clientWidth,
+            scrollWidth: element.scrollWidth,
+            commentLines: element.querySelector('h2 span').getClientRects().length,
+        }));
+        expect(sizes.font).toBeLessThan(sizes.bodyFont);
+        expect(sizes.scrollWidth).toBeLessThanOrEqual(sizes.width + 1);
+        expect(sizes.commentLines).toBe(1);
+    });
+
+    test('additional text fits one line and adds space only at paragraph boundaries', async ({ page }) => {
+        await page.setViewportSize({ width: 740, height: 420 });
+        await page.route('**/admin/search.php?q=0012a', async route => {
+            if (route.request().method() !== 'GET') return route.continue();
+            const response = await route.fetch();
+            const songs = await response.json();
+            const sheet = JSON.parse(songs[0].chordmarkup);
+            const longLine = 'This additional text has to stay on one line even with a very long sentence and a pitch hint.';
+            sheet.lines.push(
+                { kind: 'note', runs: [{ text: longLine }], aside: '123456', asideTone: 'pitch', paragraphStart: true },
+                { kind: 'note', runs: [{ text: 'After Shift+Return' }], paragraphStart: false },
+                { kind: 'note', runs: [{ text: 'After Return' }], paragraphStart: true },
+                { kind: 'lyrics', runs: [{ text: 'Next verse' }] },
+            );
+            songs[0].chordmarkup = JSON.stringify(sheet);
+            await route.fulfill({ response, json: songs });
+        });
+        await page.goto('/admin/?q=0012a');
+        await page.getByRole('button', { name: 'Preview chord text' }).click();
+
+        const notes = page.locator('.chord-sheet-note');
+        await expect(notes).toHaveCount(3);
+        const layout = await notes.evaluateAll(rows => rows.map(row => {
+            const text = row.querySelector('.chord-sheet-main');
+            const rowStyle = getComputedStyle(row);
+            return {
+                fontSize: parseFloat(getComputedStyle(text).fontSize),
+                overflow: text.scrollWidth - text.clientWidth,
+                lines: text.firstElementChild.getClientRects().length,
+                before: parseFloat(rowStyle.paddingTop),
+                after: parseFloat(rowStyle.paddingBottom),
+            };
+        }));
+        expect(layout[0].fontSize).toBeLessThan(layout[1].fontSize);
+        expect(layout[0].overflow).toBeLessThanOrEqual(0);
+        expect(layout[0].lines).toBe(1);
+        expect(layout[0].before).toBeGreaterThan(0);
+        expect(layout[0].after).toBe(0);
+        expect(layout[1].before).toBe(0);
+        expect(layout[1].after).toBe(0);
+        expect(layout[2].before).toBeGreaterThan(0);
+        expect(layout[2].after).toBeGreaterThan(0);
+        const noteAside = notes.first().locator('.chord-sheet-aside');
+        await expect(noteAside).toHaveText('123456');
+        await expect(noteAside).toHaveCSS('color', 'rgb(191, 143, 0)');
+        const sizeRatio = await noteAside.evaluate(element =>
+            parseFloat(getComputedStyle(element).fontSize) / parseFloat(getComputedStyle(element.closest('.chord-sheet')).fontSize));
+        expect(sizeRatio).toBeCloseTo(0.78, 2);
+    });
+
+    test('the admin preview identifies an older import and shows the gap after a refresh', async ({ page }) => {
+        let hasParagraphs = false;
+        await page.route('**/admin/search.php?q=0012a', async route => {
+            if (route.request().method() !== 'GET') return route.continue();
+            const response = await route.fetch();
+            const songs = await response.json();
+            const sheet = JSON.parse(songs[0].chordmarkup);
+            sheet.lines.push(...['First line', 'Continuation', 'New paragraph'].map((text, index) => ({
+                kind: 'note', runs: [{ text }],
+                ...(hasParagraphs ? { paragraphStart: index !== 1 } : {}),
+            })));
+            songs[0].chordmarkup = JSON.stringify(sheet);
+            await route.fulfill({ response, json: songs });
+        });
+        await page.goto('/admin/?q=0012a');
+
+        const preview = page.getByRole('button', { name: 'Preview chord text' });
+        const notice = page.locator('.chord-sheet-import-notice');
+        const notes = page.locator('.chord-sheet-note .chord-sheet-main');
+        const distances = () => notes.evaluateAll(elements => {
+            const [first, second, third] = elements.map(element => element.getBoundingClientRect().top);
+            return [second - first, third - second];
+        });
+
+        await preview.click();
+        await expect(notice).toContainText('no paragraph markers');
+        await expect(notes).toHaveCount(3);
+        const [oldFirst, oldSecond] = await distances();
+        expect(oldFirst).toBeCloseTo(oldSecond, 0);
+        await page.locator('#popup .popup-close').click();
+
+        hasParagraphs = true;
+        await preview.click();
+        await expect(notes).toHaveCount(3);
+        await expect(notice).toHaveCount(0);
+        const [freshFirst, freshSecond] = await distances();
+        expect(freshSecond).toBeGreaterThan(freshFirst + 5);
+    });
+
+    test('a wide song presents all three additional verses on a compact display', async ({ page }) => {
+        await page.addInitScript(() => {
+            Element.prototype.requestFullscreen = () => Promise.resolve();
+        });
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.route('**/admin/search.php?q=0012a', async route => {
+            if (route.request().method() !== 'GET') return route.continue();
+            const response = await route.fetch();
+            const songs = await response.json();
+            const sheet = JSON.parse(songs[0].chordmarkup);
+            const chord = { kind: 'chords', runs: [{ text: 'C        Dm      F              G7       Am         Dm       G7         C' }] };
+            const lyric = { kind: 'lyrics', runs: [{ text: 'The quiet river moves through fields and carries the morning into the day.' }] };
+            const verses = Array.from({ length: 9 }, (_, index) => ({
+                kind: 'note',
+                runs: [{ text: 'The next verse follows the river under the trees and into the open valley.' }],
+                paragraphStart: index % 3 === 0,
+            }));
+            sheet.lines = [...Array.from({ length: 5 }, () => [chord, lyric]).flat(), ...verses];
+            songs[0].chordmarkup = JSON.stringify(sheet);
+            await route.fulfill({ response, json: songs });
+        });
+        await page.goto('/admin/?q=0012a');
+        await page.getByRole('button', { name: 'Preview chord text' }).click();
+
+        const viewer = page.locator('.chord-sheet-viewport');
+        await expect(viewer).toHaveClass(/chord-sheet-sideways/);
+        await expect(viewer.locator('.chord-sheet-note')).toHaveCount(9);
+        const metrics = await viewer.evaluate(element => {
+            const lyrics = element.querySelector('.chord-sheet-lyrics .chord-sheet-main');
+            const notes = [...element.querySelectorAll('.chord-sheet-note')];
+            return {
+                extraHeight: element.scrollHeight - element.clientHeight,
+                paragraphStarts: notes.flatMap((row, index) =>
+                    parseFloat(getComputedStyle(row).paddingTop) > 0 ? [index] : []),
+                lyricFont: parseFloat(getComputedStyle(lyrics).fontSize),
+                noteFont: parseFloat(getComputedStyle(notes[0].firstElementChild).fontSize),
+            };
+        });
+        expect(metrics.extraHeight).toBe(0);
+        expect(metrics.paragraphStarts).toEqual([0, 3, 6]);
+        expect(metrics.noteFont).toBeCloseTo(metrics.lyricFont * 0.85, 1);
+    });
+
+    test('a long chord sheet stays upright and can scroll at a readable size', async ({ page }) => {
+        await page.addInitScript(() => {
+            Element.prototype.requestFullscreen = () => Promise.resolve();
+        });
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.route('**/admin/search.php?q=0012a', async route => {
+            if (route.request().method() !== 'GET') return route.continue();
+            const response = await route.fetch();
+            const songs = await response.json();
+            const sheet = JSON.parse(songs[0].chordmarkup);
+            const [chords, lyrics] = sheet.lines;
+            sheet.lines = [...Array.from({ length: 80 }, () => [chords, lyrics]).flat(), chords, chords];
+            songs[0].chordmarkup = JSON.stringify(sheet);
+            await route.fulfill({ response, json: songs });
+        });
+        await page.goto('/admin/?q=0012a');
+        await page.getByRole('button', { name: 'Preview chord text' }).click();
+
+        const viewport = page.locator('.chord-sheet-viewport');
+        await expect(viewport).toBeVisible();
+        await expect(viewport).not.toHaveClass(/chord-sheet-sideways/);
+        await expect(viewport.locator('article')).toHaveCSS('font-size', '12.8px');
+        const spacing = await viewport.locator('article').evaluate(article => {
+            const rows = [...article.querySelectorAll('.chord-sheet-row')];
+            const gap = (from, to) => to.getBoundingClientRect().top - from.getBoundingClientRect().bottom;
+            return {
+                pairedGap: gap(rows[0], rows[1]),
+                betweenPairs: gap(rows[1], rows[2]),
+                unpairedGap: gap(rows.at(-2), rows.at(-1)),
+                fontSize: parseFloat(getComputedStyle(article).fontSize)
+            };
+        });
+        expect(spacing.pairedGap / spacing.fontSize).toBeCloseTo(-0.2, 2);
+        expect(spacing.betweenPairs).toBe(0);
+        expect(spacing.unpairedGap).toBe(0);
+        const scroll = await viewport.evaluate(element => {
+            element.scrollTop = element.scrollHeight;
+            return element.scrollTop;
+        });
+        expect(scroll).toBeGreaterThan(0);
+    });
+
     test('sync endpoints include media metadata and filter private songs and their links', async ({ request }) => {
         const standardResponse = await request.get('/admin/download_data.php');
         expect(standardResponse.status()).toBe(200);
@@ -122,10 +408,11 @@ test.describe('admin', () => {
         expect(standard.songs.find(song => song.id === '0012a')).toMatchObject({
             lyrics_short: 'Carry me home',
             lyrics_paged: 'Morning river|Carry me home',
-            chordmarkup: '[Am]',
+            chordmarkup: null,
             tabfilename: 'river.jpg',
             mp3filename2: 'river-alternate.mp3',
         });
+        expect(standard).not.toHaveProperty('chord_markup_revision');
         expect(standard.meanings.map(meaning => ({ ...meaning, id: Number(meaning.id) })))
             .toContainEqual({ id: 17, title: 'Context', meaning: 'A fictional translation' });
         expect(standard.song_meanings.map(link => ({ ...link, meaning_id: Number(link.meaning_id) })))

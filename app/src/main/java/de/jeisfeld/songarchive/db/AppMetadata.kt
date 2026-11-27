@@ -9,5 +9,6 @@ data class AppMetadata(
     val numberOfTabs: Int,
     val chordsZipSize: Long,
     val language: String = "system",
-    val defaultNetworkConnection: Int = 0
+    val defaultNetworkConnection: Int = 0,
+    val chordMarkupRevision: String? = null
 )

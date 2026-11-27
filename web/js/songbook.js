@@ -2,6 +2,7 @@ let searchAbortController = new AbortController(); // Create a controller
 let searchTimeout = null;
 let currentSong = null;
 let lastSearchResults = [];
+let chordSheetResizeObserver;
 
 function getAdminModule() {
 	if (typeof window === "undefined") {
@@ -19,6 +20,11 @@ function isAdminView() {
 }
 
 // functions related to song search
+function songSearchUrl(query) {
+	const path = isAdminView() ? "/admin/search.php" : "/search.php";
+	return path + "?q=" + encodeURIComponent(query);
+}
+
 function searchSongs(inputquery = null) {
 	clearTimeout(searchTimeout); // Reset timeout on every keypress
 
@@ -51,7 +57,7 @@ async function performSearch(query) {
 			requestBody.set("include_hidden", "1");
 		}
 
-		let response = await fetch("/search.php?q=" + encodeURIComponent(query), {
+		let response = await fetch(songSearchUrl(query), {
 			method: "POST",
 			body: requestBody,
 			signal
@@ -78,13 +84,16 @@ function displayResult(songs) {
 		displaySongs = [currentSong, ...lastSearchResults];
 	}
 
+	const adminPreview = isAdminView();
 	let tableHTML = "";
-	displaySongs.forEach(song => {
+	displaySongs.forEach((song, index) => {
 		const adminModule = getAdminModule();
 		const adminActions = adminModule && typeof adminModule.renderActionButtons === "function"
 			? adminModule.renderActionButtons(song)
 			: "";
 		const isCurrentSong = currentSong && song.id === currentSong.id;
+		const hasChordMarkup = Number(song.has_chordmarkup) === 1;
+		const language = texts[userLang];
 
 		tableHTML += `
                         <tr class="${isCurrentSong ? "playing-row" : ""}">
@@ -95,7 +104,12 @@ function displayResult(songs) {
                                         <div class="actions-container">
                                                 ${adminActions}
                                                 <img src="/img/text2.png" alt="View Lyrics" class="icon-btn" onclick="showLyrics('${song.id}', '${song.title}')">
-                                                ${song.tabfilename ? `<img src="/img/chords2.png" alt="View Image" class="icon-btn" onclick="showImage('${song.tabfilename}')">` : ""}
+                                                ${song.tabfilename || (!adminPreview && hasChordMarkup) ? `
+                                                    <button type="button" class="chord-sheet-button" data-chord-index="${index}" data-chord-view="${adminPreview ? "image" : "default"}" aria-label="${adminPreview ? language.viewChordImage : language.viewChords}">
+                                                        <img src="/img/chords2.png" alt="" class="icon-btn">
+                                                    </button>` : ""}
+                                                ${adminPreview && hasChordMarkup ? `
+                                                    <button type="button" class="chord-preview-button" data-chord-index="${index}" data-chord-view="preview" aria-label="${language.previewChordText}" title="${language.previewChordText}">Text</button>` : ""}
 								${song.mp3filename ? `
 									${isCurrentSong
 										? `<img src="/img/stop2.svg" alt="Stop Audio" class="icon-btn" onclick="stopAudio()">`
@@ -105,7 +119,8 @@ function displayResult(songs) {
 													'${song.id}', 
 						                        '${song.title}', 
 						                        '${song.author ? song.author : ''}', 
-						                        '${song.tabfilename ? song.tabfilename.replace('.txt', '.jpg') : ''}')">`}
+						                        '${song.tabfilename ? song.tabfilename.replace('.txt', '.jpg') : ''}',
+						                        ${hasChordMarkup})">`}
 						` : ""}
 					</div>
 				</td>
@@ -113,7 +128,18 @@ function displayResult(songs) {
 		`;
 	});
 
-	document.getElementById("results").innerHTML = tableHTML;
+	const results = document.getElementById("results");
+	results.innerHTML = tableHTML;
+	results.querySelectorAll("[data-chord-index]").forEach(button => {
+		button.addEventListener("click", () => {
+			const song = displaySongs[Number(button.dataset.chordIndex)];
+			if (button.dataset.chordView === "image") {
+				showImage(song.tabfilename);
+			} else {
+				showChords(song, button.dataset.chordView === "preview");
+			}
+		});
+	});
 }
 
 function toggleClearButton() {
@@ -210,7 +236,7 @@ function formatAuthors(authorStr) {
 
 // functions related to audio popup
 
-function playAudio(mp3filename1, mp3filename2 = "", id = "", title = "", author = "", imageFilename = "") {
+function playAudio(mp3filename1, mp3filename2 = "", id = "", title = "", author = "", imageFilename = "", hasChordMarkup = false) {
 	if (!mp3filename1) return;
 
 	currentSong = {
@@ -218,6 +244,7 @@ function playAudio(mp3filename1, mp3filename2 = "", id = "", title = "", author 
 		title,
 		author,
 		tabfilename: imageFilename,
+		has_chordmarkup: hasChordMarkup,
 		mp3filename: mp3filename1,
 		mp3filename2: mp3filename2 || "",
 		mp3files: [mp3filename1, mp3filename2].filter(Boolean),
@@ -508,6 +535,203 @@ function autoRotateAndSizeImage() {
 	}, 100);
 }
 
+async function showChords(song, preview = false) {
+	if (Number(song.has_chordmarkup) !== 1) {
+		showImage(song.tabfilename);
+		return;
+	}
+
+	const popup = document.getElementById("popup");
+	const body = document.getElementById("popup-body");
+	const status = document.createElement("p");
+	status.setAttribute("role", "status");
+	status.textContent = texts[userLang].chordsLoading;
+	body.replaceChildren(status);
+	popup.style.display = "flex";
+	document.body.classList.add("no-scroll");
+	enterFullscreen();
+
+	try {
+		const response = await fetch(songSearchUrl(song.id));
+		if (!response.ok) throw new Error("Chord sheet request failed");
+		const songs = await response.json();
+		if (!status.isConnected) return;
+		const sheet = JSON.parse(songs[0]?.chordmarkup);
+		const viewport = renderChordSheet(sheet, preview);
+		body.replaceChildren(viewport);
+		fitChordSheet(popup, viewport);
+	} catch (error) {
+		if (!status.isConnected) return;
+		if (!preview && song.tabfilename) {
+			showImage(song.tabfilename);
+		} else {
+			status.textContent = preview ? texts[userLang].chordPreviewFailed : texts[userLang].chordsUnavailable;
+		}
+	}
+}
+
+function renderChordSheet(sheet, preview = false) {
+	const lineKinds = ["chords", "lyrics", "note", "pitch"];
+	const runTones = ["alternate", "chords", "comment", "detail", "note", "pitch"];
+	if (sheet?.version !== 1 || typeof sheet.title !== "string" || !Array.isArray(sheet.lines)
+		|| !Array.isArray(sheet.details) || !sheet.lines.some(line =>
+			line?.kind === "chords" && (line.runs?.some(run => run?.text?.trim()) || line.aside?.trim()))) {
+		throw new Error("Invalid chord sheet");
+	}
+
+	const viewport = document.createElement("div");
+	viewport.className = "chord-sheet-viewport";
+	viewport.tabIndex = 0;
+	if (preview && sheet.lines.some((line, index) => line?.kind === "note"
+		&& sheet.lines[index - 1]?.kind === "note" && typeof line.paragraphStart !== "boolean")) {
+		const notice = document.createElement("p");
+		notice.className = "chord-sheet-import-notice";
+		notice.setAttribute("role", "status");
+		notice.textContent = texts[userLang].chordParagraphsMissing;
+		viewport.append(notice);
+	}
+	const article = document.createElement("article");
+	article.className = "chord-sheet";
+	article.append(renderChordHeading(sheet));
+
+	for (const [index, line] of sheet.lines.entries()) {
+		if (!lineKinds.includes(line.kind) || !Array.isArray(line.runs)) throw new Error("Invalid chord row");
+		const row = document.createElement("div");
+		row.className = `chord-sheet-row chord-sheet-${line.kind}`;
+		if (line.kind === "note") {
+			const paragraphStart = typeof line.paragraphStart === "boolean"
+				? line.paragraphStart : sheet.lines[index - 1]?.kind !== "note";
+			row.classList.toggle("chord-sheet-note-start", paragraphStart);
+			row.classList.toggle("chord-sheet-note-end", sheet.lines[index + 1]?.kind !== "note");
+		}
+		const main = document.createElement("span");
+		main.className = "chord-sheet-main";
+		for (const run of line.runs) {
+			if (typeof run.text !== "string") throw new Error("Invalid chord text");
+			const span = document.createElement(run.superscript ? "sup" : "span");
+			span.textContent = run.text;
+			if (runTones.includes(run.tone)) span.classList.add(`chord-sheet-tone-${run.tone}`);
+			if (run.underline) {
+				span.style.textDecorationLine = "underline";
+				if (run.underline === "dotted") span.style.textDecorationStyle = "dotted";
+			}
+			if (run.bold) span.style.fontWeight = "bold";
+			if (run.italic) span.style.fontStyle = "italic";
+			main.append(span);
+		}
+		row.append(main);
+		if (line.aside) {
+			const aside = document.createElement("span");
+			aside.className = "chord-sheet-aside";
+			if (line.asideTone === "pitch") aside.classList.add("chord-sheet-tone-pitch");
+			aside.textContent = line.aside;
+			row.append(aside);
+		}
+		article.append(row);
+	}
+	viewport.append(article);
+	return viewport;
+}
+
+function renderChordHeading(sheet) {
+	function runsFor(index, text) {
+		const runs = sheet.headingRuns?.[index];
+		return Array.isArray(runs) && runs.every(run => typeof run?.text === "string")
+			&& runs.map(run => run.text).join("") === text ? runs : [{ text }];
+	}
+	function appendRuns(element, runs) {
+		for (const run of runs) {
+			if (run.tone === "comment") {
+				const comment = document.createElement("span");
+				comment.className = "chord-sheet-tone-comment";
+				comment.textContent = run.text;
+				element.append(comment);
+			} else {
+				element.append(run.text);
+			}
+		}
+	}
+
+	const header = document.createElement("header");
+	const title = document.createElement("h2");
+	appendRuns(title, runsFor(0, sheet.title));
+	const credits = [];
+	const capo = [];
+	sheet.details.forEach((detail, index) => {
+		const runs = runsFor(index + 1, detail);
+		const match = /^((?:drop-d,\s*|\(?[\d¾:/]+\)?\s*)?capo\s*\d+)\b\s*(.*)$/i.exec(detail);
+		if (!match) {
+			credits.push(runs);
+		} else {
+			capo.push(match[1]);
+			if (match[2]) {
+				let offset = detail.length - match[2].length;
+				credits.push(runs.flatMap(run => {
+					const text = run.text.slice(offset);
+					offset = Math.max(0, offset - run.text.length);
+					return text ? [{ ...run, text }] : [];
+				}));
+			}
+		}
+	});
+
+	const creditText = document.createElement("span");
+	creditText.className = "chord-sheet-credits";
+	credits.forEach((runs, index) => {
+		if (index > 0) creditText.append(" · ");
+		appendRuns(creditText, runs);
+	});
+	header.append(title, creditText);
+	if (capo.length > 0) {
+		const capoText = document.createElement("span");
+		capoText.className = "chord-sheet-capo";
+		capoText.textContent = capo.join(" · ");
+		header.append(capoText);
+	}
+	return header;
+}
+
+function fitChordText(element) {
+	element.style.fontSize = "";
+	const width = element.clientWidth;
+	const textWidth = element.scrollWidth;
+	if (textWidth > width) {
+		element.style.fontSize = `${Math.max(1, width - 2) / textWidth}em`;
+	}
+}
+
+function fitChordSheet(popup, viewport) {
+	const sheet = viewport.querySelector(".chord-sheet");
+	const notice = viewport.querySelector(".chord-sheet-import-notice");
+	const notes = sheet.querySelectorAll(".chord-sheet-note .chord-sheet-main");
+	const fittedText = [sheet.firstElementChild, ...notes];
+	fittedText.forEach(fitChordText);
+	const baseFontSize = parseFloat(getComputedStyle(sheet).fontSize);
+	const sheetWidth = sheet.offsetWidth;
+	const sheetHeight = sheet.offsetHeight;
+	const wide = sheetWidth > sheetHeight;
+	const minimumScale = wide && notes.length > 0 ? 0.65 : 0.8;
+
+	function fit() {
+		const sideways = wide && popup.clientWidth < popup.clientHeight;
+		viewport.classList.toggle("chord-sheet-sideways", sideways);
+
+		const padding = getComputedStyle(viewport);
+		const width = viewport.offsetWidth - parseFloat(padding.paddingLeft) - parseFloat(padding.paddingRight);
+		const height = viewport.offsetHeight - parseFloat(padding.paddingTop) - parseFloat(padding.paddingBottom)
+			- (notice?.offsetHeight ?? 0);
+		const scale = Math.min((width - 2) / sheetWidth, (height - 2) / sheetHeight);
+		// Keep dense sheets readable and let the viewport scroll.
+		sheet.style.fontSize = `${baseFontSize * Math.max(minimumScale, scale)}px`;
+		fittedText.forEach(fitChordText);
+	}
+
+	fit();
+	chordSheetResizeObserver?.disconnect();
+	chordSheetResizeObserver = new ResizeObserver(fit);
+	chordSheetResizeObserver.observe(popup);
+}
+
 function showImage(tabfilename, popupid = 'popup') {
 	if (!tabfilename) return;
 
@@ -527,6 +751,7 @@ function showImage(tabfilename, popupid = 'popup') {
 
 function enableImageInteractions() {
 	const img = document.getElementById("popup-image");
+	if (!img) return;
 	let scale = 1; // Default zoom level
 	let lastTouchDistance = 0;
 	let isDragging = false;
@@ -576,10 +801,11 @@ function enableImageInteractions() {
 }
 
 function enterFullscreen() {
+	if (document.fullscreenElement) return;
 	let elem = document.documentElement; // Fullscreen for the entire document
 
 	if (elem.requestFullscreen) {
-		elem.requestFullscreen();
+		elem.requestFullscreen().catch(() => {});
 	} else if (elem.mozRequestFullScreen) { // Firefox
 		elem.mozRequestFullScreen();
 	} else if (elem.webkitRequestFullscreen) { // Chrome, Safari, Edge
@@ -594,6 +820,8 @@ function closePopup(id) {
 	document.getElementById(id + "-body").innerHTML = "";
 
 	if (id == "popup") {
+		chordSheetResizeObserver?.disconnect();
+		chordSheetResizeObserver = undefined;
 		document.body.classList.remove("no-scroll"); // Re-enable main page scrolling after closing last popup
 	}
 
@@ -628,7 +856,8 @@ function isMobileLandscape() {
 // Close pop-up when pressing Escape key
 document.addEventListener("keydown", function(event) {
 	if (event.key === "Escape") {
-		closePopup();
+		const openPopup = ["popup2", "popup"].find(id => document.getElementById(id).style.display !== "none");
+		if (openPopup) closePopup(openPopup);
 	}
 });
 
@@ -659,7 +888,14 @@ const texts = {
 		actions: "Actions",
 		impressum: "Imprint",
 		searchBox: "Search...",
-		heilsamelieder: "Circle Songs"
+		heilsamelieder: "Circle Songs",
+		viewChords: "View chords",
+		viewChordImage: "View chord image",
+		previewChordText: "Preview chord text",
+		chordPreviewFailed: "The chord text could not be displayed.",
+		chordParagraphsMissing: "This import has no paragraph markers for some additional text. Reimport the song from Word to restore the spacing.",
+		chordsLoading: "Loading chords…",
+		chordsUnavailable: "Chords are unavailable."
 	},
 	de: {
 		title: "Titel",
@@ -667,7 +903,14 @@ const texts = {
 		actions: "Aktionen",
 		impressum: "Impressum",
 		searchBox: "Suchen...",
-		heilsamelieder: "Heilsame Lieder"
+		heilsamelieder: "Heilsame Lieder",
+		viewChords: "Akkorde anzeigen",
+		viewChordImage: "Akkordbild anzeigen",
+		previewChordText: "Akkordtext als Vorschau anzeigen",
+		chordPreviewFailed: "Der Akkordtext konnte nicht angezeigt werden.",
+		chordParagraphsMissing: "In diesem Import fehlen Absatzmarken für Zusatztext. Importiere das Lied erneut aus Word, um die Abstände wiederherzustellen.",
+		chordsLoading: "Akkorde werden geladen …",
+		chordsUnavailable: "Akkorde sind nicht verfügbar."
 	}
 };
 
