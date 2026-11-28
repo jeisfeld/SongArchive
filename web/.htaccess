@@ -1,3 +1,7 @@
 Allow from all
 
+<FilesMatch "(?i)^Chants\.docx$">
+    Require all denied
+</FilesMatch>
+
 Redirect 301 /ww https://playshopping.de/cards

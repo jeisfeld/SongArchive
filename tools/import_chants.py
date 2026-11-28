@@ -281,7 +281,7 @@ def main():
             requested = set(args.song)
             missing = requested - sheets.keys()
             if missing:
-                raise ValueError("No chord sheet in the selected export for song IDs: " + ", ".join(sorted(missing)))
+                parser.exit(3, "No chord sheet in the selected export for song IDs: " + ", ".join(sorted(missing)) + "\n")
             sheets = {song_id: sheet for song_id, sheet in sheets.items() if song_id in requested}
     except (OSError, BadZipFile, ET.ParseError, KeyError, ValueError) as error:
         parser.exit(1, f"{error}\n")

@@ -6,7 +6,12 @@
 !tests/web/archive.conf
 !tests/web/db_config.php
 !tests/web/fixture.sql
+!tests/web/chants-document.xml
+!tools/
+!tools/import_chants.py
+!tools/chant-variants.json
 !web/
+!web/.htaccess
 !web/*.html
 !web/*.php
 !web/favicon.ico

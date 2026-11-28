@@ -24,6 +24,7 @@
 /web/admin/.htpasswd
 /web/vip/.htpasswd
 /web/chords.zip
+/web/Chants.docx
 /web/db_config.php
 /tests/web/node_modules/
 /tests/web/test-results/

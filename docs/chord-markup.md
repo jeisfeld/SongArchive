@@ -104,10 +104,29 @@ arrangements stops the export.
 
 ## Release the public website and Android app
 
-Deploy `web/search.php`, `web/chord_markup.php`, `web/js/songbook.js`,
-`web/css/songbook.css`, `web/download_data.php` and `web/check_update.php`
-along with `search.php`, `download_data.php` and `check_update.php` under
-`web/admin/`. Keep Apache Basic Auth enabled for `/admin/` and `/vip/`.
+Deploy the updated `web/` files together so the public viewer and editor can
+load the shared renderer. Keep Apache Basic Auth enabled for `/admin/` and
+`/vip/`.
 The website uses the existing `chordmarkup` data as soon as the files are
 deployed. Publish the updated Android build so users can fetch the sheets
 through the regular archive update.
+
+## Edit a song’s chord markup on the website
+
+Open **Edit Song** in the admin page. Change the JSON in **Chord markup (JSON)**
+and check the live landscape preview. On a narrow screen, the preview appears
+below the editor. Use **Save** to apply the draft or clear the field and save to
+remove the sheet.
+
+**Extract from Chants.docx** loads the current song ID into the editor using the
+same variant map as the command-line importer. It preserves `"enabled": false`
+from the current draft. Review the preview and save when ready.
+
+Deploy the updated `web/` files, including `web/.htaccess`, and place the two
+importer files, `import_chants.py` and `chant-variants.json`, in a `tools/`
+directory alongside the document root. The web server needs Python 3 on its
+PATH, PHP process execution through `proc_open`, and read access to those files.
+Keep Apache Basic Auth on `/admin/`. Before placing `Chants.docx` in the
+document root, verify that Apache denies direct downloads of it. The supplied
+`.htaccess` rule does this. Configure the same rule in the virtual host if
+Apache ignores `.htaccess`.

@@ -139,8 +139,76 @@ test('VIP entry preserves the query and expands browse in the same browser sessi
     }
 });
 
+test('Word source and extraction are protected from public requests', async ({ request }) => {
+    expect((await request.get('/Chants.docx')).status()).toBe(403);
+    expect((await request.post('/admin/extract_chord_markup.php', { form: { id: 'Y911' } })).status()).toBe(401);
+});
+
 test.describe('admin', () => {
     test.use({ httpCredentials: credentials });
+
+    test('the song editor previews, extracts, validates and saves chord markup', async ({ page, request }) => {
+        const id = 'Y911';
+        const endpoint = '/admin/extract_chord_markup.php';
+        const extract = songId => request.post(endpoint, { form: { id: songId } });
+        const getChords = async () => (await search(request, id))[0].chordmarkup;
+        expect((await request.get(endpoint)).status()).toBe(405);
+        expect((await extract('../0012')).status()).toBe(400);
+        expect((await extract('Y999')).status()).toBe(404);
+        const mapped = await extract('0159a');
+        expect(mapped.status()).toBe(200);
+        expect((await mapped.json()).sheet.title).toBe('First Arrangement');
+
+        const created = await request.post('/admin/addsong_external.php', {
+            form: { id, title: 'Editing fixture', lyrics: 'A fictional lyric' },
+        });
+        expect(created.status()).toBe(201);
+        try {
+            await page.setViewportSize({ width: 1200, height: 850 });
+            await page.goto('/admin/editsong.php?id=' + id);
+            const input = page.getByLabel('Chord markup (JSON)');
+            const preview = page.getByRole('region', { name: 'Landscape chord preview' });
+            const save = page.getByRole('button', { name: 'Save', exact: true });
+            const inputBox = await input.boundingBox();
+            const previewBox = await preview.boundingBox();
+            expect(previewBox.x).toBeGreaterThan(inputBox.x + inputBox.width);
+            expect(previewBox.width / previewBox.height).toBeCloseTo(16 / 9, 1);
+
+            await input.fill(JSON.stringify({
+                version: 1, enabled: false, title: 'Edited preview', details: [],
+                lines: [{ kind: 'chords', runs: [{ text: 'D' }] }],
+            }));
+            await expect(preview.locator('h2')).toHaveText('Edited preview');
+            await expect(page.getByText('Chord text is disabled for viewers.')).toBeVisible();
+            page.once('dialog', dialog => dialog.accept());
+            await page.getByRole('button', { name: 'Extract from Chants.docx' }).click();
+            await expect(preview.locator('h2')).toHaveText('Word Practice Song');
+            await expect(preview.locator('.chord-sheet-lyrics')).toHaveText('A fictional verse');
+            expect(JSON.parse(await input.inputValue()).enabled).toBe(false);
+            expect(await getChords()).toBeNull();
+
+            const draft = JSON.parse(await input.inputValue());
+            draft.enabled = true;
+            await input.fill(JSON.stringify(draft));
+            await save.click();
+            await expect(page.getByText('Song updated successfully.')).toBeVisible();
+            expect(JSON.parse(await getChords())).toMatchObject({ title: 'Word Practice Song', enabled: true });
+
+            await input.fill('{"version":1}');
+            await expect(preview).toContainText('Preview unavailable.');
+            await save.click();
+            await expect(page.locator('.alert-error')).toContainText('Enter valid version 1 chord markup');
+            await expect(input).toHaveValue('{"version":1}');
+            expect(JSON.parse(await getChords()).title).toBe('Word Practice Song');
+
+            await input.fill('');
+            await save.click();
+            await expect(page.getByText('Song updated successfully.')).toBeVisible();
+            expect(await getChords()).toBeNull();
+        } finally {
+            await request.post('/admin/deletesong.php', { form: { id, confirm_delete: 'on' } });
+        }
+    });
 
     test('the regular admin chord button displays imported text and formatting', async ({ page }) => {
         await page.goto('/admin/?q=0012a');

@@ -1,0 +1,11 @@
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    <w:p><w:pPr><w:pStyle w:val="Liedtitel"/></w:pPr><w:r><w:t>Y911 Word Practice Song</w:t></w:r></w:p>
+    <w:p><w:pPr><w:pStyle w:val="Akkorde"/></w:pPr><w:r><w:t>Am       G</w:t></w:r></w:p>
+    <w:p><w:pPr><w:pStyle w:val="Text"/></w:pPr><w:r><w:t>A fictional verse</w:t></w:r></w:p>
+    <w:p><w:pPr><w:pStyle w:val="Liedtitel"/></w:pPr><w:r><w:t>0159 First Arrangement</w:t></w:r></w:p>
+    <w:p><w:pPr><w:pStyle w:val="Akkorde"/></w:pPr><w:r><w:t>C</w:t></w:r></w:p>
+    <w:p><w:pPr><w:pStyle w:val="Liedtitel"/></w:pPr><w:r><w:t>0159 Second Arrangement</w:t></w:r></w:p>
+    <w:p><w:pPr><w:pStyle w:val="Akkorde"/></w:pPr><w:r><w:t>D</w:t></w:r></w:p>
+  </w:body>
+</w:document>

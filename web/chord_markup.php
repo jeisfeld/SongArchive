@@ -1,16 +1,17 @@
 <?php
 function viewableChordMarkup(?string $markup): ?string {
-	if ($markup === null) {
-		return null;
-	}
-	$sheet = json_decode ( $markup );
-	if (($sheet->enabled ?? null) === false || ! in_array ( $sheet->version ?? null, [1, 1.0], true )
+	$sheet = $markup === null ? null : json_decode ( $markup );
+	return ($sheet->enabled ?? null) !== false && validChordSheet ( $sheet ) ? $markup : null;
+}
+
+function validChordSheet($sheet): bool {
+	if (! in_array ( $sheet->version ?? null, [1, 1.0], true )
 			|| ! is_string ( $sheet->title ?? null ) || ! is_array ( $sheet->details ?? null ) || ! is_array ( $sheet->lines ?? null )) {
-		return null;
+		return false;
 	}
 	foreach ( $sheet->details as $detail ) {
 		if (! is_string ( $detail )) {
-			return null;
+			return false;
 		}
 	}
 	$hasChords = false;
@@ -18,18 +19,18 @@ function viewableChordMarkup(?string $markup): ?string {
 		$kind = $line->kind ?? null;
 		$aside = $line->aside ?? '';
 		if (! in_array ( $kind, ['chords', 'lyrics', 'note', 'pitch'], true ) || ! is_array ( $line->runs ?? null ) || ! is_string ( $aside )) {
-			return null;
+			return false;
 		}
 		$hasText = trim ( $aside ) !== '';
 		foreach ( $line->runs as $run ) {
 			if (! is_string ( $run->text ?? null )) {
-				return null;
+				return false;
 			}
 			$hasText = $hasText || trim ( $run->text ) !== '';
 		}
 		$hasChords = $hasChords || ($kind === 'chords' && $hasText);
 	}
-	return $hasChords ? $markup : null;
+	return $hasChords;
 }
 
 // Both queries supply songs in ID order. Ignore rows without chord markup.

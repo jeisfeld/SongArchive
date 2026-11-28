@@ -2,6 +2,7 @@
 header ( 'Content-Type: text/html; charset=UTF-8' );
 
 require_once __DIR__ . '/../db_config.php';
+require_once __DIR__ . '/../chord_markup.php';
 function nullIfEmpty($value) {
 	if ($value === null) {
 		return null;
@@ -10,7 +11,7 @@ function nullIfEmpty($value) {
 	return trim ( $value ) === '' ? null : $value;
 }
 function fetchSong($conn, $songId) {
-	$sql = "SELECT id, title, lyrics, lyrics_short, lyrics_paged, tabfilename, mp3filename, mp3filename2, author, keywords FROM songs WHERE id = ?";
+	$sql = "SELECT id, title, lyrics, lyrics_short, lyrics_paged, tabfilename, mp3filename, mp3filename2, author, keywords, chordmarkup FROM songs WHERE id = ?";
 	$stmt = $conn->prepare ( $sql );
 
 	if (! $stmt) {
@@ -591,6 +592,7 @@ if ($_SERVER ['REQUEST_METHOD'] === 'POST') {
 	$mp3filename2Input = isset ( $_POST ['mp3filename2'] ) ? trim ( $_POST ['mp3filename2'] ) : '';
 	$authorInput = isset ( $_POST ['author'] ) ? trim ( $_POST ['author'] ) : '';
 	$keywordsInput = isset ( $_POST ['keywords'] ) ? trim ( $_POST ['keywords'] ) : '';
+	$chordInput = $_POST ['chordmarkup'] ?? null;
 
 	$lyrics_short = nullIfEmpty ( $lyricsShortInput );
 	$lyrics_paged = nullIfEmpty ( $lyricsPagedInput );
@@ -614,6 +616,7 @@ if ($_SERVER ['REQUEST_METHOD'] === 'POST') {
 			'mp3filename2' => $mp3filename2Input,
 			'author' => $authorInput,
 			'keywords' => $keywordsInput,
+			'chordmarkup' => is_string ( $chordInput ) ? $chordInput : '',
 			'meaning_ids' => $requestedMeaningIds
 	];
 
@@ -628,6 +631,25 @@ if ($_SERVER ['REQUEST_METHOD'] === 'POST') {
 		}
 		else {
 			$songMeaningIdsFromDatabase = fetchSongMeaningIds ( $conn, $id );
+			$chordMarkup = $songFromDatabase ['chordmarkup'];
+			if ($chordInput !== null) {
+				$chordMarkup = null;
+				if (! is_string ( $chordInput )) {
+					$errorMessage = 'The chord markup must be a JSON chord sheet.';
+				}
+				elseif (trim ( $chordInput ) !== '') {
+					$sheet = json_decode ( $chordInput );
+					if (! validChordSheet ( $sheet )) {
+						$errorMessage = 'Enter valid version 1 chord markup with at least one chord row.';
+					}
+					else {
+						$chordMarkup = json_encode ( $sheet, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES );
+					}
+				}
+			}
+			else {
+				$formValues ['chordmarkup'] = $chordMarkup;
+			}
 
 			$filenamesEmptyAfterUpdate = $tabfilename === null && $mp3filename === null && $mp3filename2 === null;
 			$noMeaningsLinkedInDatabase = empty ( $songMeaningIdsFromDatabase );
@@ -640,7 +662,7 @@ if ($_SERVER ['REQUEST_METHOD'] === 'POST') {
 
 			$targetSongId = $id;
 
-			if (! $isCloneRequest && $requestedSongId !== $id) {
+			if ($errorMessage === '' && ! $isCloneRequest && $requestedSongId !== $id) {
 				if ($canUpdateSongIdRequest) {
 					$targetSongId = $requestedSongId;
 				}
@@ -657,7 +679,7 @@ if ($_SERVER ['REQUEST_METHOD'] === 'POST') {
 						$errorMessage = 'Unable to generate a new ID for the cloned song.';
 					}
 					else {
-						$insertSql = "INSERT INTO songs (id, title, lyrics, lyrics_short, lyrics_paged, tabfilename, mp3filename, mp3filename2, author, keywords) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+						$insertSql = "INSERT INTO songs (id, title, lyrics, lyrics_short, lyrics_paged, tabfilename, mp3filename, mp3filename2, author, keywords, chordmarkup) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 						$insertStmt = $conn->prepare ( $insertSql );
 
 						if (! $insertStmt) {
@@ -665,7 +687,7 @@ if ($_SERVER ['REQUEST_METHOD'] === 'POST') {
 							$errorMessage = 'Unable to clone the song at this time.';
 						}
 						else {
-							$insertStmt->bind_param ( 'ssssssssss', $targetSongId, $title, $lyrics, $lyrics_short, $lyrics_paged, $tabfilename, $mp3filename, $mp3filename2, $author, $keywords );
+							$insertStmt->bind_param ( 'sssssssssss', $targetSongId, $title, $lyrics, $lyrics_short, $lyrics_paged, $tabfilename, $mp3filename, $mp3filename2, $author, $keywords, $chordMarkup );
 
 							$transactionStarted = $conn->begin_transaction ();
 							if (! $transactionStarted) {
@@ -717,7 +739,7 @@ if ($_SERVER ['REQUEST_METHOD'] === 'POST') {
 					}
 				}
 				else {
-					$updateSql = "UPDATE songs SET id = ?, title = ?, lyrics = ?, lyrics_short = ?, lyrics_paged = ?, tabfilename = ?, mp3filename = ?, mp3filename2 = ?, author = ?, keywords = ? WHERE id = ?";
+					$updateSql = "UPDATE songs SET id = ?, title = ?, lyrics = ?, lyrics_short = ?, lyrics_paged = ?, tabfilename = ?, mp3filename = ?, mp3filename2 = ?, author = ?, keywords = ?, chordmarkup = ? WHERE id = ?";
 					$updateStmt = $conn->prepare ( $updateSql );
 
 					if (! $updateStmt) {
@@ -725,7 +747,7 @@ if ($_SERVER ['REQUEST_METHOD'] === 'POST') {
 						$errorMessage = 'Unable to update the song at this time.';
 					}
 					else {
-						$updateStmt->bind_param ( 'sssssssssss', $targetSongId, $title, $lyrics, $lyrics_short, $lyrics_paged, $tabfilename, $mp3filename, $mp3filename2, $author, $keywords, $id );
+						$updateStmt->bind_param ( 'ssssssssssss', $targetSongId, $title, $lyrics, $lyrics_short, $lyrics_paged, $tabfilename, $mp3filename, $mp3filename2, $author, $keywords, $chordMarkup, $id );
 
 						$transactionStarted = $conn->begin_transaction ();
 						if (! $transactionStarted) {
@@ -943,6 +965,13 @@ else {
 }
 
 $currentSongIdValue = ( string ) $id;
+$chordEditorValue = $songData ['chordmarkup'] ?? '';
+if ((! $formValues || $updateSuccess) && $chordEditorValue !== '') {
+	$sheet = json_decode ( $chordEditorValue );
+	if (json_last_error () === JSON_ERROR_NONE) {
+		$chordEditorValue = json_encode ( $sheet, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES );
+	}
+}
 
 ?>
 <!DOCTYPE html>
@@ -951,6 +980,9 @@ $currentSongIdValue = ( string ) $id;
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Edit Song <?php echo escapeHtml($currentSongIdValue); ?></title>
+<link rel="stylesheet" href="/css/chord-sheet.css">
+<script src="/js/chord-sheet.js" defer></script>
+<script src="/js/edit-chord-sheet.js" defer></script>
 <style>
 body {
 	font-family: Arial, sans-serif;
@@ -994,6 +1026,38 @@ h1 {
 	min-height: 120px;
 	resize: vertical;
 	line-height: 1.4;
+}
+
+.chord-editor {
+	display: grid;
+	grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+	align-items: start;
+	gap: 16px;
+}
+
+.chord-editor textarea {
+	font: 0.875rem/1.4 monospace;
+}
+
+.chord-editor-preview {
+	position: relative;
+	aspect-ratio: 16 / 9;
+	border: 1px solid #c5c5c5;
+	border-radius: 4px;
+	background: #fff;
+	overflow: hidden;
+}
+
+.chord-editor-preview .chord-sheet-viewport {
+	padding: 8px;
+}
+
+.chord-editor-preview > p {
+	margin: 12px;
+}
+
+@media (max-width: 700px) {
+	.chord-editor { grid-template-columns: minmax(0, 1fr); }
 }
 
 .form-group--with-suggestions {
@@ -1653,6 +1717,20 @@ h1 {
 			<div class="form-group">
 				<label for="song-lyrics-paged">Lyrics (Paged)</label>
 				<textarea id="song-lyrics-paged" name="lyrics_paged" class="short-textarea" rows="6"><?php echo htmlspecialchars($songData['lyrics_paged'] ?? '', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></textarea>
+			</div>
+
+			<div class="form-group">
+				<label for="song-chordmarkup">Chord markup (JSON)</label>
+				<button type="button" class="link-meanings-btn" id="import-chord-sheet"
+					data-song-id="<?php echo escapeHtml($currentSongIdValue); ?>">Extract from Chants.docx</button>
+				<p class="form-note" id="chord-editor-help">Use <code>"enabled": false</code> to show the chord image instead. Clear the field to remove the markup.</p>
+				<p class="form-note" id="chord-import-status" role="status" hidden></p>
+				<div class="chord-editor">
+					<textarea id="song-chordmarkup" name="chordmarkup" rows="12" spellcheck="false"
+						aria-describedby="chord-editor-help"><?php echo escapeHtml($chordEditorValue); ?></textarea>
+					<div class="chord-editor-preview" id="chord-editor-preview" role="region" aria-label="Landscape chord preview"></div>
+				</div>
+				<p class="form-note" id="chord-preview-status" role="status" hidden></p>
 			</div>
 
 			<div class="form-group form-group--with-suggestions">
