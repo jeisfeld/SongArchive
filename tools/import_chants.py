@@ -234,7 +234,15 @@ def write_sql(sheets):
     print("START TRANSACTION;")
     for song_id, sheet in sheets.items():
         encoded = json.dumps(sheet, ensure_ascii=False, separators=(",", ":")).encode("utf-8").hex()
-        print(f"UPDATE songs SET chordmarkup = CONVERT(X'{encoded}' USING utf8mb4) WHERE id = '{song_id}';")
+        imported = f"CONVERT(X'{encoded}' USING utf8mb4)"
+        # Keep a disabled sheet on its image fallback when its Word source is updated.
+        enabled = "JSON_EXTRACT(CASE WHEN JSON_VALID(chordmarkup) THEN chordmarkup END, '$.enabled')"
+        disabled = "JSON_EXTRACT('{\"enabled\":false}', '$.enabled')"
+        print(
+            f"UPDATE songs SET chordmarkup = CASE WHEN JSON_TYPE({enabled}) = 'BOOLEAN' "
+            f"AND JSON_UNQUOTE({enabled}) = 'false' THEN JSON_SET({imported}, '$.enabled', {disabled}) "
+            f"ELSE {imported} END WHERE id = '{song_id}';"
+        )
     print("COMMIT;")
 
 

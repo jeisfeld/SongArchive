@@ -575,8 +575,17 @@ body.no-scroll {
 	display: flex;
 	flex-direction: column;
 	overflow: auto;
+	overflow-anchor: none;
+	touch-action: pan-x pan-y;
 	padding: 2.75rem clamp(0.75rem, 3vmin, 2rem) 1rem;
 	color: #171717;
+}
+
+@media (max-width: 599px), (max-height: 599px) {
+	.chord-sheet-viewport {
+		padding-inline: 0.25rem;
+		padding-bottom: 0.25rem;
+	}
 }
 
 .chord-sheet-sideways {
@@ -687,6 +696,10 @@ body.no-scroll {
 	margin-bottom: -0.2em;
 }
 
+.chord-sheet-lyrics + .chord-sheet-chords {
+	margin-top: var(--chord-pair-gap, 0px);
+}
+
 .chord-sheet-note,
 .chord-sheet-tone-note {
 	color: #a61b1b;
@@ -717,16 +730,4 @@ body.no-scroll {
 .chord-sheet-main sup {
 	font-size: inherit;
 	line-height: 0;
-}
-
-.admin-view .chord-preview-button {
-	min-height: 24px;
-	padding: 0 0.35em;
-	border: 1px solid var(--text-color-light);
-	border-radius: 4px;
-	background: var(--inner-color);
-	color: var(--text-color);
-	font: inherit;
-	font-size: 0.8em;
-	cursor: pointer;
 }

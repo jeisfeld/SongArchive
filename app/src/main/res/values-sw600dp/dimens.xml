@@ -5,6 +5,8 @@
     <dimen name="spacing_vertical_medium">12dp</dimen>
     <dimen name="spacing_search_vertical">6dp</dimen>
     <dimen name="spacing_heading_vertical">24dp</dimen>
+    <dimen name="chord_sheet_side_padding">16dp</dimen>
+    <dimen name="chord_sheet_bottom_padding">12dp</dimen>
     <dimen name="icon_size_small">34dp</dimen>
     <dimen name="icon_size_medium">42dp</dimen>
     <dimen name="icon_size_large">50dp</dimen>

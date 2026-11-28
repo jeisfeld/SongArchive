@@ -31,11 +31,15 @@ INSERT INTO songs (id, title, lyrics, lyrics_short, lyrics_paged, author, keywor
 VALUES
     ('0012a', 'Morning River', CONCAT('Morning |river', CHAR(10), 'Carry me home'), 'Carry me home', 'Morning river|Carry me home',
      'Ada Example [example.test], Ben Example', 'water', '{"version":1,"title":"Morning River","details":["(Ada Example)","¾Capo 2"],"lines":[{"kind":"chords","runs":[{"text":"    Am  "},{"text":"G","tone":"alternate"}],"aside":"123","asideTone":"pitch"},{"kind":"lyrics","runs":[{"text":"Morning river"}],"aside":"2x"}]}', 'river.jpg', 'river.mp3', 'river-alternate.mp3'),
-    ('0011', 'Evening Song', 'Morning river', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-    ('0010', 'Morning Light', 'Warm skies', NULL, NULL, NULL, 'river', NULL, NULL, NULL, NULL),
-    ('1000', 'Morning Sky', 'Bright stars', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-    ('X001', 'Hidden Rehearsal', 'Practice song', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-    ('Y001', 'Local Rehearsal', 'A local song', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+    ('0011', 'Evening Song', 'Morning river', NULL, NULL, NULL, NULL,
+     '{"version":1,"enabled":false,"title":"Evening Song","details":[],"lines":[{"kind":"chords","runs":[{"text":"G"}]}]}', 'river.jpg', NULL, NULL),
+    ('0010', 'Morning Light', 'Warm skies', NULL, NULL, NULL, 'river', '{"version":1,"title":"Morning Light","details":[],"lines":[{"kind":"lyrics","runs":[{"text":"Warm skies"}]}]}', 'river.jpg', NULL, NULL),
+    ('1000', 'Morning Sky', 'Bright stars', NULL, NULL, NULL, NULL,
+     '{"version":1,"enabled":true,"title":"Morning Sky","details":[],"lines":[{"kind":"chords","runs":[{"text":"D"}]}]}', NULL, NULL, NULL),
+    ('X001', 'Hidden Rehearsal', 'Practice song', NULL, NULL, NULL, NULL,
+     '{"version":1,"title":"Hidden Rehearsal","details":[],"lines":[{"kind":"chords","runs":[{"text":"F"}]}]}', NULL, NULL, NULL),
+    ('Y001', 'Local Rehearsal', 'A local song', NULL, NULL, NULL, NULL,
+     '{"version":1,"enabled":false,"title":"Local Rehearsal","details":[],"lines":[{"kind":"chords","runs":[{"text":"E"}]}]}', NULL, NULL, NULL);
 
 INSERT INTO meaning (id, title, meaning)
 VALUES (17, 'Context', 'A fictional translation'), (18, 'Pronunciation', 'Sing gently');

@@ -1,10 +1,10 @@
 # Chord sheets from Word
 
 SongArchive stores versioned JSON in the existing `songs.chordmarkup` column.
-The admin page can preview the text before release. After release, the public
-website and Android prefer chord text and use the existing image as a fallback.
-Android also supports user-attached chord photos. App synchronization detects
-changes to chord text even when the image archive has the same size.
+The regular chord button on the public and admin pages and in the Android app
+opens valid chord text by default. It uses the existing chord image when the
+text is missing, invalid, or disabled. A locally attached image takes priority
+on Android. The app detects chord text changes even when the image ZIP is current.
 
 ## Generate an import
 
@@ -31,28 +31,28 @@ to fail the export if every image must have a Word section. The private ZIP
 contains 18 matching sheets and an image-only score for `X004` (La ténèbre).
 Omit `--image-only` to include numbered sheets without an image,
 including the document's `X` songs. The website serves `X` chord text through the
-authenticated admin view and, after release, the authenticated VIP view. Omit
+authenticated admin and VIP views. Omit
 `--images` as well to export directly from Word alone.
 
-## Preview on the admin page
+## Disable chord text for a song
 
-1. Upload `web/search.php`, `web/chord_markup.php`, `web/js/songbook.js` and
-   `web/css/songbook.css`. Upload `search.php`, `download_data.php` and
-   `check_update.php` under `web/admin/` along with `web/download_data.php`
-   and `web/check_update.php`. The download endpoints need to be in place
-   before importing the preview data. Keep the existing Apache Basic Auth
-   configuration for `/admin/`.
-2. Leave `SONGARCHIVE_CHORD_MARKUP_RELEASED` unset or set it to `false` in
-   `web/db_config.php`. In this mode the public website uses the image viewer
-   and the Android sync endpoints omit the preview content.
-3. Import `chords.sql`. Sign in to `/admin/` and search for a song. Open the
-   usual chord icon to see the original image and the **Text** button to see
-   the same song in the new renderer. The **Text** button appears for songs
-   with imported chord text. A preview error appears directly in that view.
-4. Review a few representative songs first. For example, `0001` has pitch
-   hints and underlined syllables, and `0159` and `0159a` have different
-   arrangements. Correct the Word document or ID map as needed, run the
-   export again, and reimport before reviewing the affected songs.
+Set `"enabled": false` at the top level of the song's `chordmarkup` JSON to
+switch to the image. To restore the text, remove `enabled` or set it to `true`.
+For example, run the first statement to disable text for `0478`, or the second
+statement to restore it.
+
+```sql
+UPDATE songs SET chordmarkup = JSON_SET(chordmarkup, '$.enabled', JSON_EXTRACT('{"enabled":false}', '$.enabled'))
+WHERE id = '0478' AND JSON_VALID(chordmarkup);
+
+UPDATE songs SET chordmarkup = JSON_REMOVE(chordmarkup, '$.enabled')
+WHERE id = '0478' AND JSON_VALID(chordmarkup);
+```
+
+Generated SQL imports preserve an existing `"enabled": false`. On the website,
+refresh the song results after editing the flag. Android picks it up on the
+next archive sync. Songs with disabled text need an image for the chord button
+to be available.
 
 ## Update the source
 
@@ -68,7 +68,7 @@ Red additional text uses a smaller font than the chords and lyrics, and each
 red line shrinks further if needed to fit its row. Wide sheets with additional
 verses can scale further to fit a short landscape display. The viewer adds
 space around additional text and between Word paragraphs created with Return.
-Lines separated by Shift+Return stay together. The admin preview shows a notice
+Lines separated by Shift+Return stay together. The admin chord viewer shows a notice
 when an older import lacks the paragraph markers for consecutive lines. To
 refresh just songs `0478` and `0611`, generate and apply this SQL file.
 
@@ -81,10 +81,19 @@ Use the image-checked command above to refresh the full catalog.
 
 The song body preserves line breaks and underlining. Alternate chords use sky blue.
 Right-hand annotations use smaller text, with golden yellow for pitch hints.
-The viewer centers and scales the sheet to fit the available area. Wide sheets
-use landscape. Browsers and Android windows that stay in portrait
-rotate the sheet within the viewer. Long or dense sheets remain readable by
-scrolling when needed, with the chord and lyric rows moving together.
+The viewer opens the sheet fitted to the available area. Pinch to enlarge it or
+shrink it to half the fitted size, and drag to move around the sheet.
+On the website, you can also drag with the mouse and use Ctrl plus the mouse
+wheel to zoom. With the sheet focused, `+` and `-` change the zoom and `0`
+returns to the fitted size.
+
+Phone-sized views use smaller side and bottom margins to give the sheet more
+room. Wide sheets use landscape. Browsers and Android windows that stay in portrait
+rotate the sheet within the viewer. Android accounts for display cutouts when
+fitting the sheet and placing the viewer controls. When a wide sheet has spare
+height, the viewer uses some of it between a lyric line and the next chord line.
+Long or dense sheets can scroll at the fitted size, with the chord and lyric
+rows moving together.
 
 When several Word headings share a number, `tools/chant-variants.json` maps them
 to database IDs in **document order**. This order differs from the filename order
@@ -95,12 +104,10 @@ arrangements stops the export.
 
 ## Release the public website and Android app
 
-After review, set the release flag in `web/db_config.php`:
-
-```php
-define('SONGARCHIVE_CHORD_MARKUP_RELEASED', true);
-```
-
-The public website then displays text where a sheet is available and keeps the
-image fallback. Publish the updated Android build when ready. Once installed,
-the app can fetch the sheets through its regular song update.
+Deploy `web/search.php`, `web/chord_markup.php`, `web/js/songbook.js`,
+`web/css/songbook.css`, `web/download_data.php` and `web/check_update.php`
+along with `search.php`, `download_data.php` and `check_update.php` under
+`web/admin/`. Keep Apache Basic Auth enabled for `/admin/` and `/vip/`.
+The website uses the existing `chordmarkup` data as soon as the files are
+deployed. Publish the updated Android build so users can fetch the sheets
+through the regular archive update.

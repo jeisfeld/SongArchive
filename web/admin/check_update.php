@@ -21,15 +21,13 @@ if ($result) {
 	$row = $result->fetch_assoc();
 	$response['tab_count'] = (int) $row['count'];
 }
-if (chordMarkupReleased()) {
-	$markupSql = "SELECT id, chordmarkup FROM songs WHERE chordmarkup IS NOT NULL";
-	if (($_GET['user'] ?? '') !== 'private') {
-		$markupSql .= " AND id NOT LIKE 'X%'";
-	}
-	$markupResult = $conn->query($markupSql . " ORDER BY id");
-	if ($markupResult) {
-		$response['chord_markup_revision'] = chordMarkupRevision($markupResult);
-	}
+$markupSql = "SELECT id, chordmarkup FROM songs WHERE chordmarkup IS NOT NULL";
+if (trim($_GET['user'] ?? '') !== 'private') {
+	$markupSql .= " AND id NOT LIKE 'X%'";
+}
+$markupResult = $conn->query($markupSql . " ORDER BY id");
+if ($markupResult) {
+	$response['chord_markup_revision'] = chordMarkupRevision($markupResult);
 }
 $conn->close();
 

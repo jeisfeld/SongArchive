@@ -58,16 +58,38 @@ test('a shared song link initializes search and opens lyrics, meanings and chord
     await page.locator('#popup .popup-close').click();
     await expect(page.locator('#popup')).toBeHidden();
 
-    await expect(page.getByRole('button', { name: 'Preview chord text' })).toHaveCount(0);
-    expect((await search(page.request, '0012a'))[0]).not.toHaveProperty('chordmarkup');
     await page.getByRole('button', { name: 'View chords', exact: true }).click();
-    const chordImage = page.locator('#popup-image');
-    await expect(chordImage).toBeVisible();
-    await expect.poll(() => chordImage.evaluate(image => image.naturalWidth)).toBeGreaterThan(0);
+    await expect(page.locator('.chord-sheet h2')).toHaveText('Morning River');
     await page.locator('#popup .popup-close').click();
 
     await page.getByRole('button', { name: 'Clear search' }).click();
     await expect(resultIds(page)).toHaveText(publicSongIds);
+});
+
+test('the chord button uses enabled text or falls back to the existing image', async ({ page }) => {
+    const listed = await search(page.request, '*');
+    expect(listed.map(song => [song.id, song.has_chordmarkup])).toEqual([
+        ['0012a', true], ['0011', false], ['0010', false], ['1000', true],
+    ]);
+    expect(listed.every(song => !Object.hasOwn(song, 'chordmarkup'))).toBe(true);
+
+    await page.goto('/');
+    const chords = id => page.locator('#results tr')
+        .filter({ has: page.getByRole('link', { name: id, exact: true }) })
+        .getByRole('button', { name: 'View chords' });
+    for (const id of ['0011', '0010']) {
+        await chords(id).click();
+        const image = page.locator('#popup-image');
+        await expect(image).toBeVisible();
+        await expect.poll(() => image.evaluate(element => element.naturalWidth)).toBeGreaterThan(0);
+        await page.locator('#popup .popup-close').click();
+    }
+    await chords('1000').click();
+    await expect(page.locator('.chord-sheet h2')).toHaveText('Morning Sky');
+
+    await page.goto('/?q=Y001');
+    await expect(resultIds(page)).toHaveText(['Y001']);
+    await expect(chords('Y001')).toHaveCount(0);
 });
 
 test('the audio player follows track controls and keeps a playing song visible during a search', async ({ page }) => {
@@ -99,12 +121,16 @@ test('the audio player follows track controls and keeps a playing song visible d
 
 test('VIP entry preserves the query and expands browse in the same browser session', async ({ browser, request }) => {
     expect((await request.get('/vip/', { maxRedirects: 0 })).status()).toBe(401);
+    expect((await search(request, 'X001'))[0]).toMatchObject({ chordmarkup: null, has_chordmarkup: false });
     const context = await browser.newContext({ httpCredentials: credentials });
     try {
         const page = await context.newPage();
         await page.goto('/vip/?q=Rehearsal');
         await expect(page).toHaveURL(/\/\?q=Rehearsal$/);
         await expect(resultIds(page)).toHaveText(['X001', 'Y001']);
+        await page.getByRole('button', { name: 'View chords' }).click();
+        await expect(page.locator('.chord-sheet h2')).toHaveText('Hidden Rehearsal');
+        await page.locator('#popup .popup-close').click();
         await page.getByRole('button', { name: 'Clear search' }).click();
         await expect(resultIds(page)).toHaveText([...publicSongIds, 'X001', 'Y001']);
         expect((await search(request, '*')).map(song => song.id)).toEqual(publicSongIds);
@@ -116,13 +142,10 @@ test('VIP entry preserves the query and expands browse in the same browser sessi
 test.describe('admin', () => {
     test.use({ httpCredentials: credentials });
 
-    test('admin can compare the chord image with the imported text', async ({ page }) => {
+    test('the regular admin chord button displays imported text and formatting', async ({ page }) => {
         await page.goto('/admin/?q=0012a');
-        await page.getByRole('button', { name: 'View chord image' }).click();
-        await expect(page.locator('#popup-image')).toBeVisible();
-        await page.locator('#popup .popup-close').click();
-
-        await page.getByRole('button', { name: 'Preview chord text' }).click();
+        await page.getByRole('button', { name: 'View chords' }).click();
+        await expect(page.getByRole('button', { name: 'Preview chord text' })).toHaveCount(0);
         await expect(page.locator('.chord-sheet h2')).toHaveText('Morning River');
         const heading = page.locator('.chord-sheet header');
         const credits = heading.locator('.chord-sheet-credits');
@@ -160,28 +183,111 @@ test.describe('admin', () => {
         await page.addInitScript(() => {
             Element.prototype.requestFullscreen = () => Promise.resolve();
         });
+        await page.route('**/admin/search.php?q=0012a', async route => {
+            if (route.request().method() !== 'GET') return route.continue();
+            const response = await route.fetch();
+            const songs = await response.json();
+            const sheet = JSON.parse(songs[0].chordmarkup);
+            sheet.lines.push(...sheet.lines);
+            songs[0].chordmarkup = JSON.stringify(sheet);
+            await route.fulfill({ response, json: songs });
+        });
         await page.setViewportSize({ width: 390, height: 844 });
         await page.goto('/admin/?q=0012a');
-        await page.getByRole('button', { name: 'Preview chord text' }).click();
+        await page.getByRole('button', { name: 'View chords' }).click();
 
         const viewport = page.locator('.chord-sheet-viewport');
         const sheet = viewport.locator('article');
         const fontSize = () => sheet.evaluate(element => parseFloat(getComputedStyle(element).fontSize));
+        const sheetWidth = () => sheet.evaluate(element => element.offsetWidth);
         await expect(viewport).toHaveClass(/chord-sheet-sideways/);
-        expect(await sheet.evaluate(element => element.offsetWidth)).toBeGreaterThan(740);
+        await expect(viewport).toHaveCSS('padding-left', '4px');
+        await expect(viewport).toHaveCSS('padding-bottom', '4px');
+        await expect(viewport).toHaveCSS('padding-top', '44px');
+        await expect.poll(sheetWidth).toBeGreaterThan(830);
         const initialFontSize = await fontSize();
         expect(initialFontSize).toBeGreaterThan(16);
         const phoneBounds = await sheet.boundingBox();
         expect(phoneBounds.x).toBeGreaterThan(0);
         expect(phoneBounds.x + phoneBounds.width).toBeLessThan(390);
 
+        await page.setViewportSize({ width: 844, height: 390 });
+        await expect(viewport).not.toHaveClass(/chord-sheet-sideways/);
+        await expect(viewport).toHaveCSS('padding-left', '4px');
+        await expect(viewport).toHaveCSS('padding-bottom', '4px');
+        await expect.poll(sheetWidth).toBeGreaterThan(830);
+
         await page.setViewportSize({ width: 1200, height: 780 });
         await expect(viewport).not.toHaveClass(/chord-sheet-sideways/);
+        await expect(viewport).toHaveCSS('padding-left', '23.4px');
+        await expect(viewport).toHaveCSS('padding-bottom', '16px');
         await expect.poll(fontSize).toBeGreaterThan(initialFontSize);
         const bounds = await sheet.boundingBox();
         expect(bounds.width).toBeGreaterThan(1100);
         expect(bounds.y).toBeGreaterThan(150);
         expect(bounds.y + bounds.height).toBeLessThan(780);
+        const nextChords = sheet.locator('.chord-sheet-lyrics + .chord-sheet-chords');
+        const gap = () => nextChords.evaluate(element => parseFloat(getComputedStyle(element).marginTop));
+        expect(await gap()).toBeGreaterThan(0);
+
+        await page.setViewportSize({ width: 1200, height: 140 });
+        await expect.poll(gap).toBe(0);
+    });
+
+    test('a sideways chord sheet can pinch to zoom and drag in both directions', async ({ page }) => {
+        await page.addInitScript(() => {
+            Element.prototype.requestFullscreen = () => Promise.resolve();
+        });
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.goto('/admin/?q=0012a');
+        await page.getByRole('button', { name: 'View chords' }).click();
+
+        const viewport = page.locator('.chord-sheet-viewport');
+        const fontSize = () => viewport.locator('article').evaluate(element => parseFloat(getComputedStyle(element).fontSize));
+        const scroll = () => viewport.evaluate(element => [element.scrollLeft, element.scrollTop]);
+        await expect(viewport).toHaveClass(/chord-sheet-sideways/);
+        const initialSize = await fontSize();
+
+        const session = await page.context().newCDPSession(page);
+        await session.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 2 });
+        const touch = (type, xs) => session.send('Input.dispatchTouchEvent', {
+            type, touchPoints: xs.map((x, id) => ({ x, y: 420, id })),
+        });
+        await touch('touchStart', [160, 230]);
+        await touch('touchMove', [50, 340]);
+        await touch('touchEnd', []);
+        await expect.poll(fontSize).toBeGreaterThan(initialSize * 3);
+        await session.send('Emulation.setTouchEmulationEnabled', { enabled: false });
+
+        const [beforeLeft, beforeTop] = await scroll();
+        await page.mouse.move(195, 420);
+        await page.mouse.down();
+        await page.mouse.move(245, 355, { steps: 5 });
+        await page.mouse.up();
+        await expect.poll(scroll).toEqual([beforeLeft + 65, beforeTop + 50]);
+
+        await session.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 2 });
+        await touch('touchStart', [245]);
+        await touch('touchMove', [195]);
+        await touch('touchMove', [145]);
+        await expect.poll(async () => (await scroll())[1]).toBeLessThan(beforeTop + 50);
+        await touch('touchEnd', []);
+        await session.send('Emulation.setTouchEmulationEnabled', { enabled: false });
+
+        await page.keyboard.press('0');
+        await expect.poll(fontSize).toBeCloseTo(initialSize);
+        await session.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 2 });
+        await touch('touchStart', [50, 340]);
+        await touch('touchMove', [150, 240]);
+        await touch('touchEnd', []);
+        await expect.poll(fontSize).toBeCloseTo(initialSize * 0.5);
+        await session.send('Emulation.setTouchEmulationEnabled', { enabled: false });
+        await page.keyboard.press('0');
+        await expect.poll(fontSize).toBeCloseTo(initialSize);
+        await page.keyboard.down('Control');
+        await page.mouse.wheel(0, -200);
+        await page.keyboard.up('Control');
+        await expect.poll(fontSize).toBeGreaterThan(initialSize * 1.3);
     });
 
     test('the heading shrinks onto one line and renders Word comments in regular gray text', async ({ page }) => {
@@ -204,7 +310,7 @@ test.describe('admin', () => {
             await route.fulfill({ response, json: songs });
         });
         await page.goto('/admin/?q=0012a');
-        await page.getByRole('button', { name: 'Preview chord text' }).click();
+        await page.getByRole('button', { name: 'View chords' }).click();
 
         const heading = page.locator('.chord-sheet header');
         const titleComment = heading.locator('h2 .chord-sheet-tone-comment');
@@ -244,7 +350,7 @@ test.describe('admin', () => {
             await route.fulfill({ response, json: songs });
         });
         await page.goto('/admin/?q=0012a');
-        await page.getByRole('button', { name: 'Preview chord text' }).click();
+        await page.getByRole('button', { name: 'View chords' }).click();
 
         const notes = page.locator('.chord-sheet-note');
         await expect(notes).toHaveCount(3);
@@ -276,7 +382,7 @@ test.describe('admin', () => {
         expect(sizeRatio).toBeCloseTo(0.78, 2);
     });
 
-    test('the admin preview identifies an older import and shows the gap after a refresh', async ({ page }) => {
+    test('the admin chord viewer identifies an older import and shows the gap after a refresh', async ({ page }) => {
         let hasParagraphs = false;
         await page.route('**/admin/search.php?q=0012a', async route => {
             if (route.request().method() !== 'GET') return route.continue();
@@ -292,7 +398,7 @@ test.describe('admin', () => {
         });
         await page.goto('/admin/?q=0012a');
 
-        const preview = page.getByRole('button', { name: 'Preview chord text' });
+        const chords = page.getByRole('button', { name: 'View chords' });
         const notice = page.locator('.chord-sheet-import-notice');
         const notes = page.locator('.chord-sheet-note .chord-sheet-main');
         const distances = () => notes.evaluateAll(elements => {
@@ -300,7 +406,7 @@ test.describe('admin', () => {
             return [second - first, third - second];
         });
 
-        await preview.click();
+        await chords.click();
         await expect(notice).toContainText('no paragraph markers');
         await expect(notes).toHaveCount(3);
         const [oldFirst, oldSecond] = await distances();
@@ -308,7 +414,7 @@ test.describe('admin', () => {
         await page.locator('#popup .popup-close').click();
 
         hasParagraphs = true;
-        await preview.click();
+        await chords.click();
         await expect(notes).toHaveCount(3);
         await expect(notice).toHaveCount(0);
         const [freshFirst, freshSecond] = await distances();
@@ -337,7 +443,7 @@ test.describe('admin', () => {
             await route.fulfill({ response, json: songs });
         });
         await page.goto('/admin/?q=0012a');
-        await page.getByRole('button', { name: 'Preview chord text' }).click();
+        await page.getByRole('button', { name: 'View chords' }).click();
 
         const viewer = page.locator('.chord-sheet-viewport');
         await expect(viewer).toHaveClass(/chord-sheet-sideways/);
@@ -374,7 +480,7 @@ test.describe('admin', () => {
             await route.fulfill({ response, json: songs });
         });
         await page.goto('/admin/?q=0012a');
-        await page.getByRole('button', { name: 'Preview chord text' }).click();
+        await page.getByRole('button', { name: 'View chords' }).click();
 
         const viewport = page.locator('.chord-sheet-viewport');
         await expect(viewport).toBeVisible();
@@ -408,11 +514,12 @@ test.describe('admin', () => {
         expect(standard.songs.find(song => song.id === '0012a')).toMatchObject({
             lyrics_short: 'Carry me home',
             lyrics_paged: 'Morning river|Carry me home',
-            chordmarkup: null,
+            chordmarkup: expect.any(String),
             tabfilename: 'river.jpg',
             mp3filename2: 'river-alternate.mp3',
         });
-        expect(standard).not.toHaveProperty('chord_markup_revision');
+        expect(JSON.parse(standard.songs.find(song => song.id === '0011').chordmarkup).enabled).toBe(false);
+        expect(standard.chord_markup_revision).toMatch(/^[0-9a-f]{64}$/);
         expect(standard.meanings.map(meaning => ({ ...meaning, id: Number(meaning.id) })))
             .toContainEqual({ id: 17, title: 'Context', meaning: 'A fictional translation' });
         expect(standard.song_meanings.map(link => ({ ...link, meaning_id: Number(link.meaning_id) })))
@@ -422,7 +529,8 @@ test.describe('admin', () => {
         const privateResponse = await request.get('/admin/download_data.php?user=private');
         expect(privateResponse.status()).toBe(200);
         const privateArchive = await privateResponse.json();
-        expect(privateArchive.songs.map(song => song.id)).toContain('X001');
+        expect(privateArchive.songs.find(song => song.id === 'X001').chordmarkup).toContain('Hidden Rehearsal');
+        expect(privateArchive.chord_markup_revision).not.toBe(standard.chord_markup_revision);
         expect(privateArchive.song_meanings.map(link => ({ ...link, meaning_id: Number(link.meaning_id) })))
             .toContainEqual({ song_id: 'X001', meaning_id: 18 });
 
@@ -435,7 +543,16 @@ test.describe('admin', () => {
 
         const metadata = await request.get('/admin/check_update.php');
         expect(metadata.status()).toBe(200);
-        expect(await metadata.json()).toEqual({ tab_count: 1, chords_zip_size: archive.length });
+        expect(await metadata.json()).toEqual({
+            tab_count: 3, chords_zip_size: archive.length, chord_markup_revision: standard.chord_markup_revision,
+        });
+        const privateMetadata = await request.get('/admin/check_update.php?user=private');
+        expect((await privateMetadata.json()).chord_markup_revision).toBe(privateArchive.chord_markup_revision);
+        const legacyDownload = await request.get('/download_data.php?user=private');
+        const legacy = await legacyDownload.json();
+        expect(legacy.songs.find(song => song.id === 'X001').chordmarkup).toBeNull();
+        const legacyMetadata = await request.get('/check_update.php');
+        expect((await legacyMetadata.json()).chord_markup_revision).toBe(legacy.chord_markup_revision);
     });
 
     test('adding, editing and deleting a song refreshes the admin listing', async ({ page }) => {
